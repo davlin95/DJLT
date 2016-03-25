@@ -13,6 +13,7 @@ void test(char ** envp){
   	char * envString = *env;
   	printf("%s\n",envString);
   }
+  printf("Path: %s\n", getenv("PATH"));
 }
 
 void toDoList(){
