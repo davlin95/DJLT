@@ -5,8 +5,35 @@
 // Assume no input line will be longer than 1024 bytes
 #define MAX_INPUT 1024
 
+/* Test Function*/
+void test(char ** envp){
+  printf("\nTesting environmentP: \n");
+  char** env;
+  for(env = envp; *env != '\0'; env++){
+  	char * envString = *env;
+  	printf("%s\n",envString);
+  }
+}
+
+void toDoList(){
+
+/* Tasks*/
+   /* 
+      -- 
+      --
+      --
+   */
+
+  /* David : */
+
+  /* Wilson: */
+}
+
 int 
 main (int argc, char ** argv, char **envp) {
+  
+  /* Testing envp
+  test(envp); */
 
   int finished = 0;
   char *prompt = "320sh> ";
@@ -40,7 +67,7 @@ main (int argc, char ** argv, char **envp) {
       if(last_char == 3) {
         write(1, "^c", 2);
       } else {
-	write(1, &last_char, 1);
+		write(1, &last_char, 1);
       }
     } 
     *cursor = '\0';
