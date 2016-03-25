@@ -39,6 +39,10 @@ void toDoList(){
 }
 
 void doNothing(){
+
+}
+
+void doNothing1(){
 	
 }
 
