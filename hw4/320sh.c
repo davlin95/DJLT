@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -13,6 +14,7 @@ void test(char ** envp){
   	char * envString = *env;
   	printf("%s\n",envString);
   }
+  printf("Path: %s\n", getenv("PATH"));
 }
 
 void toDoList(){
@@ -49,8 +51,8 @@ void doNothing1(){
 int 
 main (int argc, char ** argv, char **envp) {
   
-  /* Testing envp
-  test(envp); */
+  //Testing envp
+  test(envp); 
 
   int finished = 0;
   char *prompt = "320sh> ";
