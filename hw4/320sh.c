@@ -3,8 +3,16 @@
 #include <string.h>
 #include <unistd.h>
 
-// Assume no input line will be longer than 1024 bytes
+/*Header Prototypes */
+int isBuiltIn(char * command);
+void parseCommandLine(char* cmd);
+
+
+/* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
+
+/* Make global array of built-in strings */
+char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set"};
 
 /* Test Function*/
 void test(char ** envp){
@@ -67,20 +75,42 @@ void parseCommandLine(char* cmd){
     write(1,token,strlen(token));
     write(1,"-->",3); */
 
-    argArray[argCount++]= token;
+    argArray[argCount]= token;
+    argCount++;
     token = strtok_r(NULL," ",&savePtr);
   }
 
   /*Test: Print out contents of argArray */
   write(1,"\nfinished\n\0",11);
-  for(int i = 0; i < argCount; i++){
+  int i;
+  for(i = 0; i < argCount; i++){
+  	char * argString = argArray[i];
   	write(1,"\n",1);
-  	write(1,argArray[i],strlen(argArray[i]));
+  	write(1,argArray[i],strlen(argString));
+  	printf("\nisBuiltin Result: %d",isBuiltIn(argString));
+  	fflush(stdout);
   }
-  printf("Argcount is %d\n",argCount);
+  printf("\nArgcount is %d\n",argCount);
   printf("last item is %s\n", argArray[argCount-1]);
   fflush(stdout);
 }
+
+
+int isBuiltIn(char * command){
+  /* Num elements of built in commands */
+  int numCommands = (int)sizeof(globalBuiltInCommand)/sizeof(char *);
+
+  /*Test : Prints out num elements in globalBuiltInCommand Array 
+  printf("\nnumber of global builtin Commands : %d", numCommands);
+  fflush(stdout); */
+  
+  int i;
+  for(i=0; i< numCommands; i++){
+  	if(strcmp(command,globalBuiltInCommand[i])==0)
+  	 return 1;
+  }
+  return 0; /*No command match found. return false */
+} 
 
 int 
 main (int argc, char ** argv, char **envp) {
