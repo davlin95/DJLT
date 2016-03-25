@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -46,8 +47,8 @@ void doNothing(){
 int 
 main (int argc, char ** argv, char **envp) {
   
-  /* Testing envp
-  test(envp); */
+  //Testing envp
+  test(envp); 
 
   int finished = 0;
   char *prompt = "320sh> ";
