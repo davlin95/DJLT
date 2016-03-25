@@ -19,14 +19,27 @@ void toDoList(){
 
 /* Tasks*/
    /* 
+      -- statFind() : Checks path variable for ls command using stat
       -- 
-      --
       --
    */
 
   /* David : */
+     /* 
+		-- 
+		--
+     */
 
   /* Wilson: */
+      /*
+      	-- statFind()
+      	--
+      */
+
+}
+
+void doNothing(){
+	
 }
 
 int 
