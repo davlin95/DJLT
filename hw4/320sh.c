@@ -15,6 +15,7 @@ void test(char ** envp){
   	printf("%s\n",envString);
   }
   printf("Path: %s\n", getenv("PATH"));
+
 }
 
 void toDoList(){
@@ -22,13 +23,15 @@ void toDoList(){
 /* Tasks*/
    /* 
       -- statFind() : Checks path variable for ls command using stat
-      -- 
-      --
+      -- parseCommandLine(): parses and executes command line. 
+      -- setPath(): sets path variable. Also must update printenv results. 
+      -- help() : printout the built in's. 
+      -- pwd(): 
    */
 
   /* David : */
      /* 
-		-- 
+		-- parseCommandLine():
 		--
      */
 
@@ -40,13 +43,6 @@ void toDoList(){
 
 }
 
-void doNothing(){
-
-}
-
-void doNothing1(){
-	
-}
 
 int 
 main (int argc, char ** argv, char **envp) {
