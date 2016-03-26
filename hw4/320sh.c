@@ -20,8 +20,41 @@ void createNewChildProcess(char* objectFilePath,char** argArray, char** environ)
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv"};
 
+/*Stores the history of commands */
+int historySize = 50;
+char* historyCommand[50];
+int historyHead = 0;
+int current=0;
+
+/* History functions*/
+void storeHistory(char * string){
+  int headIndex = historyHead % historySize; /*Valid index within the array */
+  historyCommand[headIndex]=string;
+  historyHead++; /*Next available space to store next string */
+  current=(historyHead-1); /*Index of most current String */
+}
+
+int moveForwardInHistory(){
+  if( (current<historyHead) && 
+  	(( (current+1)%historySize) != (historyHead%historySize))) {
+  	current++;
+  	return (current%historySize);
+  }
+  return(current%historySize); /* Can't move forward, don't increment */
+}
+
+int moveBackwardInHistory(){
+	if((current<historyHead)
+	  &&(current>0)
+	  &&(((current-1)%historySize) != ((historyHead-1)%historySize))){ /*Not overwriting the most current cmd string*/
+		current--;
+		return(current%historySize);
+	}
+	return(current%historySize);
+}
+
 /* Test Function*/
-void test(char ** envp){
+void test(){
 
   /* Print environment variables 
   printf("\nTesting environmentP: \n");
@@ -32,6 +65,33 @@ void test(char ** envp){
   }
   printf("Path: %s\n", getenv("PATH")); */
 
+  /*Test: historyCommand
+  char* str[]={"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25",
+    "26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51"};
+  int i;
+  
+  for(i=0;i<51;i++){
+  	storeHistory(str[i]);
+  	printf("\nStoring string %s\n",str[i]);
+  	fflush(stdout);
+  }
+  
+  int moved=0;
+  for(i=0;i<100;i++){
+    moved=moveForwardInHistory();
+    printf("\n Moved is %d\n",moved);
+  	fflush(stdout);
+  }
+  if(moved >=0){
+        historyCommand[moved]="->";
+  }
+  for(i=0; historyCommand[i]!=NULL;i++){
+  	write(1,"\n",1);
+  	write(1,historyCommand[i],strlen(historyCommand[i]));
+  }
+  write(1,"\n",1); */
+
+  /*End Of Test History Command */
 
 }
 
@@ -80,7 +140,9 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   char * token;
   char * savePtr;
   int argCount = 0;
-  token = strtok_r(cmd," \n",&savePtr);
+  char cmdCopy[MAX_INPUT];
+  strcpy(cmdCopy,cmd);
+  token = strtok_r(cmdCopy," \n",&savePtr);
   while(token != NULL){
 
   	/*Test: Print out token 
@@ -94,6 +156,11 @@ char ** parseCommandLine(char* cmd, char ** argArray){
     token = strtok_r(NULL," \n",&savePtr);
   }
   argArray[argCount]=NULL; /* Null terminate */
+
+  /* Parsed a non-empty string, store in history*/
+  if(argCount>1){
+    storeHistory(cmd);
+  }
 
   /*Test: Print out contents of argArray 
   write(1,"\nfinished\n\0",11);
@@ -244,6 +311,7 @@ main (int argc, char ** argv, char **envp) {
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
 
+  test();
 
   while (!finished) {
     char *cursor;
