@@ -9,7 +9,7 @@
 int isBuiltIn(char * command);
 char ** parseCommandLine(char* cmd, char ** argArray);
 void executeArgArray(char * argArray[],char * environ[]);
-void *statFind(char *cmd);
+char *statFind(char *cmd);
 void printError(char* command);
 void createNewChildProcess(char* objectFilePath,char** argArray, char** environ);
 
@@ -206,10 +206,11 @@ void executeArgArray(char * argArray[], char * environ[]){
 
       /*Find and execute the binary path */
       char * fullCommandPath; 
-      fullCommandPath = (char*)statFind(argArray[0]);
+      fullCommandPath = statFind(argArray[0]);
       if(fullCommandPath!=NULL){
         createNewChildProcess(fullCommandPath,argArray,environ);
       }else { /*Not found */
+      	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
       }
 
