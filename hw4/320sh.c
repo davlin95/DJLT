@@ -5,7 +5,8 @@
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
-void parseCommandLine(char* cmd);
+char ** parseCommandLine(char* cmd, char ** argArray);
+void executeArgArray(char * argArray[]);
 
 
 /* Assume no input line will be longer than 1024 bytes */
@@ -54,7 +55,7 @@ void toDoList(){
 
 }
 
-void parseCommandLine(char* cmd){
+char ** parseCommandLine(char* cmd, char ** argArray){
 
   /* Headline printing for debugging
 
@@ -66,21 +67,23 @@ void parseCommandLine(char* cmd){
   /* initialize*/
   char * token;
   char * savePtr;
-  char * argArray[MAX_INPUT]; /* at most max_input args */
   int argCount = 0;
-  token = strtok_r(cmd," ",&savePtr);
+  token = strtok_r(cmd," \n",&savePtr);
   while(token != NULL){
 
   	/*Test: Print out token 
     write(1,token,strlen(token));
     write(1,"-->",3); */
 
+    /* Fill up argArray with split strings */
+    /*token = strcat(token, "\0"); */   /*might already be terminated with \0 */
     argArray[argCount]= token;
     argCount++;
-    token = strtok_r(NULL," ",&savePtr);
+    token = strtok_r(NULL," \n",&savePtr);
   }
+  argArray[argCount]=NULL; /* Null terminate */
 
-  /*Test: Print out contents of argArray */
+  /*Test: Print out contents of argArray 
   write(1,"\nfinished\n\0",11);
   int i;
   for(i = 0; i < argCount; i++){
@@ -92,7 +95,9 @@ void parseCommandLine(char* cmd){
   }
   printf("\nArgcount is %d\n",argCount);
   printf("last item is %s\n", argArray[argCount-1]);
-  fflush(stdout);
+  fflush(stdout);*/
+
+  return argArray;
 }
 
 
@@ -111,6 +116,54 @@ int isBuiltIn(char * command){
   }
   return 0; /*No command match found. return false */
 } 
+
+
+void executeArgArray(char * argArray[]){
+  int count;
+  for(count=0; argArray[count]!=NULL;++count)
+  	;
+
+  /*Test: Print count */
+  printf("\n value of count of argArray in executeArgArray is: %d\n", count);
+  for(int i=0;i<count;i++){
+  	printf("arg[%d] is %s\n", i,argArray[i]);
+  }
+  fflush(stdout);
+  /*Test end*/
+
+  int argPosition =0;
+  char * command = argArray[argPosition];
+  if(isBuiltIn(command)){ /*Pre-built binary command */
+
+    /*Our implemented commands */
+    if(strcmp(command,"cd")==0){ 
+      printf("\nexecute cd\n");
+      fflush(stdout);
+    }else if(strcmp(command,"pwd")==0){
+      printf("\nexecute pwd\n");
+      fflush(stdout);
+    }else if(strcmp(command,"echo")==0){
+      printf("\nexecute echo\n");
+      fflush(stdout);
+    }else if(strcmp(command,"set")==0){
+      printf("\nexecute set\n");
+      fflush(stdout);
+    }else if(strcmp(command,"help")==0){
+      printf("\nexecute help\n");
+      fflush(stdout);
+    }else{
+      /* Use statfind() to launch the program from shell */
+      printf("\nuse statfind() to launch the built in\n");
+      printf("%s\n",command);
+      fflush(stdout);
+    }
+
+  }else{ /* Is an object file such as a.out */
+    printf("\nobject file is like a.out\n");
+    fflush(stdout);
+
+  }
+}
 
 int 
 main (int argc, char ** argv, char **envp) {
@@ -156,7 +209,12 @@ main (int argc, char ** argv, char **envp) {
     // Just echo the command line for now
     // write(1, cmd, strnlen(cmd, MAX_INPUT));
     
-    parseCommandLine(cmd);
+
+    char* argArray[MAX_INPUT]; /* Array of arguments */
+    char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
+    executeArgArray(parsedArgArray);
+
+
   }
   return 0;
 }
