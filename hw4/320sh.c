@@ -119,7 +119,9 @@ char *statFind(char *cmd){
   char *command;
   struct stat pathStat;
   char *slash = "/";
-  token = strtok_r(getenv("PATH"),":",&savePtr);
+  char path[strlen(getenv("PATH"))];
+  strcpy(path, getenv("PATH"));
+  token = strtok_r(path,":",&savePtr);
   while(token != NULL){
     pathArray[argCount]= token;
     argCount++;
