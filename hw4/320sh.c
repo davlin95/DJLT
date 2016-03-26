@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
@@ -99,7 +100,28 @@ char ** parseCommandLine(char* cmd, char ** argArray){
 
   return argArray;
 }
-
+void *statFind(char *cmd){
+  char *token;
+  char *savePtr;
+  char *pathArray[MAX_INPUT];
+  int argCount = 0;
+  char *command;
+  struct stat pathStat;
+  char *slash = "/";
+  token = strtok_r(getenv("PATH"),":",&savePtr);
+  while(token != NULL){
+    pathArray[argCount]= token;
+    argCount++;
+    token = strtok_r(NULL,":",&savePtr);
+  }
+  for (int i = 0; i < argCount; i++){
+    char src[strlen(pathArray[i]) + strlen(cmd) + 1];
+    strcat(strcpy(src, pathArray[i]), slash);
+    if (stat((command = strcat(src, cmd)), &pathStat) >= 0)
+      return command;
+  }
+  return NULL;
+}
 
 int isBuiltIn(char * command){
   /* Num elements of built in commands */
