@@ -100,7 +100,7 @@ char ** parseCommandLine(char* cmd, char ** argArray){
 
   return argArray;
 }
-void *statFind(char *cmd){
+char *statFind(char *cmd){
   char *token;
   char *savePtr;
   char *pathArray[MAX_INPUT];
@@ -138,6 +138,22 @@ int isBuiltIn(char * command){
   }
   return 0; /*No command match found. return false */
 } 
+void pwd(){
+  char *path;
+  char buf[MAX_INPUT];
+  path = getcwd(buf, MAX_INPUT);
+  write(1, path, strlen(path));
+  write(1, "\n", 1);
+}
+void set(char argArray[]){
+  char * token;
+  char * token2;
+  char *equals = "=";
+  token = strtok(argArray, equals);
+  token2 = strtok(NULL, equals);
+  if (getenv(token) != NULL)
+    setenv(token, token2, 1);
+}
 
 
 void executeArgArray(char * argArray[]){
@@ -162,14 +178,12 @@ void executeArgArray(char * argArray[]){
       printf("\nexecute cd\n");
       fflush(stdout);
     }else if(strcmp(command,"pwd")==0){
-      printf("\nexecute pwd\n");
-      fflush(stdout);
+      pwd();
     }else if(strcmp(command,"echo")==0){
       printf("\nexecute echo\n");
       fflush(stdout);
     }else if(strcmp(command,"set")==0){
-      printf("\nexecute set\n");
-      fflush(stdout);
+      set(argArray[1]);
     }else if(strcmp(command,"help")==0){
       printf("\nexecute help\n");
       fflush(stdout);
