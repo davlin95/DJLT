@@ -56,14 +56,13 @@ int moveBackwardInHistory(){
 /* Test Function*/
 void test(){
 
-  /* Print environment variables 
+  // Print environment variables 
   printf("\nTesting environmentP: \n");
   char** env;
   for(env = envp; *env != '\0'; env++){
   	char * envString = *env;
   	printf("%s\n",envString);
   }
-  printf("Path: %s\n", getenv("PATH")); */
 
   /*Test: historyCommand
   char* str[]={"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25",
@@ -186,7 +185,9 @@ char *statFind(char *cmd){
   char *command;
   struct stat pathStat;
   char *slash = "/";
-  token = strtok_r(getenv("PATH"),":",&savePtr);
+  char path[strlen(getenv("PATH"))];
+  strcpy(path, getenv("PATH"));
+  token = strtok_r(path,":",&savePtr);
   while(token != NULL){
     pathArray[argCount]= token;
     argCount++;
@@ -216,12 +217,96 @@ int isBuiltIn(char * command){
   }
   return 0; /*No command match found. return false */
 } 
+void cd(char argArray[]){
+  if(argArray == NULL){
+    setenv("OLDPWD", getenv("PWD"), 1);
+    setenv("PWD", getenv("HOME"), 1);
+    chdir(getenv("PWD"));
+  }
+  else if(strcmp(argArray,"-")==0){ 
+    char temp[strlen(getenv("OLDPWD"))];
+    strcpy(temp,getenv("OLDPWD"));
+    setenv("OLDPWD", getenv("PWD"), 1);
+    setenv("PWD", temp, 1);
+    chdir(getenv("PWD")); 
+  }else if(argArray[0] == '.'){
+    if (argArray[1] == '\0')
+      setenv("OLDPWD", getenv("PWD"), 1);
+    else if(argArray[1] == '/'){
+      char *argPtr = &argArray[1];
+      char path[strlen(getenv("PWD")) + strlen(argArray) - 1];
+      strcat(strcpy(path, getenv("PWD")), argPtr);
+      struct stat pathStat;
+      if (stat(path, &pathStat) >= 0){
+        setenv("OLDPWD", getenv("PWD"), 1);
+        setenv("PWD", path, 1); 
+        chdir(getenv("PWD"));
+      } 
+      else {
+        write(1, "cd: ", 4);
+        write(1, argArray, strlen(argArray));
+        write(1, ": No such file or directory\n", 28);
+      }
+    }else if(argArray[1] == '.'){
+      char path[strlen(getenv("PWD")) + strlen(argArray) - 2];
+      strcpy(path, getenv("PWD"));
+      if (strcmp(getenv("HOME"), getenv("PWD")) != 0){
+        char *lastSlash = strrchr(path, '/');
+        *lastSlash = '\0';
+      }
+      if (argArray[2] == '\0'){
+        setenv("OLDPWD", getenv("PWD"), 1);
+        setenv("PWD", path, 1); 
+        chdir(getenv("PWD"));
+      }else if (argArray[2] == '/'){
+        char *argPtr = &argArray[2];
+        strcat(path, argPtr);
+        struct stat pathStat;
+        if (stat(path, &pathStat) >= 0){
+          setenv("OLDPWD", getenv("PWD"), 1);
+          setenv("PWD", path, 1); 
+          chdir(getenv("PWD"));
+        }else {
+          write(1, "cd: ", 4);
+          write(1, argArray, strlen(argArray));
+          write(1, ": No such file or directory\n", 28);
+        } 
+      }else {
+          write(1, "cd: ", 4);
+          write(1, argArray, strlen(argArray));
+          write(1, ": No such file or directory\n", 28);
+      } 
+    }else {
+      write(1, "cd: ", 4);
+      write(1, argArray, strlen(argArray));
+      write(1, ": No such file or directory\n", 28);
+    } 
+    }else {
+      struct stat pathStat;
+      char path[strlen(getenv("PWD")) + strlen(argArray) + 1];
+      strcpy(path, getenv("PWD"));
+      strcat((strcat(path, "/")), argArray);
+      printf("path is %s\n", path);
+      if (stat(path, &pathStat) >= 0){
+          setenv("OLDPWD", getenv("PWD"), 1);
+          setenv("PWD", path, 1); 
+          chdir(getenv("PWD"));
+      }
+      else {
+          write(1, "cd: ", 4);
+          write(1, argArray, strlen(argArray));
+          write(1, ": No such file or directory\n", 28);
+      }  
+    }
+  }
 void pwd(){
   char *path;
   char buf[MAX_INPUT];
   path = getcwd(buf, MAX_INPUT);
   write(1, path, strlen(path));
   write(1, "\n", 1);
+  printf("pid is %d\n", getpid());
+  fflush(stdout);
 }
 void set(char argArray[]){
   char * token;
@@ -253,8 +338,7 @@ void executeArgArray(char * argArray[], char * environ[]){
 
     /*Our implemented commands */
     if(strcmp(command,"cd")==0){ 
-      printf("\nexecute cd\n");
-      fflush(stdout);
+      cd(argArray[1]);
     }else if(strcmp(command,"pwd")==0){
       pwd();
     }else if(strcmp(command,"echo")==0){
@@ -294,6 +378,7 @@ void createNewChildProcess(char* objectFilePath,char** argArray, char** environ)
   pid_t pid;
   int status;
   if((pid=fork())==0){
+    printf("child's parent pid is %d\n", getppid());
     execve(objectFilePath,argArray,environ);
     exit(0);
   }else{
@@ -311,8 +396,12 @@ main (int argc, char ** argv, char **envp) {
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
 
+<<<<<<< HEAD
   test();
 
+=======
+  
+>>>>>>> dcaa76a85e1eead4fbcb26635f47c966904b7553
   while (!finished) {
     char *cursor;
     char last_char;
@@ -320,6 +409,9 @@ main (int argc, char ** argv, char **envp) {
     int count;
 
     // Print the prompt
+    write(1, "[", 1);
+    write(1, getenv("PWD"), strlen(getenv("PWD")));
+    write(1, "] ", 2);
     rv = write(1, prompt, strlen(prompt));
     if (!rv) { 
       finished = 1;
@@ -349,7 +441,6 @@ main (int argc, char ** argv, char **envp) {
     // Just echo the command line for now
     // write(1, cmd, strnlen(cmd, MAX_INPUT));
     
-
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
     executeArgArray(parsedArgArray,envp);
