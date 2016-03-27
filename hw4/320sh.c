@@ -5,25 +5,11 @@
 #include <termios.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include "shellHeader.h"
 
 /* Key definitions and Canonicals */
-#define UP_KEY "^[[A"
-#define DOWN_KEY "^[[B"
-#define RIGHT_KEY "^[[C"
-#define LEFT_KEY "^[[D"
 struct termios termios_set;
 struct termios termios_prev;
-
-/*Header Prototypes */
-int isBuiltIn(char * command);
-char ** parseCommandLine(char* cmd, char ** argArray);
-void executeArgArray(char * argArray[],char * environ[]);
-char *statFind(char *cmd);
-void printError(char* command);
-void createNewChildProcess(char* objectFilePath,char** argArray, char** environ);
-
-/* Assume no input line will be longer than 1024 bytes */
-#define MAX_INPUT 1024
 
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv","exit"};
@@ -100,14 +86,34 @@ void test(){
   write(1,"\n",1); */
 
   /*End Of Test History Command */
-
 }
 
-void printError(char * command){
-  write(2,"\n",1);
-  write(2,command,strnlen(command,MAX_INPUT));
-  char * msg = ":command not found\n\0";
-  write(2,msg,strlen(msg));  
+void launchObjectFile(char**argArray){
+  char* command = argArray[0];
+  int pathSize = strlen(getenv("PWD"));
+  char buildingPath[pathSize];
+  strcpy(buildingPath,getenv("PWD"));
+
+  /*Test print
+  printf("\nbuildingPath is: %s\n",buildingPath);
+  printf("command is: %s\n",command);
+  fflush(stdout);*/
+
+  /*Find the traversal path */
+  char * traversal[MAX_INPUT];
+  parseByDelimiter(traversal,command,"/ ");
+
+  /*Test Print the array we just filled 
+  char**traversalPtr = traversal;
+  while(*traversalPtr != NULL){
+    printf("traversal is: %s\n",*traversalPtr);
+    fflush(stdout);
+    traversalPtr++;
+  }*/
+
+
+
+
 }
 
 void nonCanonicalSettings(){
@@ -362,7 +368,7 @@ void executeArgArray(char * argArray[], char * environ[]){
       fflush(stdout);
       /*
       canonicalSettings();*/
-      
+
       exit(0);
     }else{
       /* Use statfind() to launch the program from shell */
@@ -383,6 +389,8 @@ void executeArgArray(char * argArray[], char * environ[]){
   }else{ /* Is an object file such as a.out */
     printf("\nobject file is like a.out\n");
     fflush(stdout);
+    launchObjectFile(argArray);
+
   }
 }
 
