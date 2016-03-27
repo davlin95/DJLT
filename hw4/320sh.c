@@ -13,7 +13,6 @@ char *statFind(char *cmd);
 void printError(char* command);
 void createNewChildProcess(char* objectFilePath,char** argArray, char** environ);
 
-
 /* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
 
@@ -57,12 +56,13 @@ int moveBackwardInHistory(){
 void test(){
 
   // Print environment variables 
+  /*
   printf("\nTesting environmentP: \n");
   char** env;
   for(env = envp; *env != '\0'; env++){
   	char * envString = *env;
   	printf("%s\n",envString);
-  }
+  }*/
 
   /*Test: historyCommand
   char* str[]={"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25",
@@ -217,6 +217,7 @@ int isBuiltIn(char * command){
   }
   return 0; /*No command match found. return false */
 } 
+
 void cd(char argArray[]){
   if(argArray == NULL){
     setenv("OLDPWD", getenv("PWD"), 1);
@@ -396,12 +397,8 @@ main (int argc, char ** argv, char **envp) {
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
 
-<<<<<<< HEAD
   test();
 
-=======
-  
->>>>>>> dcaa76a85e1eead4fbcb26635f47c966904b7553
   while (!finished) {
     char *cursor;
     char last_char;
