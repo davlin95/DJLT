@@ -2,8 +2,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <termios.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+
+/* Key definitions and Canonicals */
+#define UP_KEY "^[[A"
+#define DOWN_KEY "^[[B"
+#define RIGHT_KEY "^[[C"
+#define LEFT_KEY "^[[D"
+struct termios termios_set;
+struct termios termios_prev;
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
@@ -17,7 +26,7 @@ void createNewChildProcess(char* objectFilePath,char** argArray, char** environ)
 #define MAX_INPUT 1024
 
 /* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv"};
+char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv","exit"};
 
 /*Stores the history of commands */
 int historySize = 50;
@@ -94,36 +103,21 @@ void test(){
 
 }
 
-void toDoList(){
-
-/* Tasks*/
-   /* 
-      -- statFind() : Checks path variable for ls command using stat
-      -- parseCommandLine(): parses and executes command line. 
-      -- setPath(): sets path variable. Also must update printenv results. 
-      -- help() : printout the built in's. 
-      -- pwd(): 
-   */
-
-  /* David : */
-     /* 
-		-- parseCommandLine(): currently fills up the arg list. last item is '\0'?
-		--
-     */
-
-  /* Wilson: */
-      /*
-      	-- statFind()
-      	--
-      */
-
-}
-
 void printError(char * command){
   write(2,"\n",1);
   write(2,command,strnlen(command,MAX_INPUT));
   char * msg = ":command not found\n\0";
   write(2,msg,strlen(msg));  
+}
+
+void nonCanonicalSettings(){
+  tcgetattr(0,&termios_prev); /*Store Copy of previous */
+  tcgetattr(0,&termios_set); /* Modfy this copy*/
+  cfmakeraw(&termios_set);   
+  tcsetattr(0,TCSANOW,&termios_set);
+}
+void canonicalSettings(){
+  tcsetattr(0,TCSANOW,&termios_prev);
 }
 
 char ** parseCommandLine(char* cmd, char ** argArray){
@@ -319,6 +313,19 @@ void set(char argArray[]){
     setenv(token, token2, 1);
 }
 
+void launcherScript(char * envp[]){
+  char * filename = "$. ./launcherScript.sh";
+  char * argv[2];
+  argv[0] = filename;
+  argv[1] =NULL;
+  int response=0;
+
+  char * output= "\nlauncher script failed";
+  response = execve(filename,argv,envp);
+  if(response)
+    write(1,output,strlen(output));
+}
+
 
 void executeArgArray(char * argArray[], char * environ[]){
   int count;
@@ -350,6 +357,13 @@ void executeArgArray(char * argArray[], char * environ[]){
     }else if(strcmp(command,"help")==0){
       printf("\nexecute help\n");
       fflush(stdout);
+    }else if(strcmp(command,"exit")==0){
+      printf("\nExecute exit\n");
+      fflush(stdout);
+      /*
+      canonicalSettings();*/
+      
+      exit(0);
     }else{
       /* Use statfind() to launch the program from shell */
       printf("\nuse statfind() to launch the built in\n");
@@ -365,13 +379,10 @@ void executeArgArray(char * argArray[], char * environ[]){
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
       }
-
     }
-
   }else{ /* Is an object file such as a.out */
     printf("\nobject file is like a.out\n");
     fflush(stdout);
-
   }
 }
 
@@ -387,17 +398,17 @@ void createNewChildProcess(char* objectFilePath,char** argArray, char** environ)
       printf("\nParent Process reaped child process %d\n",pid);
       fflush(stdout);
   }
-
 }
 
 int 
 main (int argc, char ** argv, char **envp) {
-
   int finished = 0;
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
 
-  test();
+  /* Failed Canonical Stuff
+  nonCanonicalSettings();
+  launcherScript(envp);*/
 
   while (!finished) {
     char *cursor;
@@ -423,7 +434,9 @@ main (int argc, char ** argv, char **envp) {
 	cursor++) {
       rv = read(0, cursor, 1);
       last_char = *cursor;
-      if(last_char == 3) {
+      if(last_char=='^'){
+      }
+      else if(last_char == 3) {
         write(1, "^c", 2);
       } else {
 		write(1, &last_char, 1);
@@ -441,8 +454,7 @@ main (int argc, char ** argv, char **envp) {
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
     executeArgArray(parsedArgArray,envp);
-
-
   }
+  /*canonicalSettings();*/
   return 0;
 }
