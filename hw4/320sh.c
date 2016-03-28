@@ -88,32 +88,57 @@ void test(){
   /*End Of Test History Command */
 }
 
-void launchObjectFile(char**argArray){
-  char* command = argArray[0];
+char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   int pathSize = strlen(getenv("PWD"));
-  char buildingPath[pathSize];
+  char buildingPath[pathSize+1]; // add one for null byte
   strcpy(buildingPath,getenv("PWD"));
+  char *buildingPathPtr = buildingPath;
 
   /*Test print
   printf("\nbuildingPath is: %s\n",buildingPath);
+  char buff[strlen(buildingPath)];
+  printf("\nparentPath is: %s\n",parentDirectory(buildingPath,buff));
   printf("command is: %s\n",command);
-  fflush(stdout);*/
+  fflush(stdout); */
 
   /*Find the traversal path */
   char * traversal[MAX_INPUT];
-  parseByDelimiter(traversal,command,"/ ");
+  parseByDelimiter(traversal,cmdString,"/ ");
 
   /*Test Print the array we just filled 
-  char**traversalPtr = traversal;
-  while(*traversalPtr != NULL){
-    printf("traversal is: %s\n",*traversalPtr);
-    fflush(stdout);
-    traversalPtr++;
-  }*/
+  int i =0;
+  while(traversal[i] != NULL&& traversal[i] !='\0'){
+    printf("traversal is: %s\n",traversal[i]);
+    i++;
+  }
+  fflush(stdout);*/
 
+  /* Build the path to the file */
+  int count =0;
+  //int childSize=0;
+  int result=0; 
+  while(traversal[count] != NULL && traversal[count] !='\0'){
+  	if( (result = strcmp(traversal[count],".")) ==0){ 
 
+  	}else if((result = strcmp(traversal[count],"..")) ==0){ /* Move up one parent*/
+      parentDirectory(buildingPathPtr);
+      printf("\n moved to parent path: %s\n",buildingPathPtr);
+      fflush(stdout);
+  	}else{  
+  	  /*Append */
+      directoryAppendChild(buildingPathPtr,traversal[count]);
+      printf("\nappended child, buildingPathPtr is: %s\n",buildingPathPtr);
+      fflush(stdout);
+  	}
+    count++; /* Move onto next traversal string */
+  }
+  /*Test print result
+  printf("built finally: %s\n",buildingPathPtr);
+  fflush(stdout);*/
+  if(bufferSize>0)
+    return strncpy(buffer,buildingPathPtr,bufferSize-1);
 
-
+  return NULL; /*if invalid size */
 }
 
 void nonCanonicalSettings(){
@@ -371,35 +396,47 @@ void executeArgArray(char * argArray[], char * environ[]){
 
       exit(0);
     }else{
-      /* Use statfind() to launch the program from shell */
+      /* Test Print: Use statfind() to launch the program from shell 
       printf("\nuse statfind() to launch the built in\n");
       printf("%s\n",command);
-      fflush(stdout);
+      fflush(stdout); */
 
       /*Find and execute the binary path */
       char * fullCommandPath; 
       fullCommandPath = statFind(argArray[0]);
       if(fullCommandPath!=NULL){
-        createNewChildProcess(fullCommandPath,argArray,environ);
+        createNewChildProcess(fullCommandPath,argArray);
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
       }
     }
   }else{ /* Is an object file such as a.out */
-    printf("\nobject file is like a.out\n");
-    fflush(stdout);
-    launchObjectFile(argArray);
+    /*Make buffer */
+    char buffer[MAX_INPUT];
 
+    /*Parse into absolute path */
+    if(turnRelativeToAbsolute(argArray[0],buffer,MAX_INPUT)!=NULL){
+      printf("\nValue of buffer is: %s\n",buffer);
+      if(statExists(buffer)){
+    	printf("dir exists: %s\n",buffer);
+    	createNewChildProcess(buffer,argArray);
+      }
+    }else{
+      fprintf(stderr,"Error in turnRelativeToAbsolute for %s",argArray[0]);
+    }
   }
 }
 
-void createNewChildProcess(char* objectFilePath,char** argArray, char** environ){
+void createNewChildProcess(char* objectFilePath,char** argArray){
   pid_t pid;
   int status;
   if((pid=fork())==0){
     printf("child's parent pid is %d\n", getppid());
-    execve(objectFilePath,argArray,environ);
+    int ex = execvp(objectFilePath,argArray);
+    if(ex){
+      printError(objectFilePath);
+    }
     exit(0);
   }else{
       wait(&status);
