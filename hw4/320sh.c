@@ -14,6 +14,45 @@ struct termios termios_prev;
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv","exit"};
 
+/* Terminal Variables */
+var* varHead=NULL;
+
+var* getVarNode(char* keyString){
+  /*Initialize*/
+  char* str;
+  var* varPtr = varHead;
+
+  /*check case*/
+  if(varPtr ==NULL) return NULL;
+  
+  /* search list for matching keyString*/
+  while(varPtr!=NULL){ 
+    str = varPtr->key;
+    if( (int result = strcmp(str,keyString))==0) 
+      return varPtr;
+  	else 
+  	  varPtr = varPtr->next;
+  }
+  return NULL;
+}
+var* createNode(char* key, char* value){
+  static var node;
+  node->key = key;
+  node->value = value;
+  return &node;
+}
+
+void setKeyValuePair(char* key, char* value){
+  var* node = getVarNode(key);
+  if(node!=NULL){
+  	node->value = value;
+  }else{
+    node = createNode(key,value);
+    node->next = varHead;
+    varHead = node;
+  }
+}
+
 /*Stores the history of commands */
 int historySize = 50;
 char* historyCommand[50];
@@ -47,46 +86,6 @@ int moveBackwardInHistory(){
 	return(current%historySize);
 }
 
-/* Test Function*/
-void test(){
-
-  // Print environment variables 
-  /*
-  printf("\nTesting environmentP: \n");
-  char** env;
-  for(env = envp; *env != '\0'; env++){
-  	char * envString = *env;
-  	printf("%s\n",envString);
-  }*/
-
-  /*Test: historyCommand
-  char* str[]={"1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25",
-    "26","27","28","29","30","31","32","33","34","35","36","37","38","39","40","41","42","43","44","45","46","47","48","49","50","51"};
-  int i;
-  
-  for(i=0;i<51;i++){
-  	storeHistory(str[i]);
-  	printf("\nStoring string %s\n",str[i]);
-  	fflush(stdout);
-  }
-  
-  int moved=0;
-  for(i=0;i<100;i++){
-    moved=moveForwardInHistory();
-    printf("\n Moved is %d\n",moved);
-  	fflush(stdout);
-  }
-  if(moved >=0){
-        historyCommand[moved]="->";
-  }
-  for(i=0; historyCommand[i]!=NULL;i++){
-  	write(1,"\n",1);
-  	write(1,historyCommand[i],strlen(historyCommand[i]));
-  }
-  write(1,"\n",1); */
-
-  /*End Of Test History Command */
-}
 
 char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   int pathSize = strlen(getenv("PWD"));
@@ -154,7 +153,6 @@ void canonicalSettings(){
 char ** parseCommandLine(char* cmd, char ** argArray){
 
   /* Headline printing for debugging
-
   char * promptString = "\nprinting commandline:\n\0";
   write(1,promptString,strlen(promptString)); 
   int cmdLen = strnlen(cmd,MAX_INPUT); 
@@ -168,7 +166,6 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   strcpy(cmdCopy,cmd);
   token = strtok_r(cmdCopy," \n",&savePtr);
   while(token != NULL){
-
   	/*Test: Print out token 
     write(1,token,strlen(token));
     write(1,"-->",3); */
