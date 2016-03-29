@@ -5,6 +5,7 @@
 #include <termios.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
+#include <stdbool.h>
 #include "shellHeader.h"
 
 /* Key definitions and Canonicals */
@@ -28,17 +29,19 @@ var* getVarNode(char* keyString){
   /* search list for matching keyString*/
   while(varPtr!=NULL){ 
     str = varPtr->key;
-    if( (int result = strcmp(str,keyString))==0) 
+    int result =0;
+    if( (result = strcmp(str,keyString))==0) 
       return varPtr;
   	else 
   	  varPtr = varPtr->next;
   }
   return NULL;
 }
+
 var* createNode(char* key, char* value){
   static var node;
-  node->key = key;
-  node->value = value;
+  node.key = key;
+  node.value = value;
   return &node;
 }
 
@@ -442,46 +445,78 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   }
 }
 
-int 
-main (int argc, char ** argv, char **envp) {
+int main (int argc, char ** argv, char **envp) {
   int finished = 0;
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
+  bool escapeSeen = false;
 
   /* Failed Canonical Stuff
   nonCanonicalSettings();
   launcherScript(envp);*/
 
   while (!finished) {
+
     char *cursor;
+    char buffer; 
     char last_char;
     int rv;
     int count;
 
-    // Print the prompt
+    // Print the current directory 
     write(1, "[", 1);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
     write(1, "] ", 2);
+
+    // Print the shell prompt
     rv = write(1, prompt, strlen(prompt));
     if (!rv) { 
       finished = 1;
       break;
     }
+
     // read and parse the input
     for(rv = 1, count = 0, 
 	  cursor = cmd, last_char = 1;
-	  rv 
-	  && (++count < (MAX_INPUT-1))
-	  && (last_char != '\n');
-	cursor++) {
-      rv = read(0, cursor, 1);
-      last_char = *cursor;
-      if(last_char=='^'){
+	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
+	  /* Read the value */
+      rv = read(0, &buffer, 1);
+      last_char = buffer;
+      escapeSeen = false; //enable printing to screen 
+
+      /* Detect escape sequence keys like arrows */
+      if(last_char=='\033'){
+      	escapeSeen = true; // disable printing to screen for terminal commands
+      	if((rv = read(0, &buffer, 1)>0) && buffer=='['){
+      	  last_char = buffer;
+		  if((rv = read(0, &buffer, 1)>0)){
+            switch(buffer){
+             case 'A': printf(" UP_KEY " ); fflush(stdout); 
+                       // DO SOMETHING with HISTORY
+                  break; 
+             case 'B': printf(" DOWN_KEY " ); fflush(stdout);
+             		   // DO SOMETHING with HISTORY
+                  break;
+             case 'C': printf(" RIGHT_KEY " ); fflush(stdout);
+                       // DO SOMETHING with HISTORY
+                  break;
+             case'D': printf(" LEFT_KEY " ); fflush(stdout);
+                      // DO SOMETHING with HISTORY
+                  break;
+            }
+		  }
+      	}
       }
+      /* Detect CTRL-C */
       else if(last_char == 3) {
         write(1, "^c", 2);
-      } else {
-		write(1, &last_char, 1);
+      }else {
+      	/* Display the last seen char to terminal */
+      	if(!escapeSeen)
+		  write(1, &last_char, 1);
+		/* Transfer the value into cmd pointed to by cursor */
+        *cursor = buffer;
+		cursor++;
       }
     } 
     *cursor = '\0';
