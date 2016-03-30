@@ -202,17 +202,37 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   if ((firstQuote = strchr(cmdCopy, '"')) != NULL){
     lastQuote = strrchr(cmdCopy, '"');
     firstQuote++;
-    while (firstQuote != lastQuote){
-      nextQuote = strchr(firstQuote,'"');
-      while (firstQuote != nextQuote){
-        if (*firstQuote == ' ')
-          *firstQuote = 0xEA;
-        firstQuote++;
-      }
-      if (firstQuote != lastQuote){
-        firstQuote++;
-        firstQuote = strchr(firstQuote, '"');
-        firstQuote++;
+    if (firstQuote == lastQuote){
+        firstQuote--;
+        *firstQuote = ' ';
+        *lastQuote = ' ';
+    }
+    else{
+      while (firstQuote != lastQuote){
+        nextQuote = strchr(firstQuote,'"');
+        if (firstQuote == nextQuote){
+          firstQuote--;
+          *firstQuote = ' ';
+          *nextQuote = ' ';
+        }
+        else{
+          while (firstQuote != nextQuote){
+            if (*firstQuote == ' ')
+              *firstQuote = 0xEA;
+            firstQuote++;
+          }
+        }
+        if (firstQuote != lastQuote){
+          firstQuote++;
+          firstQuote = strchr(firstQuote, '"');
+          firstQuote++;
+          if (firstQuote == lastQuote){
+            firstQuote--;
+            *firstQuote = ' ';
+            *lastQuote = ' ';
+            firstQuote++;
+          }
+        }
       }
     }
   }
@@ -359,9 +379,9 @@ void processCd(char argArray[]){
         badDirectory = 1;
     }
     if (badDirectory){
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
+          write(2, "cd: ", 4);
+          write(2, argArray, strlen(argArray));
+          write(2, ": No such file or directory\n", 28);
           error = 1;
       }  
   }
@@ -388,7 +408,8 @@ void processSet(char argArray[]){
   else if (alphaNumerical(token)){
     printf("setenv returned %d\n", setenv(token, token2, 1));
     printf("token is %s and token2 is %s\n", token, token2);
-  }
+  } else 
+    error = 1;
   printf("getenv(%s) is %s\n", token, getenv(token));
 }
 void processEcho(char argArray[]){
