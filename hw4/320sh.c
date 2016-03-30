@@ -6,7 +6,6 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdbool.h>
-#include <errno.h>
 #include <curses.h>
 #include "shellHeader.h"
 
@@ -14,7 +13,7 @@
 /* Key definitions and Canonicals */
 struct termios termios_set;
 struct termios termios_prev;
-
+int error = 0;
 /*Strings for help menu: WARNING!!! LAST ELEMENT MUST BE NULL, for the printHelpMenu() function */
 char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o option->",
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
@@ -81,7 +80,6 @@ int current=0;
 
 /* History functions*/
 void storeHistory(char * string){
-  printf("in store function, line is %s", string);
   int headIndex = historyHead % historySize; /*Valid index within the array */
   
   /* Free the previous string */
@@ -275,7 +273,7 @@ int isBuiltIn(char * command){
 } 
 
 void processCd(char argArray[]){
-  int error = 0;
+  int badDirectory = 0;
   if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
     argArray[strlen(argArray)-1] = '\0';
   }
@@ -303,7 +301,7 @@ void processCd(char argArray[]){
         setenv("PWD", path, 1); 
         chdir(getenv("PWD"));
       } else 
-        error = 1;
+        badDirectory = 1;
     }else if(argArray[1] == '.'){
       char path[strlen(getenv("PWD")) + strlen(argArray) - 2];
       strcpy(path, getenv("PWD"));
@@ -324,14 +322,14 @@ void processCd(char argArray[]){
           setenv("PWD", path, 1); 
           chdir(getenv("PWD"));
         }else 
-        error = 1;
+        badDirectory = 1;
       }else 
-        error = 1;
+        badDirectory = 1;
     }else 
-        error = 1;
+        badDirectory = 1;
     }else if(argArray[0] == '\0'){
           argArray[0] = '/';
-          error = 1;
+          badDirectory = 1;
     }  
     else {
       struct stat pathStat;
@@ -344,12 +342,13 @@ void processCd(char argArray[]){
           chdir(getenv("PWD"));
       }
       else 
-        error = 1;
+        badDirectory = 1;
     }
-    if (error){
+    if (badDirectory){
           write(1, "cd: ", 4);
           write(1, argArray, strlen(argArray));
           write(1, ": No such file or directory\n", 28);
+          error = 1;
       }  
   }
 void processPwd(){
@@ -379,13 +378,22 @@ void processSet(char argArray[]){
   printf("getenv(%s) is %s\n", token, getenv(token));
 }
 void processEcho(char argArray[]){
-  char error[1] = {errno};
   char *argPtr = &argArray[1];
-  if (argArray != NULL && argArray[0] == '$'){
-    if (*argPtr == '?')
-      write(1, error, 1);
-    else if (getenv(argPtr) != NULL)
-      write(1, getenv(argPtr), strlen(getenv(argPtr)));
+  if (argArray != NULL){
+    if (argArray[0] == '$'){
+      if (strcmp(argPtr, "?")==0){
+        if (error)
+          write(1, "1", 1);
+        else
+          write(1, "0", 1);
+        error = 0;
+      }
+      else if (getenv(argPtr) != NULL)
+        write(1, getenv(argPtr), strlen(getenv(argPtr)));
+    }
+    else {
+        write(1, argArray, strlen(argArray));
+    }
   }
   write(1, "\n", 2);
 }
@@ -463,6 +471,7 @@ void executeArgArray(char * argArray[], char * environ[]){
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
+        error = 1;
       }
     }
   }else{ /* Is an object file such as a.out */
@@ -476,6 +485,8 @@ void executeArgArray(char * argArray[], char * environ[]){
     	printf("dir exists: %s\n",buffer);
     	createNewChildProcess(buffer,argArray);
       }
+      else
+        error = 1;
     }else{
       fprintf(stderr,"Error in turnRelativeToAbsolute for %s",argArray[0]);
     }
@@ -488,28 +499,25 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   if((pid=fork())==0){
     printf("child's parent pid is %d\n", getppid());
     int ex = execvp(objectFilePath,argArray);
-    if(ex){
+    if(ex){      
       printError(objectFilePath);
     }
     exit(0);
   }else{
       wait(&status);
+      if (status)
+        error = 1;
       printf("\nParent Process reaped child process %d\n",pid);
       fflush(stdout);
   }
 }
-int main (int argc, char ** argv, char **envp) {
-  int finished = 0;
-  char *prompt = "320sh> ";
-  char cmd[MAX_INPUT];
-  bool escapeSeen = false;
+void  initializeHistory(){
   char historyPath[strlen(getenv("HOME")) + 15];
   strcat((strcpy(historyPath, getenv("HOME"))), "/.320sh_history");
   FILE *historyFile;
   if ((historyFile = fopen(historyPath, "r"))){
     char line[MAX_INPUT];
     while (fgets(line, sizeof(line), historyFile)){
-      printf("line is %s", line);
       if (line != NULL)
       storeHistory(line);
     }
@@ -517,6 +525,13 @@ int main (int argc, char ** argv, char **envp) {
       historyFile = fopen(historyPath, "w");
     }
   fclose(historyFile);
+}
+int main (int argc, char ** argv, char **envp) {
+  int finished = 0;
+  char *prompt = "320sh> ";
+  char cmd[MAX_INPUT];
+  bool escapeSeen = false;
+  initializeHistory();
   while (!finished) {
 
     char *cursor;
@@ -617,7 +632,6 @@ int main (int argc, char ** argv, char **envp) {
       }
     } 
     *cursor = '\0';
-    storeHistory(cmd);
     if (!rv) { 
       finished = 1;
       break;
