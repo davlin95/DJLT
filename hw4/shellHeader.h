@@ -15,6 +15,8 @@ char *statFind(char *cmd);
 void printError(char* command);
 void createNewChildProcess(char* objectFilePath,char** argArray);
 
+
+
 /* Terminal Variables */
 typedef struct variableNode{
   char* key;

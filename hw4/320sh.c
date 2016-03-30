@@ -12,9 +12,22 @@
 struct termios termios_set;
 struct termios termios_prev;
 
-/* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"ls","cd","pwd","echo","set","ps","printenv","exit"};
+/*Strings for help menu: WARNING!!! LAST ELEMENT MUST BE NULL, for the printHelpMenu() function */
+char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o option->",
+"ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
 
+/* Make global array of built-in strings */
+char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
+
+/*Helper Function Key-Value Strings */
+void printHelpMenu(){
+  char** str = helpStrings;
+  while(*str!=NULL){
+  	printf("%-30s\n",*str); 
+  	str++;
+  }
+  fflush(stdout);
+}
 /* Terminal Variables */
 var* varHead=NULL;
 
@@ -387,6 +400,7 @@ void executeArgArray(char * argArray[], char * environ[]){
       set(argArray[1]);
     }else if(strcmp(command,"help")==0){
       printf("\nexecute help\n");
+      printHelpMenu();
       fflush(stdout);
     }else if(strcmp(command,"exit")==0){
       printf("\nExecute exit\n");
