@@ -9,8 +9,9 @@
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
+
+bool executeArgArray(char * argArray[], char * environ[]);
 char ** parseCommandLine(char* cmd, char ** argArray);
-void executeArgArray(char * argArray[],char * environ[]);
 char *statFind(char *cmd);
 void printError(char* command);
 void createNewChildProcess(char* objectFilePath,char** argArray);
@@ -18,8 +19,13 @@ void createNewChildProcess(char* objectFilePath,char** argArray);
 /* ANSII CODE FOR ARROW MOVEMENT */
 char* moveLeftAscii = "\033[D";
 char * moveRightAscii ="\033[C";
-char * backspaceAscii = "\010";
-char * deleteAscii = "\177";
+char * backspaceAscii = "\b";
+char * deleteAscii = "\b \b";
+char * eraseLineAscii = "\033[K";
+char * cursorPosAscii = "\033[6n";
+char * saveCursorPosAscii = "\033[s";
+char * loadCursorPosAscii = "\033[u";
+
 
 /* Terminal Variables */
 typedef struct variableNode{

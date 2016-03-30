@@ -18,6 +18,16 @@ char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o optio
 
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
+char temporaryCommandlineCache[MAX_INPUT];
+char *temporaryCommandlineCachePtr;
+bool inCommandlineCache;
+
+void storeCommandLineCache(char* cmd){
+  if(cmd!=NULL){
+  	temporaryCommandlineCachePtr=temporaryCommandlineCache;
+    strncpy(temporaryCommandlineCache,cmd,strnlen(cmd,MAX_INPUT));
+  }else temporaryCommandlineCachePtr=NULL;
+}
 
 /*Helper Function Key-Value Strings */
 void printHelpMenu(){
@@ -75,6 +85,18 @@ char* historyCommand[50];
 int historyHead = 0;
 int current=0;
 
+void printHistoryCommand(){
+  int i=0;
+  if(historyCommand[i]==NULL){
+    printf("History command is null");fflush(stdout);
+  } 
+
+  while(historyCommand[i]!=NULL){
+    printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
+    i++;
+  }
+}
+
 /* History functions*/
 void storeHistory(char * string){
   int headIndex = historyHead % historySize; /*Valid index within the array */
@@ -112,6 +134,14 @@ int moveBackwardInHistory(){
 	return(current%historySize);
 }
 
+bool hasHistoryEntry(){
+  int headIndex = (historyHead-1) % historySize; /*Valid index within the array */
+  /* Free the previous string */
+  if(historyCommand[headIndex]!=NULL){
+  	return true;
+  }
+  return false;
+}
 
 char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   int pathSize = strlen(getenv("PWD"));
@@ -205,9 +235,12 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   argArray[argCount]=NULL; /* Null terminate */
 
   /* Parsed a non-empty string, store in history*/
-  if(argCount>1){
+  if(argCount>0){
     storeHistory(cmd);
-  }
+    //printf("\nStored into historyCommand");fflush(stdout);
+  }else{
+    //printf("\nUnable to store into historyCommand");fflush(stdout);
+  } 
 
   /*Test: Print out contents of argArray 
   write(1,"\nfinished\n\0",11);
@@ -367,31 +400,18 @@ void set(char argArray[]){
     setenv(token, token2, 1);
 }
 
-void launcherScript(char * envp[]){
-  char * filename = "$. ./launcherScript.sh";
-  char * argv[2];
-  argv[0] = filename;
-  argv[1] =NULL;
-  int response=0;
 
-  char * output= "\nlauncher script failed";
-  response = execve(filename,argv,envp);
-  if(response)
-    write(1,output,strlen(output));
-}
-
-
-void executeArgArray(char * argArray[], char * environ[]){
+bool executeArgArray(char * argArray[], char * environ[]){
   int count;
   for(count=0; argArray[count]!=NULL;++count)
   	;
-
-  /*Test: Print count */
+  if(count==0) return false;
+  /*Test: Print count 
   printf("\n value of count of argArray in executeArgArray is: %d\n", count);
   for(int i=0;i<count;i++){
   	printf("arg[%d] is %s\n", i,argArray[i]);
   }
-  fflush(stdout);
+  fflush(stdout);*/
   /*Test end*/
 
   int argPosition =0;
@@ -450,6 +470,7 @@ void executeArgArray(char * argArray[], char * environ[]){
       fprintf(stderr,"Error in turnRelativeToAbsolute for %s",argArray[0]);
     }
   }
+  return true;
 }
 
 void createNewChildProcess(char* objectFilePath,char** argArray){
@@ -474,6 +495,7 @@ int main (int argc, char ** argv, char **envp) {
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
   bool escapeSeen = false;
+  bool inCommandlineCache=true;
 
   /* Failed Canonical Stuff
   nonCanonicalSettings();
@@ -482,13 +504,14 @@ int main (int argc, char ** argv, char **envp) {
   while (!finished) {
 
     char *cursor;
+    char *lastCursor;
     char buffer; 
     char last_char;
     int rv;
     int count;
 
     // Print the current directory 
-    write(1, "[", 1);
+    write(1, "\n[", 2);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
     write(1, "] ", 2);
 
@@ -498,10 +521,9 @@ int main (int argc, char ** argv, char **envp) {
       finished = 1;
       break;
     }
-
     // read and parse the input
     for(rv = 1, count = 0, 
-	  cursor = cmd, last_char = 1;
+	  cursor=cmd, lastCursor=cursor,last_char = 1;
 	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
 	  /* Read the value */
       rv = read(0, &buffer, 1);
@@ -518,44 +540,86 @@ int main (int argc, char ** argv, char **envp) {
 		  if((rv = read(0, &buffer, 1)>0)){
             switch(buffer){
              case 'A':
-                       historicString = historyCommand[moveBackwardInHistory()];
-                       if(historicString!=NULL){
-                         /*Test Print out contents of historyCommand array 
-             	         printf("\nhistoric string is: %s",historicString);fflush(stdout);
-             	         printf("\tcurrent is: %d",current);fflush(stdout);
-             	         int i=0;
-             	         while(historyCommand[i]!=NULL){
-             	           printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
-             	           i++;
-             	         }*/
+                       /* To Store cache or not*/
+                       if(inCommandlineCache && hasHistoryEntry()) {
+                       	 inCommandlineCache=false;
+                         *lastCursor = '\0'; //terminate the current string
+                       	 storeCommandLineCache(cmd);
+                       	 char historyHeadBuffer[MAX_INPUT];
+                       	 strcpy(historyHeadBuffer,historyCommand[(historyHead-1)%historySize]);
+                         historicString = historyHeadBuffer;
+                       }else if(inCommandlineCache && !hasHistoryEntry() ){
+                         historicString=NULL; // set to NULL to do nothing;
+                       }else{
+                         historicString = historyCommand[moveBackwardInHistory()];
+                       } 
+
+                       /*Test Print out contents of historyCommand array 
+             	       printf("\nhistoric string is: %s",historicString);fflush(stdout);
+             	       printf("\tcurrent is: %d",current);fflush(stdout);*/
+
+             	       /*Update the cmd line*/
+             	       if(historicString!=NULL)
                          strcpy(cmd,historicString);
-                         printf("\n%s\n",cmd);
-                         cursor = cmd;
-                       }else printf("\nError historic string shouldn't be null");
-                       // DO SOMETHING with HISTORY
+                       else
+                       	 *cmd = '\0';
+                       
+                       /*Clear the previous args, before printing historic string */
+                       while(lastCursor>cmd){
+                         write(1,deleteAscii,strlen(deleteAscii));
+                         lastCursor--;
+                       }
+                       cursor = cmd;
+                       cursor+= (strlen(cmd)); // incremented at end of loop to right place
+                       lastCursor=cursor;
+                       write(1,cmd,strlen(cmd));
                   break; 
              case 'B': 
-                       historicString = historyCommand[moveForwardInHistory()];
-                       if(historicString!=NULL){
-                  	     /*Test Print out contents of historyCommand array 
-                         printf("\nhistoric string is: %s",historicString);fflush(stdout);
-             	         printf("\tcurrent is: %d",current);fflush(stdout);
-             	         int i=0;
-             	         while(historyCommand[i]!=NULL){
-             	           printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
-             	           i++;
-             	         }*/
+                       /* Choose cache or actual history storage*/
+                       if((current==(historyHead-1))&& !inCommandlineCache){
+                       	 inCommandlineCache=true;
+                         historicString = temporaryCommandlineCachePtr;
+
+                         /*Test: indicator of entering cache 
+                         printf("entered the cache\n");fflush(stdout);*/
+
+                       }else if((current==(historyHead-1))&& inCommandlineCache){
+                         historicString = temporaryCommandlineCachePtr;
+                       }else{
+					     historicString = historyCommand[moveForwardInHistory()];
+                       } 
+
+                  	   /*Test Print out contents of historyCommand array 
+                       printf("\nhistoric string is: %s",historicString);fflush(stdout);
+             	       printf("\tcurrent is: %d",current);fflush(stdout);*/
+
+             	       if(historicString!=NULL)
                          strcpy(cmd,historicString);
-                         cursor = cmd;
-                       }else printf("\nError historic string shouldn't be null");
-             		   // DO SOMETHING with HISTORY
+                       else *cmd = '\0';
+
+                       /*Clear the previous args, before printing historic string */
+                       while(lastCursor>cmd){
+                         write(1,deleteAscii,strlen(deleteAscii));
+                         lastCursor--;
+                       }
+
+                       cursor = cmd;
+                       cursor+= (strlen(cmd)); // incremented at end of loop to write place
+                       lastCursor=cursor;
+                       write(1,cmd,strlen(cmd));
+                       
                   break;
-             case 'C': write(1,moveRightAscii,strlen(moveRightAscii));
-                       if((cursor - cmd) < (MAX_INPUT-2)) cursor++;
-                       // DO SOMETHING with HISTORY
+             case 'C': 
+                       if(((cursor - cmd) < (MAX_INPUT-2))&& (cursor<lastCursor)){
+                       	 write(1,moveRightAscii,strlen(moveRightAscii));
+                       	 cursor++;
+                       } 
                   break;
-             case'D': write(1,moveLeftAscii,strlen(moveLeftAscii));
-                       if(cursor - cmd >0) cursor--;
+             case'D': 
+                       if(cursor - cmd >0){
+                       	 write(1,moveLeftAscii,strlen(moveLeftAscii));
+                         cursor--;
+                       } 
                       // DO SOMETHING with HISTORY
                   break;
             }
@@ -563,34 +627,77 @@ int main (int argc, char ** argv, char **envp) {
 		}
       }
       else if (last_char==8||last_char==127){
-        write(1,backspaceAscii,strlen(backspaceAscii));
-        write(1,deleteAscii,strlen(deleteAscii));
+        char* swapper1;
+      	char* swapper2;
+
+      	//PRECONDITION: 
+        if(cursor-cmd>0){
+
+      	  //MOVE BACK THE CURSOR AND SAVE SPOT
+          write(1,backspaceAscii,strlen(backspaceAscii));
+          write(1,saveCursorPosAscii,strlen(saveCursorPosAscii));
+
+          /*CHANGES TO THE DATA IN CMD*/
+
+		  //Initialize cursor positions
+          cursor--; 
+          swapper1 = cursor;
+          swapper2 = cursor+1;
+
+          /* Iterate and make changes*/
+          while(swapper2!=NULL && *swapper2!='\0'){ //while the right-hand pos has a significant byte
+            // swap with left pos
+            *swapper1 = *swapper2; 
+            write(1,swapper2,1); // display on console too
+
+            //increment data ptr and move cursor right on console
+            swapper1++;
+            swapper2++;
+          }        
+          /* null terminate the new last space in memory, and delete last char on console*/
+          *lastCursor='\0';
+
+          if(lastCursor>cmd)
+            lastCursor--;
+          *lastCursor= '\0';
+          write(1,moveRightAscii,strlen(moveRightAscii));
+          write(1,deleteAscii,strlen(deleteAscii));
+
+          /* reload the previous position of cursor*/
+          write(1,loadCursorPosAscii,strlen(loadCursorPosAscii));
+        }
       }
       /* Detect CTRL-C */
       else if(last_char == 3) {
         write(1, "^c", 2);
+      }else if(last_char=='\n'){
+        
       }else {
       	/* Display the last seen char to terminal */
       	if(!escapeSeen)
 		  write(1, &last_char, 1);
 		/* Transfer the value into cmd pointed to by cursor */
         *cursor = buffer;
+        lastCursor+=2;
+		*lastCursor='\0';
+		lastCursor--; // becomes cursor+1
 		cursor++;
+
       }
     } 
-    *cursor = '\0';
-    storeHistory(cmd);
     if (!rv) { 
       finished = 1;
       break;
     }
     // Execute the command, handling built-in commands separately 
     // Just echo the command line for now
-    // write(1, cmd, strnlen(cmd, MAX_INPUT));
     
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
-    executeArgArray(parsedArgArray,envp);
+    if(executeArgArray(parsedArgArray,envp)==0) continue;
+
+    /*Test: show historyCommand 
+    printHistoryCommand();*/
   }
   /*canonicalSettings();*/
   return 0;
