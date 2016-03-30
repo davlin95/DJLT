@@ -15,7 +15,11 @@ char *statFind(char *cmd);
 void printError(char* command);
 void createNewChildProcess(char* objectFilePath,char** argArray);
 
-
+/* ANSII CODE FOR ARROW MOVEMENT */
+char* moveLeftAscii = "\033[D";
+char * moveRightAscii ="\033[C";
+char * backspaceAscii = "\010";
+char * deleteAscii = "\177";
 
 /* Terminal Variables */
 typedef struct variableNode{

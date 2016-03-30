@@ -78,7 +78,17 @@ int current=0;
 /* History functions*/
 void storeHistory(char * string){
   int headIndex = historyHead % historySize; /*Valid index within the array */
-  historyCommand[headIndex]=string;
+  
+  /* Free the previous string */
+  if(historyCommand[headIndex]!=NULL){
+  	free(historyCommand[headIndex]);
+  }
+  /* Allocate for new string */
+  char* newString = malloc((strlen(string)+1)*sizeof(char));
+  strcpy(newString,string);
+  historyCommand[headIndex]=newString;
+
+  /* Reset counters*/
   historyHead++; /*Next available space to store next string */
   current=(historyHead-1); /*Index of most current String */
 }
@@ -503,23 +513,58 @@ int main (int argc, char ** argv, char **envp) {
       	escapeSeen = true; // disable printing to screen for terminal commands
       	if((rv = read(0, &buffer, 1)>0) && buffer=='['){
       	  last_char = buffer;
+
+      	  char * historicString; // Used later if reached inside switch statement.
 		  if((rv = read(0, &buffer, 1)>0)){
             switch(buffer){
-             case 'A': printf(" UP_KEY " ); fflush(stdout); 
+             case 'A':
+                       historicString = historyCommand[moveBackwardInHistory()];
+                       if(historicString!=NULL){
+                         /*Test Print out contents of historyCommand array 
+             	         printf("\nhistoric string is: %s",historicString);fflush(stdout);
+             	         printf("\tcurrent is: %d",current);fflush(stdout);
+             	         int i=0;
+             	         while(historyCommand[i]!=NULL){
+             	           printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
+             	           i++;
+             	         }*/
+                         strcpy(cmd,historicString);
+                         printf("\n%s\n",cmd);
+                         cursor = cmd;
+                       }else printf("\nError historic string shouldn't be null");
                        // DO SOMETHING with HISTORY
                   break; 
-             case 'B': printf(" DOWN_KEY " ); fflush(stdout);
+             case 'B': 
+                       historicString = historyCommand[moveForwardInHistory()];
+                       if(historicString!=NULL){
+                  	     /*Test Print out contents of historyCommand array 
+                         printf("\nhistoric string is: %s",historicString);fflush(stdout);
+             	         printf("\tcurrent is: %d",current);fflush(stdout);
+             	         int i=0;
+             	         while(historyCommand[i]!=NULL){
+             	           printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
+             	           i++;
+             	         }*/
+                         strcpy(cmd,historicString);
+                         cursor = cmd;
+                       }else printf("\nError historic string shouldn't be null");
              		   // DO SOMETHING with HISTORY
                   break;
-             case 'C': printf(" RIGHT_KEY " ); fflush(stdout);
+             case 'C': write(1,moveRightAscii,strlen(moveRightAscii));
+                       if((cursor - cmd) < (MAX_INPUT-2)) cursor++;
                        // DO SOMETHING with HISTORY
                   break;
-             case'D': printf(" LEFT_KEY " ); fflush(stdout);
+             case'D': write(1,moveLeftAscii,strlen(moveLeftAscii));
+                       if(cursor - cmd >0) cursor--;
                       // DO SOMETHING with HISTORY
                   break;
             }
 		  }
-      	}
+		}
+      }
+      else if (last_char==8||last_char==127){
+        write(1,backspaceAscii,strlen(backspaceAscii));
+        write(1,deleteAscii,strlen(deleteAscii));
       }
       /* Detect CTRL-C */
       else if(last_char == 3) {
@@ -534,6 +579,7 @@ int main (int argc, char ** argv, char **envp) {
       }
     } 
     *cursor = '\0';
+    storeHistory(cmd);
     if (!rv) { 
       finished = 1;
       break;
