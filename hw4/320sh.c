@@ -175,6 +175,7 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   int count =0;
   //int childSize=0;
   int result=0; 
+  //printf("travesal is %s\n", *traversal);
   while(traversal[count] != NULL && traversal[count] !='\0'){
   	if( (result = strcmp(traversal[count],".")) ==0){ 
 
@@ -812,12 +813,7 @@ int main (int argc, char ** argv, char **envp) {
     // Just echo the command line for now
 
     char* argArray[MAX_INPUT]; /* Array of arguments */
-
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
-    if(executeArgArray(parsedArgArray,envp)==0) continue;
-
-    /*Test: show historyCommand 
-    printHistoryCommand();*/
     if (debug){
       char *cmdEnd = strrchr(cmd, '\n');
         *cmdEnd = '\0';
@@ -825,7 +821,11 @@ int main (int argc, char ** argv, char **envp) {
       write(2, cmd, strlen(cmd));
       error = 0;
     }
-    executeArgArray(parsedArgArray,envp);
+    if(executeArgArray(parsedArgArray,envp)==0) continue;
+
+    /*Test: show historyCommand 
+    printHistoryCommand();*/
+    
     if (debug){
       write(2, "ENDED: ", 7);
       write(2, cmd, strlen(cmd));
