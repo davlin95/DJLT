@@ -274,7 +274,7 @@ int isBuiltIn(char * command){
   return 0; /*No command match found. return false */
 } 
 
-void cd(char argArray[]){
+void processCd(char argArray[]){
   int error = 0;
   if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
     argArray[strlen(argArray)-1] = '\0';
@@ -352,7 +352,7 @@ void cd(char argArray[]){
           write(1, ": No such file or directory\n", 28);
       }  
   }
-void pwd(){
+void processPwd(){
   char *path;
   char buf[MAX_INPUT];
   path = getcwd(buf, MAX_INPUT);
@@ -361,7 +361,7 @@ void pwd(){
   printf("pid is %d\n", getpid());
   fflush(stdout);
 }
-void set(char argArray[]){
+void processSet(char argArray[]){
   char * token;
   char * token2;
   char *equals = "=";
@@ -378,7 +378,7 @@ void set(char argArray[]){
   }
   printf("getenv(%s) is %s\n", token, getenv(token));
 }
-void echoBI(char argArray[]){
+void processEcho(char argArray[]){
   char error[1] = {errno};
   char *argPtr = &argArray[1];
   if (argArray != NULL && argArray[0] == '$'){
@@ -397,7 +397,6 @@ void processExit(){
     if (historyCommand[historyHead] == NULL){
       int position;
       for (position = 0; position < historyHead; position++){
-        printf("writing history[%d]= %s back into file\n", position, historyCommand[position]);
         fprintf(historyFile, "%s", historyCommand[position]);
       }
     } else {
@@ -437,13 +436,13 @@ void executeArgArray(char * argArray[], char * environ[]){
 
     /*Our implemented commands */
     if(strcmp(command,"cd")==0){ 
-      cd(argArray[1]);
+      processCd(argArray[1]);
     }else if(strcmp(command,"pwd")==0){
-      pwd();
+      processPwd();
     }else if(strcmp(command,"echo")==0){
-      echoBI(argArray[1]);
+      processEcho(argArray[1]);
     }else if(strcmp(command,"set")==0){
-      set(argArray[1]);
+      processSet(argArray[1]);
     }else if(strcmp(command,"help")==0){
       printf("\nexecute help\n");
       printHelpMenu();
