@@ -48,7 +48,7 @@ char** parseByDelimiter(char** dst,char*src,char* delimiters){
   printf("\n%s\n",buffer);
   fflush(stdout);*/
 
-  token = strtok_r(src,delimiters,&savePtr);
+  token = strtok_r(buffer,delimiters,&savePtr);
   while(token!=NULL){
     dst[argCount++]=token;
 

@@ -6,15 +6,18 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#include <curses.h>
 #include "shellHeader.h"
+
 
 /* Key definitions and Canonicals */
 struct termios termios_set;
 struct termios termios_prev;
-
+int error = 0;
 /*Strings for help menu: WARNING!!! LAST ELEMENT MUST BE NULL, for the printHelpMenu() function */
 char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o option->",
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
+
 
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
@@ -150,7 +153,7 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   char *buildingPathPtr = buildingPath;
 
   /*Test print
-  printf("\nbuildingPath is: %s\n",buildingPath);
+  ("\nbuildingPath is: %s\n",buildingPath);
   char buff[strlen(buildingPath)];
   printf("\nparentPath is: %s\n",parentDirectory(buildingPath,buff));
   printf("command is: %s\n",command);
@@ -196,14 +199,17 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   return NULL; /*if invalid size */
 }
 
-void nonCanonicalSettings(){
-  tcgetattr(0,&termios_prev); /*Store Copy of previous */
-  tcgetattr(0,&termios_set); /* Modfy this copy*/
-  cfmakeraw(&termios_set);   
-  tcsetattr(0,TCSANOW,&termios_set);
-}
-void canonicalSettings(){
-  tcsetattr(0,TCSANOW,&termios_prev);
+int alphaNumerical(char *argString){
+  int i;
+  char* position = argString;
+  for (i = 0; i < strlen(argString); i++){
+    if ((*position > 47 && *position < 58) || (*position > 64 && *position < 91) || (*position > 96 && *position < 123)){
+      position++;
+    }
+  }
+  if (position == argString + strlen(argString))
+    return i;
+  return 0;
 }
 
 char ** parseCommandLine(char* cmd, char ** argArray){
@@ -220,20 +226,68 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   int argCount = 0;
   char cmdCopy[MAX_INPUT];
   strcpy(cmdCopy,cmd);
+  char *firstQuote;
+  char *nextQuote;
+  char *lastQuote;
+  if ((firstQuote = strchr(cmdCopy, '"')) != NULL){
+    lastQuote = strrchr(cmdCopy, '"');
+    firstQuote++;
+    if (firstQuote == lastQuote){
+        firstQuote--;
+        *firstQuote = ' ';
+        *lastQuote = ' ';
+    }
+    else{
+      while (firstQuote != lastQuote){
+        nextQuote = strchr(firstQuote,'"');
+        if (firstQuote == nextQuote){
+          firstQuote--;
+          *firstQuote = ' ';
+          *nextQuote = ' ';
+        }
+        else{
+          while (firstQuote != nextQuote){
+            if (*firstQuote == ' ')
+              *firstQuote = 0xEA;
+            firstQuote++;
+          }
+        }
+        if (firstQuote != lastQuote){
+          firstQuote++;
+          firstQuote = strchr(firstQuote, '"');
+          firstQuote++;
+          if (firstQuote == lastQuote){
+            firstQuote--;
+            *firstQuote = ' ';
+            *lastQuote = ' ';
+            firstQuote++;
+          }
+        }
+      }
+    }
+  }
   token = strtok_r(cmdCopy," \n",&savePtr);
   while(token != NULL){
-  	/*Test: Print out token 
-    write(1,token,strlen(token));
-    write(1,"-->",3); */
-
-    /* Fill up argArray with split strings */
-    /*token = strcat(token, "\0"); */   /*might already be terminated with \0 */
     argArray[argCount]= token;
     argCount++;
     token = strtok_r(NULL," \n",&savePtr);
   }
   argArray[argCount]=NULL; /* Null terminate */
-
+  int position;
+  for (position = 0; position < argCount; position++){
+    char *temp = argArray[position];
+    if (*temp == '"'){
+      char *end = temp + strlen(argArray[position]) - 1;
+      *end = '\0';
+      temp++;
+      char *current;
+      for (current = temp; current < end; current++){
+        if (*current == '\352')
+          *current = ' ';
+      }
+      argArray[position] = temp;
+    }
+  }
   /* Parsed a non-empty string, store in history*/
   if(argCount>0){
     storeHistory(cmd);
@@ -241,20 +295,6 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   }else{
     //printf("\nUnable to store into historyCommand");fflush(stdout);
   } 
-
-  /*Test: Print out contents of argArray 
-  write(1,"\nfinished\n\0",11);
-  int i;
-  for(i = 0; i < argCount; i++){
-  	char * argString = argArray[i];
-  	write(1,"\n",1);
-  	write(1,argArray[i],strlen(argString));
-  	printf("\nisBuiltin Result: %d",isBuiltIn(argString));
-  	fflush(stdout);
-  }
-  printf("\nArgcount is %d\n",argCount);
-  printf("last item is %s\n", argArray[argCount-1]);
-  fflush(stdout);*/
 
   return argArray;
 }
@@ -299,7 +339,11 @@ int isBuiltIn(char * command){
   return 0; /*No command match found. return false */
 } 
 
-void cd(char argArray[]){
+void processCd(char argArray[]){
+  int badDirectory = 0;
+  if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
+    argArray[strlen(argArray)-1] = '\0';
+  }
   if(argArray == NULL){
     setenv("OLDPWD", getenv("PWD"), 1);
     setenv("PWD", getenv("HOME"), 1);
@@ -323,12 +367,8 @@ void cd(char argArray[]){
         setenv("OLDPWD", getenv("PWD"), 1);
         setenv("PWD", path, 1); 
         chdir(getenv("PWD"));
-      } 
-      else {
-        write(1, "cd: ", 4);
-        write(1, argArray, strlen(argArray));
-        write(1, ": No such file or directory\n", 28);
-      }
+      } else 
+        badDirectory = 1;
     }else if(argArray[1] == '.'){
       char path[strlen(getenv("PWD")) + strlen(argArray) - 2];
       strcpy(path, getenv("PWD"));
@@ -348,40 +388,37 @@ void cd(char argArray[]){
           setenv("OLDPWD", getenv("PWD"), 1);
           setenv("PWD", path, 1); 
           chdir(getenv("PWD"));
-        }else {
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
-        } 
-      }else {
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
-      } 
-    }else {
-      write(1, "cd: ", 4);
-      write(1, argArray, strlen(argArray));
-      write(1, ": No such file or directory\n", 28);
-    } 
-    }else {
+        }else 
+        badDirectory = 1;
+      }else 
+        badDirectory = 1;
+    }else 
+        badDirectory = 1;
+    }else if(argArray[0] == '\0'){
+          argArray[0] = '/';
+          badDirectory = 1;
+    }  
+    else {
       struct stat pathStat;
       char path[strlen(getenv("PWD")) + strlen(argArray) + 1];
       strcpy(path, getenv("PWD"));
       strcat((strcat(path, "/")), argArray);
-      printf("path is %s\n", path);
       if (stat(path, &pathStat) >= 0){
           setenv("OLDPWD", getenv("PWD"), 1);
           setenv("PWD", path, 1); 
           chdir(getenv("PWD"));
       }
-      else {
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
-      }  
+      else 
+        badDirectory = 1;
     }
+    if (badDirectory){
+          write(2, "cd: ", 4);
+          write(2, argArray, strlen(argArray));
+          write(2, ": No such file or directory\n", 28);
+          error = 1;
+      }  
   }
-void pwd(){
+void processPwd(){
   char *path;
   char buf[MAX_INPUT];
   path = getcwd(buf, MAX_INPUT);
@@ -390,16 +427,71 @@ void pwd(){
   printf("pid is %d\n", getpid());
   fflush(stdout);
 }
-void set(char argArray[]){
+void processSet(char argArray[]){
   char * token;
   char * token2;
   char *equals = "=";
   token = strtok(argArray, equals);
   token2 = strtok(NULL, equals);
-  if (getenv(token) != NULL)
-    setenv(token, token2, 1);
+  printf("token is %s and token2 is %s\n", token, token2);
+  if (getenv(token) != NULL){
+    printf("setenv returned %d\n", setenv(token, token2, 1));
+    printf("token is %s and token2 is %s\n", token, token2);
+  }
+  else if (alphaNumerical(token)){
+    printf("setenv returned %d\n", setenv(token, token2, 1));
+    printf("token is %s and token2 is %s\n", token, token2);
+  } else 
+    error = 1;
+  printf("getenv(%s) is %s\n", token, getenv(token));
 }
 
+void processEcho(char argArray[]){
+  char *argPtr = &argArray[1];
+  if (argArray != NULL){
+    if (argArray[0] == '$'){
+      if (strcmp(argPtr, "?")==0){
+        if (error)
+          write(1, "1", 1);
+        else
+          write(1, "0", 1);
+        error = 0;
+      }
+      else if (getenv(argPtr) != NULL)
+        write(1, getenv(argPtr), strlen(getenv(argPtr)));
+    }
+    else {
+        write(1, argArray, strlen(argArray));
+    }
+  }
+  write(1, "\n", 2);
+}
+void processExit(){
+    char historyPath[strlen(getenv("HOME")) + 15];
+    strcat((strcpy(historyPath, getenv("HOME"))), "/.320sh_history");
+    FILE *historyFile;
+    historyFile = fopen(historyPath, "w");
+    if (historyCommand[historyHead] == NULL){
+      int position;
+      for (position = 0; position < historyHead; position++){
+        fprintf(historyFile, "%s", historyCommand[position]);
+      }
+    } else {
+      int headPosition = historyHead;
+        fprintf(historyFile, "%s", historyCommand[historyHead]);
+        historyHead++;
+        if (historyHead == 50)
+            historyHead = 0;
+        while (historyHead != headPosition){
+          fprintf(historyFile, "%s", historyCommand[historyHead]);
+          historyHead++;
+          if (historyHead == 50)
+            historyHead = 0;
+        }
+    }
+  fclose(historyFile);
+  exit(0);
+}
 
 bool executeArgArray(char * argArray[], char * environ[]){
   int count;
@@ -420,25 +512,19 @@ bool executeArgArray(char * argArray[], char * environ[]){
 
     /*Our implemented commands */
     if(strcmp(command,"cd")==0){ 
-      cd(argArray[1]);
+      processCd(argArray[1]);
     }else if(strcmp(command,"pwd")==0){
-      pwd();
+      processPwd();
     }else if(strcmp(command,"echo")==0){
-      printf("\nexecute echo\n");
-      fflush(stdout);
+      processEcho(argArray[1]);
     }else if(strcmp(command,"set")==0){
-      set(argArray[1]);
+      processSet(argArray[1]);
     }else if(strcmp(command,"help")==0){
       printf("\nexecute help\n");
       printHelpMenu();
       fflush(stdout);
     }else if(strcmp(command,"exit")==0){
-      printf("\nExecute exit\n");
-      fflush(stdout);
-      /*
-      canonicalSettings();*/
-
-      exit(0);
+      processExit();
     }else{
       /* Test Print: Use statfind() to launch the program from shell 
       printf("\nuse statfind() to launch the built in\n");
@@ -453,6 +539,7 @@ bool executeArgArray(char * argArray[], char * environ[]){
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
+        error = 1;
       }
     }
   }else{ /* Is an object file such as a.out */
@@ -466,6 +553,8 @@ bool executeArgArray(char * argArray[], char * environ[]){
     	printf("dir exists: %s\n",buffer);
     	createNewChildProcess(buffer,argArray);
       }
+      else
+        error = 1;
     }else{
       fprintf(stderr,"Error in turnRelativeToAbsolute for %s",argArray[0]);
     }
@@ -479,28 +568,49 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   if((pid=fork())==0){
     printf("child's parent pid is %d\n", getppid());
     int ex = execvp(objectFilePath,argArray);
-    if(ex){
+    if(ex){      
       printError(objectFilePath);
     }
     exit(0);
   }else{
       wait(&status);
+      if (status)
+        error = 1;
       printf("\nParent Process reaped child process %d\n",pid);
       fflush(stdout);
   }
 }
-
+void  initializeHistory(){
+  char historyPath[strlen(getenv("HOME")) + 15];
+  strcat((strcpy(historyPath, getenv("HOME"))), "/.320sh_history");
+  FILE *historyFile;
+  if ((historyFile = fopen(historyPath, "r"))){
+    char line[MAX_INPUT];
+    while (fgets(line, sizeof(line), historyFile)){
+      if (line != NULL)
+      storeHistory(line);
+    }
+  } else {
+      historyFile = fopen(historyPath, "w");
+    }
+  fclose(historyFile);
+}
 int main (int argc, char ** argv, char **envp) {
+  /*debug flag*/
+  int debug = 0;
+  if (argv[1] != NULL){
+    if (strcmp(argv[1], "-d") == 0)
+      debug = 1;
+  }
+
+  int quote = 0;
   int finished = 0;
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
   bool escapeSeen = false;
   bool inCommandlineCache=true;
 
-  /* Failed Canonical Stuff
-  nonCanonicalSettings();
-  launcherScript(envp);*/
-
+  initializeHistory();
   while (!finished) {
 
     char *cursor;
@@ -527,7 +637,12 @@ int main (int argc, char ** argv, char **envp) {
 	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
 	  /* Read the value */
       rv = read(0, &buffer, 1);
+    /*encounter a quotation in terminal command*/
+      if (buffer == '"')
+        quote++;
+
       last_char = buffer;
+      
       escapeSeen = false; //enable printing to screen 
 
       /* Detect escape sequence keys like arrows */
@@ -675,7 +790,7 @@ int main (int argc, char ** argv, char **envp) {
       }else {
       	/* Display the last seen char to terminal */
       	if(!escapeSeen)
-		  write(1, &last_char, 1);
+		      write(1, &last_char, 1);
 		/* Transfer the value into cmd pointed to by cursor */
         *cursor = buffer;
         lastCursor+=2;
@@ -684,6 +799,10 @@ int main (int argc, char ** argv, char **envp) {
 		cursor++;
 
       }
+      if ((quote%2 != 0) && (last_char == '\n')){
+        write(1, ">", 1);
+        last_char = 1;
+      }
     } 
     if (!rv) { 
       finished = 1;
@@ -691,14 +810,33 @@ int main (int argc, char ** argv, char **envp) {
     }
     // Execute the command, handling built-in commands separately 
     // Just echo the command line for now
-    
+
     char* argArray[MAX_INPUT]; /* Array of arguments */
+
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
     if(executeArgArray(parsedArgArray,envp)==0) continue;
 
     /*Test: show historyCommand 
     printHistoryCommand();*/
+    if (debug){
+      char *cmdEnd = strrchr(cmd, '\n');
+        *cmdEnd = '\0';
+      write(2, "RUNNING: ", 9);
+      write(2, cmd, strlen(cmd));
+      error = 0;
+    }
+    executeArgArray(parsedArgArray,envp);
+    if (debug){
+      write(2, "ENDED: ", 7);
+      write(2, cmd, strlen(cmd));
+      write(2, " (ret=", 6);
+      if (error)
+        write(2, "1)\n", 3);
+      else 
+        write(2, "0)\n", 3);
+    }
   }
   /*canonicalSettings();*/
   return 0;
 }
+
