@@ -6,7 +6,10 @@
 #include <sys/wait.h>
 #include <sys/stat.h>
 #include <stdbool.h>
+#include <errno.h>
+#include <curses.h>
 #include "shellHeader.h"
+
 
 /* Key definitions and Canonicals */
 struct termios termios_set;
@@ -15,6 +18,7 @@ struct termios termios_prev;
 /*Strings for help menu: WARNING!!! LAST ELEMENT MUST BE NULL, for the printHelpMenu() function */
 char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o option->",
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
+
 
 /* Make global array of built-in strings */
 char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
@@ -77,6 +81,7 @@ int current=0;
 
 /* History functions*/
 void storeHistory(char * string){
+  printf("in store function, line is %s", string);
   int headIndex = historyHead % historySize; /*Valid index within the array */
   
   /* Free the previous string */
@@ -120,7 +125,7 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   char *buildingPathPtr = buildingPath;
 
   /*Test print
-  printf("\nbuildingPath is: %s\n",buildingPath);
+  ("\nbuildingPath is: %s\n",buildingPath);
   char buff[strlen(buildingPath)];
   printf("\nparentPath is: %s\n",parentDirectory(buildingPath,buff));
   printf("command is: %s\n",command);
@@ -166,14 +171,17 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   return NULL; /*if invalid size */
 }
 
-void nonCanonicalSettings(){
-  tcgetattr(0,&termios_prev); /*Store Copy of previous */
-  tcgetattr(0,&termios_set); /* Modfy this copy*/
-  cfmakeraw(&termios_set);   
-  tcsetattr(0,TCSANOW,&termios_set);
-}
-void canonicalSettings(){
-  tcsetattr(0,TCSANOW,&termios_prev);
+int alphaNumerical(char *argString){
+  int i;
+  char* position = argString;
+  for (i = 0; i < strlen(argString); i++){
+    if ((*position > 47 && *position < 58) || (*position > 64 && *position < 91) || (*position > 96 && *position < 123)){
+      position++;
+    }
+  }
+  if (position == argString + strlen(argString))
+    return i;
+  return 0;
 }
 
 char ** parseCommandLine(char* cmd, char ** argArray){
@@ -267,6 +275,10 @@ int isBuiltIn(char * command){
 } 
 
 void cd(char argArray[]){
+  int error = 0;
+  if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
+    argArray[strlen(argArray)-1] = '\0';
+  }
   if(argArray == NULL){
     setenv("OLDPWD", getenv("PWD"), 1);
     setenv("PWD", getenv("HOME"), 1);
@@ -290,12 +302,8 @@ void cd(char argArray[]){
         setenv("OLDPWD", getenv("PWD"), 1);
         setenv("PWD", path, 1); 
         chdir(getenv("PWD"));
-      } 
-      else {
-        write(1, "cd: ", 4);
-        write(1, argArray, strlen(argArray));
-        write(1, ": No such file or directory\n", 28);
-      }
+      } else 
+        error = 1;
     }else if(argArray[1] == '.'){
       char path[strlen(getenv("PWD")) + strlen(argArray) - 2];
       strcpy(path, getenv("PWD"));
@@ -315,38 +323,34 @@ void cd(char argArray[]){
           setenv("OLDPWD", getenv("PWD"), 1);
           setenv("PWD", path, 1); 
           chdir(getenv("PWD"));
-        }else {
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
-        } 
-      }else {
-          write(1, "cd: ", 4);
-          write(1, argArray, strlen(argArray));
-          write(1, ": No such file or directory\n", 28);
-      } 
-    }else {
-      write(1, "cd: ", 4);
-      write(1, argArray, strlen(argArray));
-      write(1, ": No such file or directory\n", 28);
-    } 
-    }else {
+        }else 
+        error = 1;
+      }else 
+        error = 1;
+    }else 
+        error = 1;
+    }else if(argArray[0] == '\0'){
+          argArray[0] = '/';
+          error = 1;
+    }  
+    else {
       struct stat pathStat;
       char path[strlen(getenv("PWD")) + strlen(argArray) + 1];
       strcpy(path, getenv("PWD"));
       strcat((strcat(path, "/")), argArray);
-      printf("path is %s\n", path);
       if (stat(path, &pathStat) >= 0){
           setenv("OLDPWD", getenv("PWD"), 1);
           setenv("PWD", path, 1); 
           chdir(getenv("PWD"));
       }
-      else {
+      else 
+        error = 1;
+    }
+    if (error){
           write(1, "cd: ", 4);
           write(1, argArray, strlen(argArray));
           write(1, ": No such file or directory\n", 28);
       }  
-    }
   }
 void pwd(){
   char *path;
@@ -363,21 +367,54 @@ void set(char argArray[]){
   char *equals = "=";
   token = strtok(argArray, equals);
   token2 = strtok(NULL, equals);
-  if (getenv(token) != NULL)
-    setenv(token, token2, 1);
+  printf("token is %s and token2 is %s\n", token, token2);
+  if (getenv(token) != NULL){
+    printf("setenv returned %d\n", setenv(token, token2, 1));
+    printf("token is %s and token2 is %s\n", token, token2);
+  }
+  else if (alphaNumerical(token)){
+    printf("setenv returned %d\n", setenv(token, token2, 1));
+    printf("token is %s and token2 is %s\n", token, token2);
+  }
+  printf("getenv(%s) is %s\n", token, getenv(token));
 }
-
-void launcherScript(char * envp[]){
-  char * filename = "$. ./launcherScript.sh";
-  char * argv[2];
-  argv[0] = filename;
-  argv[1] =NULL;
-  int response=0;
-
-  char * output= "\nlauncher script failed";
-  response = execve(filename,argv,envp);
-  if(response)
-    write(1,output,strlen(output));
+void echoBI(char argArray[]){
+  char error[1] = {errno};
+  char *argPtr = &argArray[1];
+  if (argArray != NULL && argArray[0] == '$'){
+    if (*argPtr == '?')
+      write(1, error, 1);
+    else if (getenv(argPtr) != NULL)
+      write(1, getenv(argPtr), strlen(getenv(argPtr)));
+  }
+  write(1, "\n", 2);
+}
+void processExit(){
+    char historyPath[strlen(getenv("HOME")) + 15];
+    strcat((strcpy(historyPath, getenv("HOME"))), "/.320sh_history");
+    FILE *historyFile;
+    historyFile = fopen(historyPath, "w");
+    if (historyCommand[historyHead] == NULL){
+      int position;
+      for (position = 0; position < historyHead; position++){
+        printf("writing history[%d]= %s back into file\n", position, historyCommand[position]);
+        fprintf(historyFile, "%s", historyCommand[position]);
+      }
+    } else {
+      int headPosition = historyHead;
+        fprintf(historyFile, "%s", historyCommand[historyHead]);
+        historyHead++;
+        if (historyHead == 50)
+            historyHead = 0;
+        while (historyHead != headPosition){
+          fprintf(historyFile, "%s", historyCommand[historyHead]);
+          historyHead++;
+          if (historyHead == 50)
+            historyHead = 0;
+        }
+    }
+  fclose(historyFile);
+  exit(0);
 }
 
 
@@ -404,8 +441,7 @@ void executeArgArray(char * argArray[], char * environ[]){
     }else if(strcmp(command,"pwd")==0){
       pwd();
     }else if(strcmp(command,"echo")==0){
-      printf("\nexecute echo\n");
-      fflush(stdout);
+      echoBI(argArray[1]);
     }else if(strcmp(command,"set")==0){
       set(argArray[1]);
     }else if(strcmp(command,"help")==0){
@@ -413,12 +449,7 @@ void executeArgArray(char * argArray[], char * environ[]){
       printHelpMenu();
       fflush(stdout);
     }else if(strcmp(command,"exit")==0){
-      printf("\nExecute exit\n");
-      fflush(stdout);
-      /*
-      canonicalSettings();*/
-
-      exit(0);
+      processExit();
     }else{
       /* Test Print: Use statfind() to launch the program from shell 
       printf("\nuse statfind() to launch the built in\n");
@@ -468,17 +499,25 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
       fflush(stdout);
   }
 }
-
 int main (int argc, char ** argv, char **envp) {
   int finished = 0;
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
   bool escapeSeen = false;
-
-  /* Failed Canonical Stuff
-  nonCanonicalSettings();
-  launcherScript(envp);*/
-
+  char historyPath[strlen(getenv("HOME")) + 15];
+  strcat((strcpy(historyPath, getenv("HOME"))), "/.320sh_history");
+  FILE *historyFile;
+  if ((historyFile = fopen(historyPath, "r"))){
+    char line[MAX_INPUT];
+    while (fgets(line, sizeof(line), historyFile)){
+      printf("line is %s", line);
+      if (line != NULL)
+      storeHistory(line);
+    }
+  } else {
+      historyFile = fopen(historyPath, "w");
+    }
+  fclose(historyFile);
   while (!finished) {
 
     char *cursor;
@@ -559,8 +598,8 @@ int main (int argc, char ** argv, char **envp) {
                       // DO SOMETHING with HISTORY
                   break;
             }
-		  }
-		}
+		      }
+		    }
       }
       else if (last_char==8||last_char==127){
         write(1,backspaceAscii,strlen(backspaceAscii));
@@ -587,7 +626,6 @@ int main (int argc, char ** argv, char **envp) {
     // Execute the command, handling built-in commands separately 
     // Just echo the command line for now
     // write(1, cmd, strnlen(cmd, MAX_INPUT));
-    
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
     executeArgArray(parsedArgArray,envp);
@@ -595,3 +633,4 @@ int main (int argc, char ** argv, char **envp) {
   /*canonicalSettings();*/
   return 0;
 }
+
