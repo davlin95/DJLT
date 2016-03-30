@@ -196,38 +196,52 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   int argCount = 0;
   char cmdCopy[MAX_INPUT];
   strcpy(cmdCopy,cmd);
+  char *firstQuote;
+  char *nextQuote;
+  char *lastQuote;
+  if ((firstQuote = strchr(cmdCopy, '"')) != NULL){
+    lastQuote = strrchr(cmdCopy, '"');
+    firstQuote++;
+    while (firstQuote != lastQuote){
+      nextQuote = strchr(firstQuote,'"');
+      while (firstQuote != nextQuote){
+        if (*firstQuote == ' ')
+          *firstQuote = 0xEA;
+        firstQuote++;
+      }
+      if (firstQuote != lastQuote){
+        firstQuote++;
+        firstQuote = strchr(firstQuote, '"');
+        firstQuote++;
+      }
+    }
+  }
   token = strtok_r(cmdCopy," \n",&savePtr);
   while(token != NULL){
-  	/*Test: Print out token 
-    write(1,token,strlen(token));
-    write(1,"-->",3); */
-
-    /* Fill up argArray with split strings */
-    /*token = strcat(token, "\0"); */   /*might already be terminated with \0 */
     argArray[argCount]= token;
     argCount++;
     token = strtok_r(NULL," \n",&savePtr);
   }
   argArray[argCount]=NULL; /* Null terminate */
-
+  int position;
+  for (position = 0; position < argCount; position++){
+    char *temp = argArray[position];
+    if (*temp == '"'){
+      char *end = temp + strlen(argArray[position]) - 1;
+      *end = '\0';
+      temp++;
+      char *current;
+      for (current = temp; current < end; current++){
+        if (*current == '\352')
+          *current = ' ';
+      }
+      argArray[position] = temp;
+    }
+  }
   /* Parsed a non-empty string, store in history*/
   if(argCount>1){
     storeHistory(cmd);
   }
-
-  /*Test: Print out contents of argArray 
-  write(1,"\nfinished\n\0",11);
-  int i;
-  for(i = 0; i < argCount; i++){
-  	char * argString = argArray[i];
-  	write(1,"\n",1);
-  	write(1,argArray[i],strlen(argString));
-  	printf("\nisBuiltin Result: %d",isBuiltIn(argString));
-  	fflush(stdout);
-  }
-  printf("\nArgcount is %d\n",argCount);
-  printf("last item is %s\n", argArray[argCount-1]);
-  fflush(stdout);*/
 
   return argArray;
 }
@@ -527,6 +541,14 @@ void  initializeHistory(){
   fclose(historyFile);
 }
 int main (int argc, char ** argv, char **envp) {
+  /*debug flag*/
+  int debug = 0;
+  if (argv[1] != NULL){
+    if (strcmp(argv[1], "-d") == 0)
+      debug = 1;
+  }
+
+  int quote = 0;
   int finished = 0;
   char *prompt = "320sh> ";
   char cmd[MAX_INPUT];
@@ -558,7 +580,12 @@ int main (int argc, char ** argv, char **envp) {
 	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
 	  /* Read the value */
       rv = read(0, &buffer, 1);
+    /*encounter a quotation in terminal command*/
+      if (buffer == '"')
+        quote++;
+
       last_char = buffer;
+      
       escapeSeen = false; //enable printing to screen 
 
       /* Detect escape sequence keys like arrows */
@@ -625,10 +652,14 @@ int main (int argc, char ** argv, char **envp) {
       }else {
       	/* Display the last seen char to terminal */
       	if(!escapeSeen)
-		  write(1, &last_char, 1);
+		      write(1, &last_char, 1);
 		/* Transfer the value into cmd pointed to by cursor */
         *cursor = buffer;
 		cursor++;
+      }
+      if ((quote%2 != 0) && (last_char == '\n')){
+        write(1, ">", 1);
+        last_char = 1;
       }
     } 
     *cursor = '\0';
@@ -640,8 +671,25 @@ int main (int argc, char ** argv, char **envp) {
     // Just echo the command line for now
     // write(1, cmd, strnlen(cmd, MAX_INPUT));
     char* argArray[MAX_INPUT]; /* Array of arguments */
+
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
+    if (debug){
+      char *cmdEnd = strrchr(cmd, '\n');
+        *cmdEnd = '\0';
+      write(2, "RUNNING: ", 9);
+      write(2, cmd, strlen(cmd));
+      error = 0;
+    }
     executeArgArray(parsedArgArray,envp);
+    if (debug){
+      write(2, "ENDED: ", 7);
+      write(2, cmd, strlen(cmd));
+      write(2, " (ret=", 6);
+      if (error)
+        write(2, "1)\n", 3);
+      else 
+        write(2, "0)\n", 3);
+    }
   }
   /*canonicalSettings();*/
   return 0;
