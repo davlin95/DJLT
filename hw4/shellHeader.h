@@ -9,7 +9,7 @@
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
-
+void saveHistoryToDisk();
 bool executeArgArray(char * argArray[], char * environ[]);
 char ** parseCommandLine(char* cmd, char ** argArray);
 char *statFind(char *cmd);
@@ -55,8 +55,7 @@ char** parseByDelimiter(char** dst,char*src,char* delimiters){
     /*Print Token
     char * str = "\n token value is: ";
     write(1,str,strlen(str));
-    write(1,dst[argCount-1],strlen(dst[argCount-1]));*/
-    
+    write(1,dst[argCount-1],strlen(dst[argCount-1]));*/    
     token = strtok_r(NULL,delimiters,&savePtr);
   }
   dst[argCount]='\0';
