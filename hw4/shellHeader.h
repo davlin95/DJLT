@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #define UP_KEY "^[[A"
 #define DOWN_KEY "^[[B"
 #define RIGHT_KEY "^[[C"
@@ -9,11 +11,12 @@
 
 /*Header Prototypes */
 int isBuiltIn(char * command);
-void saveHistoryToDisk();
+bool saveHistoryToDisk();
 bool executeArgArray(char * argArray[], char * environ[]);
 char ** parseCommandLine(char* cmd, char ** argArray);
 char *statFind(char *cmd);
 void printError(char* command);
+void processExit();
 void createNewChildProcess(char* objectFilePath,char** argArray);
 
 /* ANSII CODE FOR ARROW MOVEMENT */
@@ -21,11 +24,46 @@ char* moveLeftAscii = "\033[D";
 char * moveRightAscii ="\033[C";
 char * backspaceAscii = "\b";
 char * deleteAscii = "\b \b";
-char * eraseLineAscii = "\033[K";
+char * eraseLineAscii = "\033[0K";
 char * cursorPosAscii = "\033[6n";
 char * saveCursorPosAscii = "\033[s";
 char * loadCursorPosAscii = "\033[u";
 
+void deleteCharAtCursor(){
+  write(1,deleteAscii,strlen(deleteAscii));
+}
+void clearLineAfterCursor(){
+  write(1,eraseLineAscii,strlen(eraseLineAscii));
+}
+void moveCursorLeft(){
+  write(1,moveLeftAscii,strlen(moveLeftAscii));
+}
+void moveCursorRight(){
+  write(1,moveRightAscii,strlen(moveRightAscii));
+}
+void moveCursorBack(int spaces){
+  if(spaces<0){
+    printError("Can't move cursor back negative spaces\n");
+  }else{
+    int i=0;
+    while(i<spaces){
+      moveCursorLeft();
+      i++;
+    }
+  }
+}
+
+void moveCursorForward(int spaces){
+  if(spaces<0){
+    printError("Can't move cursor back negative spaces\n");
+  }else{
+    int i=0;
+    while(i<spaces){
+      moveCursorRight();
+      i++;
+    }
+  }
+}
 
 /* Terminal Variables */
 typedef struct variableNode{
@@ -33,6 +71,25 @@ typedef struct variableNode{
   char* value;
   struct variableNode * next;
 }var;
+
+
+void safeFreePtrNull(char* ptr){
+  if(ptr!=NULL){
+    free(ptr);
+  }
+  ptr = NULL;
+}
+
+char* safeMalloc(char* ptr){
+  /*Assign pointer, or new pointer space*/
+  ptr = malloc(MAX_INPUT *sizeof(char));
+  printf("size of ptr is %lu",sizeof(ptr));
+  if(ptr==NULL){
+    printError("\nMalloc Ran out of space: Exiting...");
+    processExit();
+  }
+  return ptr;
+}
 
 /* Small Helper Functions*/
 char** parseByDelimiter(char** dst,char*src,char* delimiters){
@@ -60,6 +117,28 @@ char** parseByDelimiter(char** dst,char*src,char* delimiters){
   }
   dst[argCount]='\0';
   return dst;
+}
+
+int parseByDelimiterNumArgs(char*src,char* delimiters){
+  char* savePtr;
+  char* token;
+  int argCount=0;
+  char* argBuffer=malloc(MAX_INPUT*sizeof(char));
+  strncpy(argBuffer,src,MAX_INPUT);
+
+  /*Test src, and buffer equality
+  printf("\n%s\n","Test src, and buffer equality");
+  printf("\n%s\n",src);
+  printf("\n%s\n",buffer);
+  fflush(stdout);*/
+
+  token = strtok_r(src,delimiters,&savePtr);
+  while(token!=NULL){
+    argCount++;   
+    token = strtok_r(NULL,delimiters,&savePtr);
+  }
+  free(argBuffer);
+  return argCount;
 }
 
 void printError(char * command){

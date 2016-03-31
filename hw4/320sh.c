@@ -21,6 +21,29 @@ char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","print
 char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
+char restOfCMDLine[MAX_INPUT];
+
+/* Function fills in buffer with the bytes between two cursors, into global array restOfCMDLine*/
+bool storeBytesBetweenPointersIntoGlobalArray(char* cursorSpot, char*lastCursorSpot){
+  int numElements = lastCursorSpot-cursorSpot;
+
+  /*Check bad cases */
+  if((numElements>MAX_INPUT)|| (numElements<0)) 
+    return false;
+
+  char* restOfCMDLinePtr= restOfCMDLine;
+  /*Copy bytes between the pointers */
+  while(cursorSpot<=lastCursorSpot){
+    *restOfCMDLinePtr = *cursorSpot;
+    cursorSpot++;
+    restOfCMDLinePtr++;
+  }
+  if(*cursorSpot!='\0') {
+  	*cursorSpot = '\0';
+  }
+  //printf("\nrestofcommandline is: %s\n",restOfCMDLine);
+  return true;
+}
 
 /*
  * A function that stores the copy of the string passed, into the global string buffer temporaryCommandlineCache
@@ -207,24 +230,27 @@ bool hasHistoryEntry(){
 }
 
 /* 
- * A function that turns relative to absolute path. Evaluation. 
+ * A function that turns relative to absolute path evaluation. 
  * @param cmdString: string to be parsed. 
  * @param buffer: buffer to be returned. contains the evaluated path. 
  * @param buffer size: size of the buffer, safety. 
  * @return char*: filled buffer. 
  */
 char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
-  int pathSize = strlen(getenv("PWD"));
-  char buildingPath[pathSize+1]; // add one for null byte
-  strcpy(buildingPath,getenv("PWD"));
-  char *buildingPathPtr = buildingPath;
+  if(strlen(buffer)>bufferSize)bufferSize = strlen(buffer);
+  if( bufferSize<=0 )return NULL; //invalid
 
-  /*Test print
-  ("\nbuildingPath is: %s\n",buildingPath);
-  char buff[strlen(buildingPath)];
-  printf("\nparentPath is: %s\n",parentDirectory(buildingPath,buff));
-  printf("command is: %s\n",command);
-  fflush(stdout); */
+  char* buildingPath = buffer; 
+  strcpy(buildingPath,getenv("PWD"));
+
+  /*Test print */
+  printf("\nbuildingPath is: %s\n",buildingPath);
+  char* testBuff=calloc(strlen(buildingPath),1);
+  strcpy(testBuff, buildingPath);
+  printf("\nparentPath is: %s\n",parentDirectory(buildingPath));
+  printf("commandString is: %s\n",cmdString);
+  fflush(stdout); 
+  free(testBuff);
 
   /*Find the traversal path */
   char * traversal[MAX_INPUT];
@@ -240,20 +266,19 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
 
   /* Build the path to the file */
   int count =0;
-  //int childSize=0;
   int result=0; 
   //printf("travesal is %s\n", *traversal);
   while(traversal[count] != NULL && traversal[count] !='\0'){
   	if( (result = strcmp(traversal[count],".")) ==0){ 
 
   	}else if((result = strcmp(traversal[count],"..")) ==0){ /* Move up one parent*/
-      parentDirectory(buildingPathPtr);
-      printf("\n moved to parent path: %s\n",buildingPathPtr);
+      parentDirectory(buildingPath);
+      printf("\n moved to parent path: %s\n",buildingPath);
       fflush(stdout);
   	}else{  
   	  /*Append */
-      directoryAppendChild(buildingPathPtr,traversal[count]);
-      printf("\nappended child, buildingPathPtr is: %s\n",buildingPathPtr);
+      directoryAppendChild(buildingPath,traversal[count]);
+      printf("\nappended child, buildingPathPtr is: %s\n",buildingPath);
       fflush(stdout);
   	}
     count++; /* Move onto next traversal string */
@@ -263,9 +288,9 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   printf("built finally: %s\n",buildingPathPtr);
   fflush(stdout);*/
 
-  if(bufferSize>0)
-    return strncpy(buffer,buildingPathPtr,bufferSize-1);
-
+  if(bufferSize>0){
+  	return buffer;
+  }
   return NULL; /*if invalid size */
 }
 
@@ -386,6 +411,7 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   } 
   return argArray;
 }
+
 char *statFind(char *cmd){
   char *token;
   char *savePtr;
@@ -555,7 +581,10 @@ void processEcho(char argArray[]){
   write(1, "\n", 2);
 }
 void processExit(){
-  saveHistoryToDisk();
+  if(!saveHistoryToDisk()){
+  	printError("Error saving history to disk\n");
+  }
+  printHistoryCommand();
   exit(0);
 }
 
@@ -610,19 +639,27 @@ bool executeArgArray(char * argArray[], char * environ[]){
     }
   }else{ /* Is an object file such as a.out */
     /*Make buffer */
-    char buffer[MAX_INPUT];
+    int callocSize = MAX_INPUT + strlen(getenv("PWD")) + strlen("320sh> ") + 1;
+    char* buffer= calloc(callocSize,1 );
 
     /*Parse into absolute path */
-    if(turnRelativeToAbsolute(argArray[0],buffer,MAX_INPUT)!=NULL){
+    if(turnRelativeToAbsolute(argArray[0],buffer,callocSize)!=NULL){
       printf("\nValue of buffer is: %s\n",buffer);
       if(statExists(buffer)){
+      	safeFreePtrNull(buffer);
     	printf("dir exists: %s\n",buffer);
     	createNewChildProcess(buffer,argArray);
       }
-      else
+      else{
+      	/*Path Doesn't Exists: user error */
         error = 1;
+      	safeFreePtrNull(buffer);
+      }
     }else{
+      /*turnRelativePathToAbsolute is erroneous, conversion error */
+      safeFreePtrNull(buffer);
       fprintf(stderr,"Error in turnRelativeToAbsolute for %s",argArray[0]);
+      return false;
     }
   }
   return true;
@@ -647,12 +684,18 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   }
 }
 
+/* 
+ * A function that initializes the historyCommand global var, from a searched dir path 
+ * for a text file in the home directory relative to the computer. 
+ * Does not initialize if not found.  
+ */
 void  initializeHistory(){
+
   /*Initialize buffers for the directory to store history */
   int homePathSize = strlen(getenv("HOME"));
   char * historyFileExtension = "/.320sh_history\0";
   int historyFileExtensionSize = strlen(historyFileExtension);
-  char historyPath[homePathSize + historyFileExtensionSize+1];
+  char* historyPath=malloc( (homePathSize + historyFileExtensionSize+1) *sizeof(char));
 
   /* Build the directory history */
   strcpy(historyPath, getenv("HOME"));
@@ -660,14 +703,22 @@ void  initializeHistory(){
 
   /* Start reading the history file */
   FILE *historyFile;
-  if ((historyFile = fopen(historyPath, "r"))){
-    char line[MAX_INPUT];
-    while(fgets(line, sizeof(line), historyFile)){
-      if (line != NULL) storeHistory(line);
-      printf("\nLoading string : %s", line);
-    }
-    fclose(historyFile);
+  historyFile = fopen(historyPath, "r");
+  free(historyPath);
 
+  char line[MAX_INPUT];
+  if(historyFile){ 
+  	/*Read for lines from file*/
+    while(fgets(line, sizeof(line), historyFile)){
+    	/* Check for NULL lines and lines of spaces, or '\n' */
+      if (line != NULL){
+      	if(parseByDelimiterNumArgs(line," \n")>0){
+      		storeHistory(line);
+      	}
+      }
+    }
+	/*Handling*/
+    fclose(historyFile);
   }else{
   	/* Print to stdout */
     printError("Unable to initialize prompt history");
@@ -675,41 +726,51 @@ void  initializeHistory(){
   printHistoryCommand();
 }
 
+/* A function that saves the history command global array into the computer's home directory. 
+ * Should be called once upon entry into main. 
+ */
+bool saveHistoryToDisk(){
 
-void saveHistoryToDisk(){
   /*Initialize buffers for the directory to store history */
   int homePathSize = strlen(getenv("HOME"));
-  char * historyFileExtension = "/.320sh_history\0";
+  char * historyFileExtension = "/.320sh_history";
   int historyFileExtensionSize = strlen(historyFileExtension);
   char* historyPath= malloc((homePathSize + historyFileExtensionSize+1)*sizeof(char));
+  if(historyPath==NULL) return false;
 
+  printf("Concatenating:\n");
   /*Build the path */
-  strcat(historyPath,getenv("HOME"));
+  strcpy(historyPath,getenv("HOME"));
   strcat(historyPath,historyFileExtension);
   printf("HOME IS: %s", getenv("HOME"));
 
   /* Start writing the history file */
   FILE *historyFile;
   historyFile = fopen(historyPath,"w");
-  free(historyPath);
-  /*Tests: */
+  printf("\nopen to file %d:\n",historyFile==NULL);
+  printHistoryCommand();
+  /*Tests: 
   printf("\n%s\n",historyPath);
-  printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL));
+  printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL)); */
 
   /* Move to earliest point in recent history*/
-  int i,currentHistoryIndex,nextHistoryIndex;
-  for(i=0; i<historySize;i++)
+  int i,currentHistoryIndex=-1,nextHistoryIndex=-1;
+  for(i=0; i<historySize;i++){
     currentHistoryIndex = moveBackwardInHistory();
-  
+  }
+  printf("moved back to beginning:\n");
    /* IMPORTANT: MUST BE '=', not double equals, "==". Is an assignment */
   while( (nextHistoryIndex=moveForwardInHistory()) 
     && (nextHistoryIndex != currentHistoryIndex) ){ // while there's more strings to store
+      printf("inWhile: %d %d\n",nextHistoryIndex,currentHistoryIndex);
+      printf("string is: %s\n",historyCommand[currentHistoryIndex]);
   	  // print the current history string to file
-  	  if( historyCommand[currentHistoryIndex] !=NULL){
+  	  if( historyCommand[currentHistoryIndex] != NULL){
+        printf("File is null: %d\n",historyFile==NULL);
 		fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
         printf("\nStoring %s",historyCommand[currentHistoryIndex]);
   	  }
-      currentHistoryIndex++;
+      currentHistoryIndex=nextHistoryIndex;
   }
   /* No more strings left in forwardInHistory, one more time to store the final string */
   if( historyCommand[currentHistoryIndex] !=NULL){
@@ -717,7 +778,10 @@ void saveHistoryToDisk(){
     printf("Storing: %s\n", historyCommand[currentHistoryIndex]); 
   }
   /*Close file */
+  free(historyPath);
   fclose(historyFile);
+  printf("Done saving to disk:\n");
+  return true;
 }
 
 int main (int argc, char ** argv, char **envp) {
@@ -734,17 +798,26 @@ int main (int argc, char ** argv, char **envp) {
   char cmd[MAX_INPUT];
   bool escapeSeen = false;
   bool inCommandlineCache=true;
-
+  
+  /* Loads the history */
   initializeHistory();
-  while (!finished) {
 
-    char *cursor;
+  while (!finished) {
+    char *cursor;  	//current position of modification 
     char *lastCursor;
+    
+    /*Used to shift elements in cmd for insertions. 
+    char *relayer1;
+    char *relayer2;
+    char* tempByte='\0';*/
+
     char buffer; 
     char last_char;
     int rv;
+    int rewrite=0;
     int count;
-
+	int lastVisitedHistoryIndex_UP=-1;
+	int lastVisitedHistoryIndex_DOWN=-1;
     // Print the current directory 
     write(1, "\n[", 2);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
@@ -756,173 +829,252 @@ int main (int argc, char ** argv, char **envp) {
       finished = 1;
       break;
     }
-    // read and parse the input
+    write(1, saveCursorPosAscii, strlen(saveCursorPosAscii));
+
+      /*READING AND PARSING THE INPUT */
+
+    /*ForLoop Initializes: 
+     * 1)rv: we can read from stdin. If read 0 bytes, stop
+     * 2)cursor=cmd: position in memory
+     * 3) lastCursor: ending bound in memory 
+     * 4) last_char = 1; Runs first time
+     */
+
+    /* ForLoop conditions: 
+     * 1) rv : 
+     * 2) count : cannot execute more than MAX_INPUT times
+     * 3) last_char != \n : stops reading when press enter.
+     */
+
+     /* Continue conditions: Handle at tail end.
+     */
+
     for(rv = 1, count = 0, 
 	  cursor=cmd, lastCursor=cursor,last_char = 1;
 	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
+
 	  /* Read the value */
       rv = read(0, &buffer, 1);
-    /*encounter a quotation in terminal command*/
-      if (buffer == '"')
+
+      last_char = buffer; // hold the last_char for evaluation. 
+      escapeSeen = false; //enable possible printing to screen
+	  if (last_char == '"'){
         quote++;
-
-      last_char = buffer;
-      
-      escapeSeen = false; //enable printing to screen 
-
+      }
       /* Detect escape sequence keys like arrows */
       if(last_char=='\033'){
-      	escapeSeen = true; // disable printing to screen for terminal commands
+      	escapeSeen = true; // disable printing to terminal screen. Arrows invisible
+
+      	/*Next arrow sequence*/
       	if((rv = read(0, &buffer, 1)>0) && buffer=='['){
       	  last_char = buffer;
-
-      	  char * historicString; // Used later if reached inside switch statement.
+ 			
+      	  /* Handle Directional Sequence */
 		  if((rv = read(0, &buffer, 1)>0)){
             switch(buffer){
+            	            /* KEY_UP */
              case 'A':
-                       /* To Store cache or not*/
+                       /* Cache the current work and move into history*/
                        if(inCommandlineCache && hasHistoryEntry()) {
-                       	 inCommandlineCache=false;
+                       	 inCommandlineCache=false; // set flag
                          *lastCursor = '\0'; //terminate the current string
-                       	 storeCommandLineCache(cmd);
-                       	 char historyHeadBuffer[MAX_INPUT];
-                       	 strcpy(historyHeadBuffer,historyCommand[(historyHead-1)%historySize]);
-                         historicString = historyHeadBuffer;
-                       }else if(inCommandlineCache && !hasHistoryEntry() ){
-                         historicString=NULL; // set to NULL to do nothing;
+                       	 storeCommandLineCache(cmd);                       	 
+
+                       	 /*Set to historic string's latest entry */
+                       	 if(historyCommand[(historyHead-1)%historySize]!=NULL){
+                       	   strcpy(cmd,historyCommand[(historyHead-1)%historySize]);
+                       	   lastVisitedHistoryIndex_UP =(historyHead-1)%historySize;
+                       	   rewrite =1;
+                       	 }
+
+                       }else if(inCommandlineCache && !hasHistoryEntry()){
+                       	 //do nothing
+                       	 rewrite =0;
                        }else{
-                         historicString = historyCommand[moveBackwardInHistory()];
-                       } 
+                         /*Copy Over the string from history */
+                       	 int previousHistoryIndex = moveBackwardInHistory();
+                       	 if(previousHistoryIndex!=lastVisitedHistoryIndex_UP){
+                       	    strcpy(cmd,historyCommand[previousHistoryIndex]);
+                       	    lastVisitedHistoryIndex_UP=previousHistoryIndex;
+                       	    rewrite=1;
+                       	 }
 
-                       /*Test Print out contents of historyCommand array 
-             	       printf("\nhistoric string is: %s",historicString);fflush(stdout);
-             	       printf("\tcurrent is: %d",current);fflush(stdout);*/
-
-             	       /*Update the cmd line*/
-             	       if(historicString!=NULL)
-                         strcpy(cmd,historicString);
-                       else
-                       	 *cmd = '\0';
-                       
-                       /*Clear the previous args, before printing historic string */
-                       while(lastCursor>cmd){
-                         write(1,deleteAscii,strlen(deleteAscii));
-                         lastCursor--;
                        }
-                       cursor = cmd;
-                       cursor+= (strlen(cmd)); // incremented at end of loop to right place
-                       lastCursor=cursor;
-                       write(1,cmd,strlen(cmd));
+
+                       if(rewrite){
+                       	 /*Test printf("rewriting UP previousHistoryIndex =%d\n",lastVisitedHistoryIndex_UP);*/
+                       	 rewrite =0;
+                         /*Delete the printed chars previously in memory, from its displayed 
+                         position on screen */
+                          write(1, loadCursorPosAscii, strlen(loadCursorPosAscii));
+                          write(1, eraseLineAscii, strlen(eraseLineAscii));
+                         /*
+                         while(lastCursor>cmd){
+                           write(1,deleteAscii,strlen(deleteAscii));
+                           lastCursor--;
+                         }*/  
+                         /*Show the cmd contents to the terminal, and set pointers*/
+                         cursor = cmd;
+                         while(cursor!=NULL && *cursor!='\0'){
+                           write(1,cursor,1);
+                           cursor++;
+                         }
+                         lastCursor=cursor;
+                       }
                   break; 
+                                 /*DOWN KEY */
              case 'B': 
-                       /* Choose cache or actual history storage*/
-                       if((current==(historyHead-1))&& !inCommandlineCache){
+                       /* Enter cached command line*/
+                       if(hasHistoryEntry() && (current==(historyHead-1))&& !inCommandlineCache){
                        	 inCommandlineCache=true;
-                         historicString = temporaryCommandlineCachePtr;
+
+                         if(temporaryCommandlineCachePtr!=NULL){
+                           strcpy(cmd,temporaryCommandlineCachePtr);
+                           rewrite=1;
+                         }
 
                          /*Test: indicator of entering cache 
                          printf("entered the cache\n");fflush(stdout);*/
 
-                       }else if((current==(historyHead-1))&& inCommandlineCache){
-                         historicString = temporaryCommandlineCachePtr;
-                       }else{
-					     historicString = historyCommand[moveForwardInHistory()];
+                       }else if(inCommandlineCache){
+                       	  //do nothing
+                       	  rewrite =0;
+                       }else{ /* Must be within the history */
+
+                       	 /* Get the next String in history*/
+                       	 int nextStringIndex = moveForwardInHistory();
+                       	 if(nextStringIndex!=lastVisitedHistoryIndex_DOWN){
+					     	strcpy(cmd,historyCommand[nextStringIndex]);
+					     	lastVisitedHistoryIndex_DOWN = nextStringIndex;
+					     	rewrite =1;
+                       	 }
                        } 
+                       /*Delete the printed chars previously in memory, from its displayed 
+                         position on screen */
+                       if(rewrite){
+                       	 /*Test: printf("rewriting\n");*/
+                       	 rewrite=0;
+                         write(1, loadCursorPosAscii, strlen(loadCursorPosAscii));
+                         write(1, eraseLineAscii, strlen(eraseLineAscii));
 
-                  	   /*Test Print out contents of historyCommand array 
-                       printf("\nhistoric string is: %s",historicString);fflush(stdout);
-             	       printf("\tcurrent is: %d",current);fflush(stdout);*/
-
-             	       if(historicString!=NULL)
-                         strcpy(cmd,historicString);
-                       else *cmd = '\0';
-
-                       /*Clear the previous args, before printing historic string */
-                       while(lastCursor>cmd){
-                         write(1,deleteAscii,strlen(deleteAscii));
-                         lastCursor--;
-                       }
-
-                       cursor = cmd;
-                       cursor+= (strlen(cmd)); // incremented at end of loop to write place
-                       lastCursor=cursor;
-                       write(1,cmd,strlen(cmd));
-                       
-                  break;
+                         /*Show the cmd contents to the terminal, and set pointers*/
+                         cursor = cmd;
+                         while(cursor!=NULL && *cursor!='\0'){
+                           write(1,cursor,1);
+                           cursor++;
+                         }
+                         lastCursor=cursor;
+					   }
+                       break;
+                              /*KEY RIGHT*/
              case 'C': 
                        if(((cursor - cmd) < (MAX_INPUT-2))&& (cursor<lastCursor)){
                        	 write(1,moveRightAscii,strlen(moveRightAscii));
                        	 cursor++;
                        } 
-                  break;
+                       break;
+                            /*KEY LEFT */
              case'D': 
                        if(cursor - cmd >0){
                        	 write(1,moveLeftAscii,strlen(moveLeftAscii));
                          cursor--;
                        } 
-                      // DO SOMETHING with HISTORY
-                  break;
+                       break;
             }
 		  }
 		}
       }
-      else if (last_char==8||last_char==127){
-        char* swapper1;
-      	char* swapper2;
+      else if (last_char==8||last_char==127){ /* A delete was seen */
+        /*char* swapper1;
+      	char* swapper2;*/
 
-      	//PRECONDITION: 
+      	//PRECONDITION: Deleting a space within the cmd array
         if(cursor-cmd>0){
+          /*Failed to store necessary bytes */
+          if(!storeBytesBetweenPointersIntoGlobalArray(cursor,lastCursor)){
+            continue;
+          }
 
-      	  //MOVE BACK THE CURSOR AND SAVE SPOT
-          write(1,backspaceAscii,strlen(backspaceAscii));
-          write(1,saveCursorPosAscii,strlen(saveCursorPosAscii));
+      	  //DELETE PREVIOUS CHAR ON SCREEN, PRINT REST OF CMD LINE
+          deleteCharAtCursor();
+          clearLineAfterCursor();
+          write(1,restOfCMDLine,strlen(restOfCMDLine));
+          moveCursorBack(strlen(restOfCMDLine));
 
-          /*CHANGES TO THE DATA IN CMD*/
-
-		  //Initialize cursor positions
-          cursor--; 
-          swapper1 = cursor;
-          swapper2 = cursor+1;
-
-          /* Iterate and make changes*/
-          while(swapper2!=NULL && *swapper2!='\0'){ //while the right-hand pos has a significant byte
-            // swap with left pos
-            *swapper1 = *swapper2; 
-            write(1,swapper2,1); // display on console too
-
-            //increment data ptr and move cursor right on console
-            swapper1++;
-            swapper2++;
-          }        
-          /* null terminate the new last space in memory, and delete last char on console*/
+          if(cursor>cmd){
+            cursor--;
+          }
+          strcpy(cursor,restOfCMDLine);
+		  
+		  if(lastCursor>cmd){
+            lastCursor--;
+    	  }
           *lastCursor='\0';
 
-          if(lastCursor>cmd)
-            lastCursor--;
-          *lastCursor= '\0';
-          write(1,moveRightAscii,strlen(moveRightAscii));
-          write(1,deleteAscii,strlen(deleteAscii));
-
-          /* reload the previous position of cursor*/
-          write(1,loadCursorPosAscii,strlen(loadCursorPosAscii));
         }
       }
       /* Detect CTRL-C */
       else if(last_char == 3) {
         write(1, "^c", 2);
       }else if(last_char=='\n'){
-        
+      	char * newline= "\n";
+        write(1, newline, 1);
       }else {
-      	/* Display the last seen char to terminal */
-      	if(!escapeSeen)
-		      write(1, &last_char, 1);
-		/* Transfer the value into cmd pointed to by cursor */
-        *cursor = buffer;
-        lastCursor+=2;
-		*lastCursor='\0';
-		lastCursor--; // becomes cursor+1
-		cursor++;
+      	/* If not an escape character, print the byte and reflect change in memory */
+      	if(!escapeSeen &&(cursor==lastCursor)){
+      	  write(1, &last_char, 1);
+      	  *cursor = last_char;
+      	  cursor++;
+          lastCursor++;
+		  *lastCursor='\0';
+      	}
 
+		/* Same as above, except must shift all elements over to reflect insertion*/
+		else if(!escapeSeen && cursor<lastCursor){
+		  /* Check successful storage of rest of cmd data */
+		  if(!storeBytesBetweenPointersIntoGlobalArray(cursor,lastCursor)){
+		    continue;
+		  }
+		  write(1, &last_char, 1);
+		  *cursor = last_char;
+		  cursor++;
+
+		  /*Get rest of command line, write to screen, copy to cursorposition*/
+		  char* restOfCMDLinePtr=restOfCMDLine;
+		  write(1,restOfCMDLinePtr,strlen(restOfCMDLinePtr));
+		  strcpy(cursor,restOfCMDLinePtr);
+
+		  int i=0;
+          while(i<strlen(restOfCMDLine)){
+            write(1,moveLeftAscii,strlen(moveLeftAscii));
+            i++;
+          }
+
+		  /*Increase size by 1, due to insertion */
+		  lastCursor++;
+		  *lastCursor='\0';
+
+		  /*
+		  relayer1 = cursor;
+		  relayer2= cursor+1;
+		  *tempByte = *relayer2;
+		  while(relayer2 < lastCursor){
+		  	*relayer2 = *relayer1;
+		    write(1, relayer2, 1);
+		  	relayer1++;
+		  	relayer2++;
+		  	*tempByte = *relayer2;
+		  }
+		  *relayer2 = *tempByte;
+		  write(1, relayer2, strlen(relayer2));
+		  *cursor = buffer;*/
+		}else{ 
+
+		   /* An escape sequence key pressed. */
+
+          //*Show no changes to screen or memory. Do nothing. 
+
+		}
       }
       if ((quote%2 != 0) && (last_char == '\n')){
         write(1, ">", 1);
@@ -936,6 +1088,9 @@ int main (int argc, char ** argv, char **envp) {
     // Execute the command, handling built-in commands separately 
     // Just echo the command line for now
 
+    //Upon evaluation, we are back in the commandlineCache. Necessary to keep track of history cycling.
+    inCommandlineCache=true; 
+
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
     if (debug){
@@ -946,9 +1101,6 @@ int main (int argc, char ** argv, char **envp) {
       error = 0;
     }
     if(executeArgArray(parsedArgArray,envp)==0) continue;
-
-    /*Test: show historyCommand 
-    printHistoryCommand();*/
     
     if (debug){
       write(2, "ENDED: ", 7);
@@ -960,7 +1112,6 @@ int main (int argc, char ** argv, char **envp) {
         write(2, "0)\n", 3);
     }
   }
-  /*canonicalSettings();*/
   return 0;
 }
 
