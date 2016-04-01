@@ -56,7 +56,9 @@ void printHistoryCommand();
 
 //JobNode Program
 Job* getJobNode(pid_t pid);
-void createJob(char* newJob, char** argArray);
+void createBackgroundJob(char* newJob, char** argArray);
+char* runStatusToString(int runStatus);
+void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
 
 
 /* ANSII CODE FOR ARROW MOVEMENT */
@@ -71,10 +73,10 @@ char * loadCursorPosAscii = "\033[u";
 char * queryCursorAscii = "\033[6n";
 
 
+    /*Cursor Wrappers */
 void queryCursorPos(){
   write(1,queryCursorAscii,strlen(queryCursorAscii));
 }
-
 void deleteCharAtCursor(){
   write(1,deleteAscii,strlen(deleteAscii));
 }
@@ -98,7 +100,6 @@ void moveCursorBack(int spaces){
     }
   }
 }
-
 void moveCursorForward(int spaces){
   if(spaces<0){
     printError("Can't move cursor back negative spaces\n");

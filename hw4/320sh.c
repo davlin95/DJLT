@@ -65,8 +65,6 @@ int current=0;
 /* Terminal Variables */
 Job* jobHead=NULL;
 
-
-
 /* 
  * A function that turns relative to absolute path evaluation. 
  * @param cmdString: string to be parsed. 
@@ -469,7 +467,7 @@ bool executeArgArray(char * argArray[], char * environ[]){
       char * fullCommandPath; 
       fullCommandPath = statFind(argArray[0]);
       if(fullCommandPath!=NULL){
-        createJob(fullCommandPath,argArray);
+        createBackgroundJob(fullCommandPath,argArray);
         return false;
 
       }else { /*Not found */
@@ -489,7 +487,7 @@ bool executeArgArray(char * argArray[], char * environ[]){
       if(statExists(buffer)){
       	safeFreePtrNull(buffer);
     	printf("dir exists: %s\n",buffer);
-    	createJob(buffer,argArray);
+    	createBackgroundJob(buffer,argArray);
       }
       else{
       	/*Path Doesn't Exists: user error */
@@ -525,8 +523,10 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   }
 }
 
-
-void createJob(char* newJob, char** argArray){
+/* 
+ * An alternate execution method. Used for running background processes 
+ */
+void createBackgroundJob(char* newJob, char** argArray){
   pid_t pid;
 
   /*Assign handlers*/
@@ -534,19 +534,24 @@ void createJob(char* newJob, char** argArray){
 
   /*Child */
   if((pid=fork())==0){
+
+  	/*Test PID */
     printf("child's parent pid is %d\n", getppid());
     printf("Inside child, pid is %d\n", getpid());
+
+    /* Execute and catch error */
     int ex = execvp(newJob,argArray);
     if(ex){      
       printf("child process pid: %d not executing %s",pid, newJob);
     }
     kill(getppid(),SIGCHLD);
     exit(0);
-  }else{
+
   	  /*Parent*/
-
+  }else{
   	/*Implement Add to jobList data structure*/
-
+  	setpgid(pid,0); // make parent the process group. set child to process group. 
+  	setJobNodeValues(pid,getpgid(pid),newJob,0,2); /*Makes deep copy of newjob, creates node. add to job head.*/
   }
 }
 
@@ -555,7 +560,6 @@ void killChildHandler(int sig){
      printf("child process pid: finished executing\n");
    }
 }
-
 
 
 
@@ -1103,7 +1107,6 @@ int moveBackwardInHistory(){
 /* GLOBAL EXTERNS 
 extern Job* jobHead; */
 
-
 /*
  * A function that creates a job node containing job process info
  * @param pid: the job identifier
@@ -1138,9 +1141,24 @@ void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStat
     jobNodePtr->runStatus = runStatus;
 
   }else{
+
+  	/*Create job node */
     jobNodePtr = createJobNode(pid,processGroup,jobName,exitStatus,runStatus);
-    jobNodePtr->next = jobHead;
-    jobHead = jobNodePtr;
+
+    /*Set to the end of the job list */
+    Job *jobRunPtr = jobHead;
+    while(jobRunPtr!=NULL && (jobRunPtr->next)!=NULL){
+      jobRunPtr=jobRunPtr->next;
+    }
+    /*Set to the head */
+    if(jobRunPtr==NULL){
+	  jobNodePtr->next = jobHead;
+      jobHead = jobNodePtr;
+    }else if((jobRunPtr->next)== NULL){
+      /* Set to the last of the list*/
+      jobRunPtr->next = jobNodePtr;
+    }
+
   }
 }
 
@@ -1167,4 +1185,40 @@ Job* getJobNode(pid_t pid){
   }
   return NULL;
 }
+
+/* 
+ * A function that prints the job status
+ */
+ void printJobList(){
+   Job* jobPtr = jobHead;
+   int jobID =1;
+   while(jobPtr!=NULL){
+     printf("[%d] (%d) %-10s %s",
+       jobID,
+       jobPtr->pid,
+       runStatusToString(jobPtr->runStatus),
+       jobPtr->jobName);
+     jobPtr=jobPtr->next;
+   }
+ }
+
+/* 
+ * A function that turns the run status int to a string 
+ * @param runStatus: the int for the Job
+ * @return: the string literally returned. 
+ */
+char* runStatusToString(int runStatus){
+  if(runStatus==0){
+    return "Stopped";
+  }else if(runStatus==1){
+    return "Suspended";
+  }else if(runStatus==2){
+    return "Running";
+  }else{
+    return "Error State";
+  }
+}
+
+
+
 
