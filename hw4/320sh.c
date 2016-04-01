@@ -1158,7 +1158,6 @@ void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStat
       /* Set to the last of the list*/
       jobRunPtr->next = jobNodePtr;
     }
-
   }
 }
 
@@ -1219,6 +1218,17 @@ char* runStatusToString(int runStatus){
   }
 }
 
-
+Job* getJobPosition(int position){
+  Job* curJob = jobHead;
+  int i;
+  for(i=1;i<position;i++){
+  	if(curJob!=NULL){
+      curJob=curJob->next;
+  	}else{
+	  return NULL;
+  	} 
+  }
+  return curJob;
+}
 
 
