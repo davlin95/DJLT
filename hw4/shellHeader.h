@@ -1,23 +1,63 @@
+#include <stdio.h>
 #include <stdlib.h>
-
-#define UP_KEY "^[[A"
-#define DOWN_KEY "^[[B"
-#define RIGHT_KEY "^[[C"
-#define LEFT_KEY "^[[D"
+#include <string.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <curses.h>
+#include <stdlib.h>
 
 
 /* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
 
+/*******************/
+/*  STRUCTS         */
+/********************/
+
+/* Struct Variables */
+typedef struct jobNode{
+  pid_t pid;
+  pid_t processGroup;
+  char jobName[MAX_INPUT];
+  int exitStatus;
+  int runStatus;
+  struct jobNode * next;
+}Job;
+
+
+/*********************/
 /*Header Prototypes */
-int isBuiltIn(char * command);
-bool saveHistoryToDisk();
+/********************/
+
+//Main Program
 bool executeArgArray(char * argArray[], char * environ[]);
 char ** parseCommandLine(char* cmd, char ** argArray);
 char *statFind(char *cmd);
 void printError(char* command);
 void processExit();
+int isBuiltIn(char * command);
+void killChildHandler(int sig);
 void createNewChildProcess(char* objectFilePath,char** argArray);
+
+//HistoryCommand Program
+int moveBackwardInHistory();
+int moveForwardInHistory();
+bool hasHistoryEntry();
+void storeHistory(char * string);
+bool saveHistoryToDisk();
+void storeCommandLineCache(char* cmd);
+void  initializeHistory();
+void printHistoryCommand();
+
+//JobNode Program
+Job* getJobNode(pid_t pid);
+void createJob(char* newJob, char** argArray);
+
 
 /* ANSII CODE FOR ARROW MOVEMENT */
 char* moveLeftAscii = "\033[D";
@@ -28,6 +68,12 @@ char * eraseLineAscii = "\033[0K";
 char * cursorPosAscii = "\033[6n";
 char * saveCursorPosAscii = "\033[s";
 char * loadCursorPosAscii = "\033[u";
+char * queryCursorAscii = "\033[6n";
+
+
+void queryCursorPos(){
+  write(1,queryCursorAscii,strlen(queryCursorAscii));
+}
 
 void deleteCharAtCursor(){
   write(1,deleteAscii,strlen(deleteAscii));
@@ -65,13 +111,26 @@ void moveCursorForward(int spaces){
   }
 }
 
-/* Terminal Variables */
-typedef struct variableNode{
-  char* key;
-  char* value;
-  struct variableNode * next;
-}var;
 
+/* Check for special char & */
+bool checkForBackgroundSpecialChar(char* argArray[],int argCount){
+  char* str;
+  int strLen, i;
+    for(i=0;i<argCount;i++){
+      if(strcmp(argArray[i],"&")==0) {
+        return true;
+      }
+      else{
+      str = argArray[i];
+      strLen = strnlen(str,1024);
+      if(  (*(str+strLen-1)) == '&' ){
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
 
 void safeFreePtrNull(char* ptr){
   if(ptr!=NULL){
@@ -174,6 +233,8 @@ int statExists(char* dir){
 
 /* Test Function*/
 void test(){
+  char * args[5]={"abc","c", "d","e","f&"};
+  printf("test found & : %d\n",checkForBackgroundSpecialChar(args,5)); fflush(stdout);
 
   // Print environment variables 
   /*

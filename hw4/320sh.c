@@ -1,13 +1,8 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <termios.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <stdbool.h>
-#include <curses.h>
 #include "shellHeader.h"
+
+                 /**************************************/
+                  /*        MAIN PROGRAM               */
+				 /**************************************/
 
 /*Global Error Var */
 int error = 0;
@@ -46,18 +41,6 @@ bool storeBytesBetweenPointersIntoGlobalArray(char* cursorSpot, char*lastCursorS
 }
 
 /*
- * A function that stores the copy of the string passed, into the global string buffer temporaryCommandlineCache
- * @param cmd: the string to be cached. 
- * @return: none
- */
-void storeCommandLineCache(char* cmd){
-  if(cmd!=NULL){
-  	temporaryCommandlineCachePtr=temporaryCommandlineCache;
-    strncpy(temporaryCommandlineCache,cmd,strnlen(cmd,MAX_INPUT));
-  }else temporaryCommandlineCachePtr=NULL;
-}
-
-/*
  * A function that prints the strings in the global helper array[] for the help menu
  * @return: none
  */
@@ -70,164 +53,19 @@ void printHelpMenu(){
   fflush(stdout);
 }
 
-          
-/* Terminal Variables */
-var* varHead=NULL;
-
 /*
- * A function that returns the current variable node.
- * @param keyString: the key string 
- * @return var: the corresponding node that has the key-value pair;
- */
-var* getVarNode(char* keyString){
-  /*Initialize*/
-  char* str;
-  var* varPtr = varHead;
-
-  /*check case*/
-  if(varPtr ==NULL) return NULL;
-  
-  /* search list for matching keyString*/
-  while(varPtr!=NULL){ 
-    str = varPtr->key;
-    int result =0;
-    if( (result = strcmp(str,keyString))==0) 
-      return varPtr;
-  	else 
-  	  varPtr = varPtr->next;
-  }
-  return NULL;
-}
-
-/*
- * A function that creates a node (key/value) pair
- * @param key: the key string
- * @param value: the value string
- * @param var* : the pointer to the created struct in memory.
- */
-var* createNode(char* key, char* value){
-  static var node;
-  node.key = key;
-  node.value = value;
-  return &node;
-}
-
-/*
- * A function that sets a new value to the key, or creates a new key-value pair if key not exists. 
- * @param key: the key string
- * @param value: the value string
- * @return : none
- */
-void setKeyValuePair(char* key, char* value){
-  var* node = getVarNode(key);
-  if(node!=NULL){
-  	node->value = value;
-  }else{
-    node = createNode(key,value);
-    node->next = varHead;
-    varHead = node;
-  }
-}
-
-/*
- * Global variables for the history 
+ * Initialize Global variables for the history 
  */
 int historySize = 50;
 char* historyCommand[50];
 int historyHead = 0;
 int current=0;
 
-/*
- *  A helper function that prints the history for debugging 
- *  @return: void
- */
-void printHistoryCommand(){
-  
-    /*If history is NULL */
-  int i=0;
-  if(historyCommand[i]==NULL){
-    printf("History command is null");fflush(stdout);
-  } 
-    /*Prints history */
-  while(historyCommand[i]!=NULL){
-    printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
-    i++;
-  }
-}
+          
+/* Terminal Variables */
+Job* jobHead=NULL;
 
-/*
- * A function that stores a string into history global structure. 
- * @param string: the string to be stored. 
- * @return : none
- */
- void storeHistory(char * string){
-  int headIndex = historyHead % historySize; /*Valid index within the array */
-  
-  /* Free the previous string */
-  if(historyCommand[headIndex]!=NULL){
-  	free(historyCommand[headIndex]);
-  }
-  /* Allocate memory for new string */
-  char* newString = malloc((strlen(string)+1)*sizeof(char));
-  strcpy(newString,string);
-  historyCommand[headIndex]=newString;
 
-  /* Reset counters*/
-  historyHead++; /*Next available space to store next string */
-  current=(historyHead-1); /*Index of most current String */
-}
-
-/*
- * A function that moves the current history point forward. Changes stored in history are persistent.
- * Up to value (head -1), which is latest string history entry
- * @return int: the int value that can be inserted into historyCommand to retrieve the next history string.
- */
-int moveForwardInHistory(){
-    /* While conditions:
-	 * 1) Current not exceed head
-	 * 2) next history string is not the buffered input [address of historyHead]
-	 */
-  if( (current<historyHead) && 
-  	(( (current+1)%historySize) != (historyHead%historySize))) {
-  	current++;
-  	return (current%historySize);
-  }
-  /* Can't move forward, don't increment */
-  return(current%historySize); 
-}
-
-/*
- * A function that moves the current history point backwards. Changes stored in history are persistent.
- * Up to value 1, which is next to-earliest string history index. S
- * @return int: the int value that can be inserted into historyCommand to retrieve the prev history string.
- */
-int moveBackwardInHistory(){
-    /* While conditions:
-     * 1) cursor before historyHead
-	 * 2) Current is not the earliest string, so it can move backwards
-	 */
-	if((current<historyHead)
-	  &&(current>0)
-	  &&(((current-1)%historySize) != ((historyHead-1)%historySize))){ /*Not overwriting the most current cmd string*/
-		current--;
-		return(current%historySize);
-	}
-    /* Can't move forward, don't increment */
-	return(current%historySize);
-}
-
-/* 
- * A function that determines whether there are strings in the history at all. 
- * @return: false if history is empty, true if at least one history string stored. 
- */
-bool hasHistoryEntry(){
-  int headIndex = (historyHead-1) % historySize; /*Valid index within the array */
-  /* Free the previous string */
-  if(historyCommand[headIndex]!=NULL){
-  	return true;
-  }
-  return false;
-}
 
 /* 
  * A function that turns relative to absolute path evaluation. 
@@ -243,14 +81,14 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   char* buildingPath = buffer; 
   strcpy(buildingPath,getenv("PWD"));
 
-  /*Test print */
+  /*Test print 
   printf("\nbuildingPath is: %s\n",buildingPath);
   char* testBuff=calloc(strlen(buildingPath),1);
   strcpy(testBuff, buildingPath);
   printf("\nparentPath is: %s\n",parentDirectory(buildingPath));
   printf("commandString is: %s\n",cmdString);
   fflush(stdout); 
-  free(testBuff);
+  free(testBuff); */
 
   /*Find the traversal path */
   char * traversal[MAX_INPUT];
@@ -580,6 +418,7 @@ void processEcho(char argArray[]){
   }
   write(1, "\n", 2);
 }
+
 void processExit(){
   if(!saveHistoryToDisk()){
   	printError("Error saving history to disk\n");
@@ -630,7 +469,9 @@ bool executeArgArray(char * argArray[], char * environ[]){
       char * fullCommandPath; 
       fullCommandPath = statFind(argArray[0]);
       if(fullCommandPath!=NULL){
-        createNewChildProcess(fullCommandPath,argArray);
+        createJob(fullCommandPath,argArray);
+        return false;
+
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
@@ -648,7 +489,7 @@ bool executeArgArray(char * argArray[], char * environ[]){
       if(statExists(buffer)){
       	safeFreePtrNull(buffer);
     	printf("dir exists: %s\n",buffer);
-    	createNewChildProcess(buffer,argArray);
+    	createJob(buffer,argArray);
       }
       else{
       	/*Path Doesn't Exists: user error */
@@ -684,107 +525,42 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
   }
 }
 
-/* 
- * A function that initializes the historyCommand global var, from a searched dir path 
- * for a text file in the home directory relative to the computer. 
- * Does not initialize if not found.  
- */
-void  initializeHistory(){
 
-  /*Initialize buffers for the directory to store history */
-  int homePathSize = strlen(getenv("HOME"));
-  char * historyFileExtension = "/.320sh_history\0";
-  int historyFileExtensionSize = strlen(historyFileExtension);
-  char* historyPath=malloc( (homePathSize + historyFileExtensionSize+1) *sizeof(char));
+void createJob(char* newJob, char** argArray){
+  pid_t pid;
 
-  /* Build the directory history */
-  strcpy(historyPath, getenv("HOME"));
-  strcat(historyPath,historyFileExtension);
+  /*Assign handlers*/
+  signal(SIGCHLD,killChildHandler);
 
-  /* Start reading the history file */
-  FILE *historyFile;
-  historyFile = fopen(historyPath, "r");
-  free(historyPath);
-
-  char line[MAX_INPUT];
-  if(historyFile){ 
-  	/*Read for lines from file*/
-    while(fgets(line, sizeof(line), historyFile)){
-    	/* Check for NULL lines and lines of spaces, or '\n' */
-      if (line != NULL){
-      	if(parseByDelimiterNumArgs(line," \n")>0){
-      		storeHistory(line);
-      	}
-      }
+  /*Child */
+  if((pid=fork())==0){
+    printf("child's parent pid is %d\n", getppid());
+    printf("Inside child, pid is %d\n", getpid());
+    int ex = execvp(newJob,argArray);
+    if(ex){      
+      printf("child process pid: %d not executing %s",pid, newJob);
     }
-	/*Handling*/
-    fclose(historyFile);
+    kill(getppid(),SIGCHLD);
+    exit(0);
   }else{
-  	/* Print to stdout */
-    printError("Unable to initialize prompt history");
+  	  /*Parent*/
+
+  	/*Implement Add to jobList data structure*/
+
   }
-  printHistoryCommand();
 }
 
-/* A function that saves the history command global array into the computer's home directory. 
- * Should be called once upon entry into main. 
- */
-bool saveHistoryToDisk(){
-
-  /*Initialize buffers for the directory to store history */
-  int homePathSize = strlen(getenv("HOME"));
-  char * historyFileExtension = "/.320sh_history";
-  int historyFileExtensionSize = strlen(historyFileExtension);
-  char* historyPath= malloc((homePathSize + historyFileExtensionSize+1)*sizeof(char));
-  if(historyPath==NULL) return false;
-
-  printf("Concatenating:\n");
-  /*Build the path */
-  strcpy(historyPath,getenv("HOME"));
-  strcat(historyPath,historyFileExtension);
-  printf("HOME IS: %s", getenv("HOME"));
-
-  /* Start writing the history file */
-  FILE *historyFile;
-  historyFile = fopen(historyPath,"w");
-  printf("\nopen to file %d:\n",historyFile==NULL);
-  printHistoryCommand();
-  /*Tests: 
-  printf("\n%s\n",historyPath);
-  printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL)); */
-
-  /* Move to earliest point in recent history*/
-  int i,currentHistoryIndex=-1,nextHistoryIndex=-1;
-  for(i=0; i<historySize;i++){
-    currentHistoryIndex = moveBackwardInHistory();
-  }
-  printf("moved back to beginning:\n");
-   /* IMPORTANT: MUST BE '=', not double equals, "==". Is an assignment */
-  while( (nextHistoryIndex=moveForwardInHistory()) 
-    && (nextHistoryIndex != currentHistoryIndex) ){ // while there's more strings to store
-      printf("inWhile: %d %d\n",nextHistoryIndex,currentHistoryIndex);
-      printf("string is: %s\n",historyCommand[currentHistoryIndex]);
-  	  // print the current history string to file
-  	  if( historyCommand[currentHistoryIndex] != NULL){
-        printf("File is null: %d\n",historyFile==NULL);
-		fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
-        printf("\nStoring %s",historyCommand[currentHistoryIndex]);
-  	  }
-      currentHistoryIndex=nextHistoryIndex;
-  }
-  /* No more strings left in forwardInHistory, one more time to store the final string */
-  if( historyCommand[currentHistoryIndex] !=NULL){
-    fprintf(historyFile,"%s\n", historyCommand[currentHistoryIndex]); 
-    printf("Storing: %s\n", historyCommand[currentHistoryIndex]); 
-  }
-  /*Close file */
-  free(historyPath);
-  fclose(historyFile);
-  printf("Done saving to disk:\n");
-  return true;
+void killChildHandler(int sig){
+   while(waitpid(-1,NULL, WNOHANG)>0){
+     printf("child process pid: finished executing\n");
+   }
 }
+
+
+
 
 int main (int argc, char ** argv, char **envp) {
+  test();
   /*debug flag*/
   int debug = 0;
   if (argv[1] != NULL){
@@ -1054,20 +830,6 @@ int main (int argc, char ** argv, char **envp) {
 		  lastCursor++;
 		  *lastCursor='\0';
 
-		  /*
-		  relayer1 = cursor;
-		  relayer2= cursor+1;
-		  *tempByte = *relayer2;
-		  while(relayer2 < lastCursor){
-		  	*relayer2 = *relayer1;
-		    write(1, relayer2, 1);
-		  	relayer1++;
-		  	relayer2++;
-		  	*tempByte = *relayer2;
-		  }
-		  *relayer2 = *tempByte;
-		  write(1, relayer2, strlen(relayer2));
-		  *cursor = buffer;*/
 		}else{ 
 
 		   /* An escape sequence key pressed. */
@@ -1113,5 +875,296 @@ int main (int argc, char ** argv, char **envp) {
     }
   }
   return 0;
+}
+
+			/***************************/
+			/* HISTORYCOMMAND PROGRAM */
+			/***************************/
+/*
+ * Global variables for the history 
+ *
+extern int historySize;
+extern char* historyCommand[50];
+extern int historyHead;
+extern int current;*/
+
+/*
+ *  A helper function that prints the history for debugging 
+ *  @return: void
+ */
+void printHistoryCommand(){
+  
+    /*If history is NULL */
+  int i=0;
+  if(historyCommand[i]==NULL){
+    printf("History command is null");fflush(stdout);
+  } 
+    /*Prints history */
+  while(historyCommand[i]!=NULL){
+    printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
+    i++;
+  }
+}
+
+/*
+ * A function that stores the copy of the string passed, into the global string buffer temporaryCommandlineCache
+ * @param cmd: the string to be cached. 
+ * @return: none
+ */
+void storeCommandLineCache(char* cmd){
+  if(cmd!=NULL){
+    temporaryCommandlineCachePtr=temporaryCommandlineCache;
+    strncpy(temporaryCommandlineCache,cmd,strnlen(cmd,MAX_INPUT));
+  }else temporaryCommandlineCachePtr=NULL;
+}
+
+/* 
+ * A function that determines whether there are strings in the history at all. 
+ * @return: false if history is empty, true if at least one history string stored. 
+ */
+bool hasHistoryEntry(){
+  int headIndex = (historyHead-1) % historySize; /*Valid index within the array */
+  /* Free the previous string */
+  if(historyCommand[headIndex]!=NULL){
+    return true;
+  }
+  return false;
+}
+
+/* 
+ * A function that initializes the historyCommand global var, from a searched dir path 
+ * for a text file in the home directory relative to the computer. 
+ * Does not initialize if not found.  
+ */
+void  initializeHistory(){
+
+  /*Initialize buffers for the directory to store history */
+  int homePathSize = strlen(getenv("HOME"));
+  char * historyFileExtension = "/.320sh_history\0";
+  int historyFileExtensionSize = strlen(historyFileExtension);
+  char* historyPath=malloc( (homePathSize + historyFileExtensionSize+1) *sizeof(char));
+
+  /* Build the directory history */
+  strcpy(historyPath, getenv("HOME"));
+  strcat(historyPath,historyFileExtension);
+
+  /* Start reading the history file */
+  FILE *historyFile;
+  historyFile = fopen(historyPath, "r");
+  free(historyPath);
+
+  char line[MAX_INPUT];
+  if(historyFile){ 
+    /*Read for lines from file*/
+    while(fgets(line, sizeof(line), historyFile)){
+      /* Check for NULL lines and lines of spaces, or '\n' */
+      if (line != NULL){
+        if(parseByDelimiterNumArgs(line," \n")>0){
+          storeHistory(line);
+        }
+      }
+    }
+  /*Handling*/
+    fclose(historyFile);
+  }else{
+    /* Print to stdout */
+    printError("Unable to initialize prompt history");
+  }
+  //printHistoryCommand();
+}
+
+/* A function that saves the history command global array into the computer's home directory. 
+ * Should be called once upon entry into main. 
+ */
+bool saveHistoryToDisk(){
+
+  /*Initialize buffers for the directory to store history */
+  int homePathSize = strlen(getenv("HOME"));
+  char * historyFileExtension = "/.320sh_history";
+  int historyFileExtensionSize = strlen(historyFileExtension);
+  char* historyPath= malloc((homePathSize + historyFileExtensionSize+1)*sizeof(char));
+  if(historyPath==NULL) return false;
+
+  printf("Concatenating:\n");
+  /*Build the path */
+  strcpy(historyPath,getenv("HOME"));
+  strcat(historyPath,historyFileExtension);
+  printf("HOME IS: %s", getenv("HOME"));
+
+  /* Start writing the history file */
+  FILE *historyFile;
+  historyFile = fopen(historyPath,"w");
+  printf("\nopen to file %d:\n",historyFile==NULL);
+  printHistoryCommand();
+  /*Tests: 
+  printf("\n%s\n",historyPath);
+  printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL)); */
+
+  /* Move to earliest point in recent history*/
+  int i,currentHistoryIndex=-1,nextHistoryIndex=-1;
+  for(i=0; i<historySize;i++){
+    currentHistoryIndex = moveBackwardInHistory();
+  }
+  printf("moved back to beginning:\n");
+   /* IMPORTANT: MUST BE '=', not double equals, "==". Is an assignment */
+  while( (nextHistoryIndex=moveForwardInHistory()) 
+    && (nextHistoryIndex != currentHistoryIndex) ){ // while there's more strings to store
+      printf("inWhile: %d %d\n",nextHistoryIndex,currentHistoryIndex);
+      printf("string is: %s\n",historyCommand[currentHistoryIndex]);
+      // print the current history string to file
+      if( historyCommand[currentHistoryIndex] != NULL){
+        printf("File is null: %d\n",historyFile==NULL);
+    fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
+        printf("\nStoring %s",historyCommand[currentHistoryIndex]);
+      }
+      currentHistoryIndex=nextHistoryIndex;
+  }
+  /* No more strings left in forwardInHistory, one more time to store the final string */
+  if( historyCommand[currentHistoryIndex] !=NULL){
+    fprintf(historyFile,"%s\n", historyCommand[currentHistoryIndex]); 
+    printf("Storing: %s\n", historyCommand[currentHistoryIndex]); 
+  }
+  /*Close file */
+  free(historyPath);
+  fclose(historyFile);
+  printf("Done saving to disk:\n");
+  return true;
+}
+
+
+/*
+ * A function that moves the current history point forward. Changes stored in history are persistent.
+ * Up to value (head -1), which is latest string history entry
+ * @return int: the int value that can be inserted into historyCommand to retrieve the next history string.
+ */
+int moveForwardInHistory(){
+    /* While conditions:
+   * 1) Current not exceed head
+   * 2) next history string is not the buffered input [address of historyHead]
+   */
+  if( (current<historyHead) && 
+    (( (current+1)%historySize) != (historyHead%historySize))) {
+    current++;
+    return (current%historySize);
+  }
+  /* Can't move forward, don't increment */
+  return(current%historySize); 
+}
+
+/*
+ * A function that moves the current history point backwards. Changes stored in history are persistent.
+ * Up to value 1, which is next to-earliest string history index. S
+ * @return int: the int value that can be inserted into historyCommand to retrieve the prev history string.
+ */
+int moveBackwardInHistory(){
+    /* While conditions:
+     * 1) cursor before historyHead
+   * 2) Current is not the earliest string, so it can move backwards
+   */
+  if((current<historyHead)
+    &&(current>0)
+    &&(((current-1)%historySize) != ((historyHead-1)%historySize))){ /*Not overwriting the most current cmd string*/
+    current--;
+    return(current%historySize);
+  }
+    /* Can't move forward, don't increment */
+  return(current%historySize);
+}
+
+/*
+ * A function that stores a string into history global structure. 
+ * @param string: the string to be stored. 
+ * @return : none
+ */
+ void storeHistory(char * string){
+  int headIndex = historyHead % historySize; /*Valid index within the array */
+  
+  /* Free the previous string */
+  if(historyCommand[headIndex]!=NULL){
+    free(historyCommand[headIndex]);
+  }
+  /* Allocate memory for new string */
+  char* newString = malloc((strlen(string)+1)*sizeof(char));
+  strcpy(newString,string);
+  historyCommand[headIndex]=newString;
+
+  /* Reset counters*/
+  historyHead++; /*Next available space to store next string */
+  current=(historyHead-1); /*Index of most current String */
+}
+
+
+
+
+                 /**************************************/
+                  /*        JOB NODE PROGRAM           */
+				 /**************************************/
+
+/* GLOBAL EXTERNS 
+extern Job* jobHead; */
+
+
+/*
+ * A function that creates a job node containing job process info
+ * @param pid: the job identifier
+ * @param jobName: name of job
+ * @param processGroup : 
+ */
+Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
+  static Job jobNode;
+  jobNode.pid = pid;
+  jobNode.processGroup = processGroup;
+  strcpy(jobNode.jobName,jobName);
+  jobNode.exitStatus =exitStatus;
+  jobNode.runStatus = runStatus;
+  return &jobNode;
+}
+
+/*
+ * A function that sets new values to the jobNode with given pid, or creates a new jobNode with such values
+ * if such pid not exists. 
+ * @param key: the key string
+ * @param value: the value string
+ * @return : none
+ */
+void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
+  Job* jobNodePtr = getJobNode(pid);
+  if(jobNodePtr!=NULL){
+    /*Set the Values for the Job Node */
+    jobNodePtr->pid = pid;
+    jobNodePtr->processGroup = processGroup;
+    strcpy(jobNodePtr->jobName,jobName);
+    jobNodePtr->exitStatus = exitStatus;
+    jobNodePtr->runStatus = runStatus;
+
+  }else{
+    jobNodePtr = createJobNode(pid,processGroup,jobName,exitStatus,runStatus);
+    jobNodePtr->next = jobHead;
+    jobHead = jobNodePtr;
+  }
+}
+
+/*
+ * A function that returns the job node by its pid.
+ * @param pid: the job pid identifier
+ * @return Job Ptr: Pointer to the job node struct
+ */
+Job* getJobNode(pid_t pid){
+  /*Initialize*/
+  pid_t jobPID;
+  Job* jobPtr = jobHead;
+
+  /*check case*/
+  if(jobPtr ==NULL) return NULL;
+  
+  /* search list for matching pid*/
+  while(jobPtr!=NULL){ 
+    jobPID = jobPtr->pid;
+    if( pid==jobPID) 
+      return jobPtr;
+  	else 
+  	  jobPtr = jobPtr->next;
+  }
+  return NULL;
 }
 
