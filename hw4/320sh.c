@@ -1,5 +1,43 @@
 #include "shellHeader.h"
 
+/*****************/
+/*   Globals  ***/
+/***************/
+/*
+ * Initialize Global variables for the history 
+ */
+int historySize = 50;
+char* historyCommand[50];
+int historyHead = 0;
+int current=0;
+
+          
+/* Terminal Variables */
+static Job* jobHead=NULL;
+pid_t foreground=-1;
+
+
+				/***********************************/
+                /*          Tests                 */
+                /**********************************/
+void testJobNode(){
+  Job* jobNode1 = createJobNode(1,2,"node1\0",0,1);
+  Job* jobNode2 = createJobNode(2,3,"node2\0",0,2);
+  Job* jobNode3 = createJobNode(3,3,"node3\0",0,0);
+
+  jobNode1->next = jobNode2;
+  jobNode1->prev = NULL;
+  jobNode2->prev = jobNode1;
+  jobNode2->next = jobNode3;
+  jobNode3->next = NULL;
+  jobNode3->prev = jobNode2;
+
+  jobHead = jobNode1;
+  printJobListWithHandling();
+  printJobListWithHandling();
+}
+
+
                  /**************************************/
                   /*        MAIN PROGRAM               */
 				 /**************************************/
@@ -53,18 +91,7 @@ void printHelpMenu(){
   fflush(stdout);
 }
 
-/*
- * Initialize Global variables for the history 
- */
-int historySize = 50;
-char* historyCommand[50];
-int historyHead = 0;
-int current=0;
 
-          
-/* Terminal Variables */
-Job* jobHead=NULL;
-pid_t foreground=-1;
 
 /* 
  * A function that turns relative to absolute path evaluation. 
@@ -485,10 +512,10 @@ bool executeArgArray(char * argArray[], char * environ[]){
         //printf("\nfinished execution createBackgroundJob in executeArgArray\n");
         return false; //Continue loop upon exit
       }else if(fullCommandPath!=NULL && fgState ){
-      	/*ALTERNATE */
-      	createNewChildProcess(fullCommandPath,argArray);
-      	/*ALTERNATE:
-		createBackgroundJob(fullCommandPath,argArray,1); */
+      	/*ALTERNATE 
+      	createNewChildProcess(fullCommandPath,argArray); */
+      	/*ALTERNATE:*/
+		createBackgroundJob(fullCommandPath,argArray,1); 
         //printf("\nfinished execution createBackgroundJob in executeArgArray\n");
         return false;//continue loop upon exit
       }else { /*Not found */
@@ -534,6 +561,7 @@ bool executeArgArray(char * argArray[], char * environ[]){
 void createNewChildProcess(char* objectFilePath,char** argArray){
   pid_t pid;
  // int status;
+
   if((pid=fork())==0){
     //printf("child's parent pid is %d\n", getppid());
     int ex = execvp(objectFilePath,argArray);
@@ -548,8 +576,8 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
         printf("\nParent Process WNOHANG reaped child process %d\n",pid);
   	  }*/
 
-       /*SLOW */
-      wait(NULL); 
+       /*SLOW 
+      wait(NULL); */
 
      /* if (status)
         error = 1; */
@@ -565,14 +593,39 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
 void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
     /*Assign handlers*/
   signal(SIGCHLD,killChildHandler);
-
   pid_t pid;
 
-  /*Child */
-  if((pid=fork())==0){
-  	/*Test PID 
+  /*PARENT PROCESS*/
+  if((pid=fork())!=0){
+  	/*Make the forked child part of this group*/
+  	setpgid(pid,getpid());  
+  	sleep(1);
+
+  	//ADD JOB TO THE DATASTRUCTURE
+  	/*Blocking*/
+  	sigset_t block,unblock;
+  	sigfillset(&block);
+    sigprocmask(SIG_SETMASK,&block,&unblock);
+
+    if(newJob!=NULL){
+      char* newJobString = malloc( sizeof(char)*(strlen(newJob)+1))	;
+      strcpy(newJobString,newJob);
+      setJobNodeValues(pid,getpgid(pid),newJobString,0,2);
+    }
+  	if(setForeground){//set foreground
+  	  foreground = pid;
+  	}else{
+	  //printJobNode(getJobNode(pid),-1);
+  	  printJobListWithHandling();
+  	}
+  	//UNBLOCKING THE SIGNALS
+  	sigprocmask(SIG_SETMASK,&unblock,NULL);
+  }
+  else{   /*CHILD*/
+
+  	/*Test PID */
     printf("child's parent pid is %d\n", getppid());
-    printf("Inside child, pid is %d\n", getpid()); */
+    printf("Inside child, pid is %d\n", getpid()); 
 
     /* Execute and catch error */
     int ex = execvp(newJob,argArray);
@@ -581,47 +634,43 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
     }
     kill(getppid(),SIGCHLD);
     exit(0);
-  	  /*Parent*/
-  }else{
-  	//printf("In parent process");
-  	/*Implement Add to jobList data structure*/
-  	//setpgid(0,0);  	// make parent the process group. set child to process group.
-  	//setpgid(pid,0);  
-  	/*//printf(": pid:%d pgid: %d",getpid(),getpgid(0));*/
-  	setJobNodeValues(pid,getpgid(pid),newJob,0,2); //Makes deep copy of newjob, creates node. add to job head.
-  	if(setForeground){//set foreground
-  	  foreground = pid;
-  	}
-  	//printJobNode(getJobNode(pid),-1);
-  	//printJobList();
-  }
+  }	  
 }
 
-void killChildHandler(int sig){
+void killChildHandler(){
+    pid_t pid=0;
+    sigset_t block,unblock;
 
-   //write(1,"caught child\0",13);
-   pid_t pid;
-   //Job* terminatedJob;
   /* Test Print Strings
    char* pidString="\nPid is: \0";
    char * str = "\nSignal!child process pid: finished executing\n\0";*/
+ 
+    while((pid=waitpid(-1,NULL, WUNTRACED)>0) ){
+    sigfillset(&block);
+    sigprocmask(SIG_SETMASK,&block,&unblock);
 
-   while( (pid=waitpid(-1,NULL, WNOHANG)>0) ){
-   /* Test print strings
-   	 write(1,str,strlen(str));
-   	 write(1,pidString,strlen(pidString)); */
+    /*TEST PRINT RECEIPT SIGNAL */
+    char reapString[MAX_INPUT]={'\0'};
+    sprintf(reapString,"Reaped Child process: %d ...\n",pid);
+    write(1,reapString,strlen(reapString)); 
 
-   	 /*sio_put("%d",pid);
-		//implement sig blocking
-	 if((terminatedJob=getJobNode(pid))!=NULL){
-       terminatedJob->runStatus =0;
-       printJobNode(terminatedJob,69);
-	 } */
-   }
+    /*MODIFY THE DATASTRUCTURE*/
+    Job* terminatedJobNode;
+    terminatedJobNode = getJobNode(pid);
+    if(terminatedJobNode!=NULL){
+      terminatedJobNode->runStatus=0;
+	  /*SHOW TO SCREEN*/
+      printJobNode(terminatedJobNode,getPositionOfJobNode(terminatedJobNode));
+    }
+
+    /*UNBLOCK ALL SIGNALS*/
+    sigprocmask(SIG_SETMASK,&unblock,NULL);
+  }
 }
 
 
 int main (int argc, char ** argv, char **envp) {
+  jobHead =NULL;
   //int firstTimeRun =1;
 
   /*debug flag*/
@@ -633,7 +682,7 @@ int main (int argc, char ** argv, char **envp) {
 
   int quote = 0;
   int finished = 0;
-  char *prompt = "320sh> ";
+  //char *prompt = "320sh > ";
   char cmd[MAX_INPUT];
   bool escapeSeen = false;
   bool inCommandlineCache=true;
@@ -665,6 +714,7 @@ int main (int argc, char ** argv, char **envp) {
       write(1,"\n",1);
     }*/
 
+    /*REENTRANT PRINTING 
     write(1, "[", 1);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
     write(1, "] ", 1);
@@ -674,8 +724,13 @@ int main (int argc, char ** argv, char **envp) {
     if (!rv) { 
       finished = 1;
       break;
-    }
-    write(1, saveCursorPosAscii, strlen(saveCursorPosAscii));
+    } */
+
+    /*NON-REENTRANT PRINTING*/
+    fprintf(stdout,"[%s]320sh >",getenv("PWD"));
+    fprintf(stdout,"%s",saveCursorPosAscii);
+    fflush(stdout);
+    //write(1, saveCursorPosAscii, strlen(saveCursorPosAscii));
 
       /*READING AND PARSING THE INPUT */
 
@@ -978,7 +1033,6 @@ extern int current;*/
  *  @return: void
  */
 void printHistoryCommand(){
-  
     /*If history is NULL */
   int i=0;
   if(historyCommand[i]==NULL){
@@ -1070,11 +1124,11 @@ bool saveHistoryToDisk(){
   char* historyPath= malloc((homePathSize + historyFileExtensionSize+1)*sizeof(char));
   if(historyPath==NULL) return false;
 
-  printf("Concatenating:\n");
+  //printf("Concatenating:\n");
   /*Build the path */
   strcpy(historyPath,getenv("HOME"));
   strcat(historyPath,historyFileExtension);
-  printf("HOME IS: %s", getenv("HOME"));
+  printf("HOME IS: %s", historyPath);
 
   /* Start writing the history file */
   FILE *historyFile;
@@ -1107,7 +1161,7 @@ bool saveHistoryToDisk(){
   /* No more strings left in forwardInHistory, one more time to store the final string */
   if( historyCommand[currentHistoryIndex] !=NULL){
     fprintf(historyFile,"%s\n", historyCommand[currentHistoryIndex]); 
-    printf("Storing: %s\n", historyCommand[currentHistoryIndex]); 
+    printf("last Storing: %s\n", historyCommand[currentHistoryIndex]); 
   }
   /*Close file */
   free(historyPath);
@@ -1188,6 +1242,14 @@ int moveBackwardInHistory(){
 /* GLOBAL EXTERNS 
 extern Job* jobHead; */
 
+int jobSize(){
+  int size =0;
+  Job* jobPtr = jobHead;
+  if(jobPtr!=NULL){
+  	jobPtr++;
+  }
+  return size;
+}
 /*
  * A function that creates a job node containing job process info
  * @param pid: the job identifier
@@ -1195,21 +1257,24 @@ extern Job* jobHead; */
  * @param processGroup : 
  */
 Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
-  static Job jobNode;
-  jobNode.pid = pid;
-  jobNode.processGroup = processGroup;
-  strcpy(jobNode.jobName,jobName);
-  jobNode.exitStatus =exitStatus;
-  jobNode.runStatus = runStatus;
-  jobNode.next=NULL;
-  jobNode.prev=NULL;
-  return &jobNode;
+  Job* newJobNode;
+  if((newJobNode=malloc(sizeof(Job)))==NULL){
+  	return NULL; /*Unable to allocate*/
+  }
+  /*Initialize memory */
+  newJobNode->pid = pid;
+  newJobNode->processGroup = processGroup;
+  strcpy(newJobNode->jobName,jobName);
+  newJobNode->exitStatus =exitStatus;
+  newJobNode->runStatus = runStatus;
+  newJobNode->next=NULL;
+  newJobNode->prev=NULL;
+  return newJobNode;
 }
 
 /*A builtin command that prints the job list */
 void processJobs(){
-  write(1,"\n",1);
-  printJobList();
+  printJobListWithHandling();
 }
 
 
@@ -1318,23 +1383,31 @@ bool continueProcess(pid_t pid){
  * if such pid not exists. 
  * @param key: the key string
  * @param value: the value string
- * @return : none
+ * @return : Job* , the created or modified jobNode
  */
-void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
+Job* setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
   
   Job* jobNodePtr = getJobNode(pid);
+  /*TEST JOB NODE RETRIEVED*/
+  if(jobNodePtr!=NULL){
+  	char* jobNameString = malloc(sizeof(char)* (strlen(jobNodePtr->jobName)+1));
+  	strcpy(jobNameString,jobNodePtr->jobName);
+  	write(1,jobNameString,strlen(jobNameString));
+  }
 
   /*Test Print 
   printf("\nIn setJobNodeValues: pid is %d, jobName is %s",pid, jobName);
   printf("\nfound jobNodePtr==NULL: %d",jobNodePtr==NULL);*/
 
   if(jobNodePtr!=NULL){
-    /*Set the Values for the Job Node */
+    /*Set the Values for the Job Node, and return it */
     jobNodePtr->pid = pid;
     jobNodePtr->processGroup = processGroup;
     strcpy(jobNodePtr->jobName,jobName);
     jobNodePtr->exitStatus = exitStatus;
     jobNodePtr->runStatus = runStatus;
+    return jobNodePtr;
+
   }else{
 
   	/*Create job node */
@@ -1347,23 +1420,29 @@ void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStat
     printf("\tjobnode prev: %p",jobNodePtr->prev);*/
 
 
-    /*Set to the end of the job list */
+    /* Initialize cursor */
     Job *jobRunPtr = jobHead;
-    while(jobRunPtr!=NULL && (jobRunPtr->next)!=NULL){
-      jobRunPtr=jobRunPtr->next;
-    }
 
-    /*Set to the head */
+    /*If NULL HEAD, set created node as new head and return it*/
     if(jobRunPtr==NULL){
 	  jobNodePtr->next = NULL;
 	  jobNodePtr->prev = NULL;
       jobHead = jobNodePtr;
-    }else if((jobRunPtr->next)== NULL){
-      /* Set to the jobNode to last of the list*/
-      jobRunPtr->next = jobNodePtr;
-      jobNodePtr->prev = jobRunPtr;
-      jobNodePtr->next =NULL;
+      
+      return jobHead;
+
     }
+
+    /*ELSE, FIND LAST ELEMENT AND RETURN IT*/
+    while((jobRunPtr->next)!=NULL){
+      jobRunPtr=jobRunPtr->next;
+    }
+    /* Set to the jobNode to last of the list*/
+    jobRunPtr->next = jobNodePtr;
+    jobNodePtr->prev = jobRunPtr;
+    jobNodePtr->next =NULL;
+
+    return jobNodePtr;
   }
 }
 
@@ -1399,23 +1478,69 @@ Job* getJobNode(pid_t pid){
    int jobID =1;
    while(jobPtr!=NULL){
      printJobNode(jobPtr,jobID);
-     write(1,"\n",1);
      /*Print the next Job if possible */
      jobPtr=jobPtr->next;
      jobID++;
    }
  }
 
+/* A function that prints the job list state, but also modifies runStatus. On second pass, deletes
+ * the invalid and done jobs
+ */
+ void printJobListWithHandling(){
+   Job* jobPtr = jobHead;
+   //Job* freePtr;
+
+   int jobID =1;
+   while(jobPtr!=NULL){
+   	 /*Remove invalid job Nodes*/
+   	 if(jobPtr->runStatus>2||jobPtr->runStatus<0){
+
+   	   /*Pointer to Free this block to delete it*/
+   	   //freePtr=jobPtr;
+
+   	   /*Delink adjacent chains, if they exist*/
+   	 	if((jobPtr->prev)!=NULL){
+   	       ((jobPtr->prev)->next)=jobPtr->next;
+   	 	}
+   	 	if((jobPtr->next)!=NULL){
+   	       ((jobPtr->next)->prev)=jobPtr->prev;
+   	 	}
+   	   jobPtr=jobPtr->next;
+
+   	   /*Release the memory*/
+   	   //free(freePtr);
+   	   continue;
+   	 }
+    	 /*Display the next valid Node*/
+      printJobNode(jobPtr,jobID);
+
+      /*If stopped, alter runStatus to mark for deletion on next pass*/
+      if((jobPtr->runStatus)==0){
+        	(jobPtr->runStatus) = -1;
+      }
+
+      jobPtr=jobPtr->next;
+      jobID++;
+   }
+
+}
+
  /* 
- * A function that prints the job status
+ * A function that prints the job status re-entrantly
  */
 void printJobNode(Job* jobPtr, int JID){
-
-  printf("[%d] (%d) %-10s %s\n",
+  char* sprintfStr=calloc(MAX_INPUT,1);
+  sprintf(sprintfStr,"[%d]  (%d)%1s  %-12s %-50s\n",
   JID,
-  jobPtr->pid,
-  runStatusToString(jobPtr->runStatus),
-  jobPtr->jobName);
+  (jobPtr->pid),
+  runStateSymbol((jobPtr->runStatus)),
+  runStatusToString((jobPtr->runStatus)),
+  (jobPtr->jobName));
+
+  /*CleanUp*/
+  write(1,sprintfStr,strlen(sprintfStr));
+  free(sprintfStr);
 }
 
 /* 
@@ -1425,13 +1550,27 @@ void printJobNode(Job* jobPtr, int JID){
  */
 char* runStatusToString(int runStatus){
   if(runStatus==0){
-    return "Stopped";
+    return "DONE\0";
   }else if(runStatus==1){
-    return "Suspended";
+    return "STOPPED\0";
   }else if(runStatus==2){
-    return "Running";
+    return "Running\0";
   }else{
-    return "Error State";
+    return "ERROR\0";
+  }
+}
+/* 
+ * A function that turns the symbol for the run state. 
+ */
+char* runStateSymbol(int runStatus){
+  if(runStatus==0){
+    return "S\0";
+  }else if(runStatus==1){
+    return "s\0";
+  }else if(runStatus==2){
+    return "+\0";
+  }else{
+    return "?\0";
   }
 }
 

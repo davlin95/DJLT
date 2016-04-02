@@ -12,6 +12,8 @@
 #include <stdlib.h>
 
 
+
+
 /* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
 
@@ -42,7 +44,7 @@ char *statFind(char *cmd);
 void printError(char* command);
 void processExit();
 int isBuiltIn(char * command);
-void killChildHandler(int sig);
+void killChildHandler();
 void createNewChildProcess(char* objectFilePath,char** argArray);
 
 //HistoryCommand Program
@@ -59,7 +61,7 @@ void printHistoryCommand();
 bool checkForBackgroundSpecialChar(char* argArray[],int argCount);
 void createBackgroundJob(char* newJob, char** argArray,bool setForeground);
 char* runStatusToString(int runStatus);
-void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
+Job* setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
 void printJobList();
 Job* getJobNode(pid_t pid);
 Job* getJobNodeAtPosition(int position);
@@ -70,8 +72,11 @@ bool suspendProcess(pid_t pid);
 bool killProcess(pid_t pid);
 bool continueProcess(pid_t pid);
 void processJobs();
-
-
+int jobSize();
+Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
+char* runStateSymbol(int runStatus);
+//SIGNALS
+ void printJobListWithHandling();
 
 /* ANSII CODE FOR ARROW MOVEMENT */
 char* moveLeftAscii = "\033[D";
@@ -145,6 +150,8 @@ bool checkForBackgroundSpecialChar(char* argArray[],int argCount){
   return false;
 }
 
+
+
 void safeFreePtrNull(char* ptr){
   if(ptr!=NULL){
     free(ptr);
@@ -216,7 +223,7 @@ int parseByDelimiterNumArgs(char*src,char* delimiters){
 void printError(char * command){
   write(2,"\n",1);
   write(2,command,strnlen(command,MAX_INPUT));
-  char * msg = ":command not found\n\0";
+  char * msg = ": command not found\n\0";
   write(2,msg,strlen(msg));  
 }
 
@@ -239,7 +246,7 @@ int statExists(char* dir){
     return 1;
   }else {
     write(1,dir,strlen(dir));
-    write(1,": No such file or directory\n", 28);
+    write(1,":No such file or directory\n", 28);
   }
   return 0;
 }
@@ -286,7 +293,6 @@ void test(){
 
   /*End Of Test History Command */
 }
-
 
 
      
