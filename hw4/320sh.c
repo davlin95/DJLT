@@ -7,6 +7,7 @@
 #include <sys/stat.h>
 #include <stdbool.h>
 #include <curses.h>
+#include <fcntl.h>
 #include "shellHeader.h"
 
 /*Global Error Var */
@@ -17,7 +18,7 @@ char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o optio
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
 
 /* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
+char * globalBuiltInCommand[] = {"cd","pwd","help","echo","set","exit"};
 char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
@@ -243,18 +244,30 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
   char* buildingPath = buffer; 
   strcpy(buildingPath,getenv("PWD"));
 
-  /*Test print */
+  /*Test print 
   printf("\nbuildingPath is: %s\n",buildingPath);
   char* testBuff=calloc(strlen(buildingPath),1);
   strcpy(testBuff, buildingPath);
   printf("\nparentPath is: %s\n",parentDirectory(buildingPath));
   printf("commandString is: %s\n",cmdString);
   fflush(stdout); 
-  free(testBuff);
+  free(testBuff);*/
 
   /*Find the traversal path */
+
+  char* savePtr;
+  char* token;
+  int argCount=0;
   char * traversal[MAX_INPUT];
-  parseByDelimiter(traversal,cmdString,"/ ");
+  char buffer2[strlen(cmdString)+1];
+  strcpy(buffer2,cmdString);
+  token = strtok_r(buffer2,"/",&savePtr);
+  while(token!=NULL){
+    traversal[argCount++]=token;
+    token = strtok_r(NULL,"/",&savePtr);
+  }
+  traversal[argCount]='\0';
+  //parseByDelimiter(traversal,cmdString,"/ ");
 
   /*Test Print the array we just filled 
   int i =0;
@@ -335,55 +348,13 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   char * savePtr;
   int argCount = 0;
   char cmdCopy[MAX_INPUT];
-  strcpy(cmdCopy,cmd);
-
-  /* Quote Parsing */
-  char *firstQuote;
-  char *nextQuote;
-  char *lastQuote;
-
-  if ((firstQuote = strchr(cmdCopy, '"')) != NULL){
-    lastQuote = strrchr(cmdCopy, '"');
-    firstQuote++;
-    if (firstQuote == lastQuote){
-        firstQuote--;
-        *firstQuote = ' ';
-        *lastQuote = ' ';
-    }
-    else{
-      while (firstQuote != lastQuote){
-        nextQuote = strchr(firstQuote,'"');
-        if (firstQuote == nextQuote){
-          firstQuote--;
-          *firstQuote = ' ';
-          *nextQuote = ' ';
-        }
-        else{
-          while (firstQuote != nextQuote){
-            if (*firstQuote == ' ')
-              *firstQuote = 0xEA;
-            firstQuote++;
-          }
-        }
-        if (firstQuote != lastQuote){
-          firstQuote++;
-          firstQuote = strchr(firstQuote, '"');
-          firstQuote++;
-          if (firstQuote == lastQuote){
-            firstQuote--;
-            *firstQuote = ' ';
-            *lastQuote = ' ';
-            firstQuote++;
-          }
-        }
-      }
-    }
-  }
-  token = strtok_r(cmdCopy," \n",&savePtr);
+  strcpy(cmdCopy,cmd),
+  checkQuote(cmdCopy);
+  token = strtok_r(cmdCopy," ",&savePtr);
   while(token != NULL){
     argArray[argCount]= token;
     argCount++;
-    token = strtok_r(NULL," \n",&savePtr);
+    token = strtok_r(NULL," ",&savePtr);
   }
   argArray[argCount]=NULL; /* Null terminate */
   int position;
@@ -400,6 +371,7 @@ char ** parseCommandLine(char* cmd, char ** argArray){
         if (*current == '\352')
           *current = ' ';
       }
+    argArray[position]=temp;
     }
   }
   /* Parsed a non-empty string, store in history*/
@@ -419,7 +391,6 @@ char *statFind(char *cmd){
   int argCount = 0;
   char *command;
   struct stat pathStat;
-  char *slash = "/";
   char path[strlen(getenv("PATH"))];
   strcpy(path, getenv("PATH"));
   token = strtok_r(path,":",&savePtr);
@@ -430,7 +401,7 @@ char *statFind(char *cmd){
   }
   for (int i = 0; i < argCount; i++){
     char src[strlen(pathArray[i]) + strlen(cmd) + 1];
-    strcat(strcpy(src, pathArray[i]), slash);
+    strcat(strcpy(src, pathArray[i]), "/");
     if (stat((command = strcat(src, cmd)), &pathStat) >= 0)
       return command;
   }
@@ -454,99 +425,85 @@ int isBuiltIn(char * command){
 } 
 
 void processCd(char argArray[]){
+  printf("cd: argArray is %s\n", argArray);
   int badDirectory = 0;
   if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
     argArray[strlen(argArray)-1] = '\0';
   }
   if(argArray == NULL){
-    setenv("OLDPWD", getenv("PWD"), 1);
-    setenv("PWD", getenv("HOME"), 1);
-    chdir(getenv("PWD"));
-  }
-  else if(strcmp(argArray,"-")==0){ 
-    char temp[strlen(getenv("OLDPWD"))];
+    changeDir(getenv("HOME"));
+  } else if(strcmp(argArray,"-")==0){ 
+    char *temp = malloc(strlen(getenv("OLDPWD"))*sizeof(char));
     strcpy(temp,getenv("OLDPWD"));
-    setenv("OLDPWD", getenv("PWD"), 1);
-    setenv("PWD", temp, 1);
-    chdir(getenv("PWD")); 
-  }else if(argArray[0] == '.'){
-    if (argArray[1] == '\0')
-      setenv("OLDPWD", getenv("PWD"), 1);
-    else if(argArray[1] == '/'){
-      char *argPtr = &argArray[1];
-      char path[strlen(getenv("PWD")) + strlen(argArray) - 1];
-      strcat(strcpy(path, getenv("PWD")), argPtr);
-      struct stat pathStat;
-      if (stat(path, &pathStat) >= 0){
-        setenv("OLDPWD", getenv("PWD"), 1);
-        setenv("PWD", path, 1); 
-        chdir(getenv("PWD"));
-      } else 
-        badDirectory = 1;
-    }else if(argArray[1] == '.'){
-      char path[strlen(getenv("PWD")) + strlen(argArray) - 2];
-      strcpy(path, getenv("PWD"));
-      if (strcmp(getenv("HOME"), getenv("PWD")) != 0){
-        char *lastSlash = strrchr(path, '/');
-        *lastSlash = '\0';
-      }
-      if (argArray[2] == '\0'){
-        setenv("OLDPWD", getenv("PWD"), 1);
-        setenv("PWD", path, 1); 
-        chdir(getenv("PWD"));
-      }else if (argArray[2] == '/'){
-        char *argPtr = &argArray[2];
-        strcat(path, argPtr);
-        struct stat pathStat;
-        if (stat(path, &pathStat) >= 0){
-          setenv("OLDPWD", getenv("PWD"), 1);
-          setenv("PWD", path, 1); 
-          chdir(getenv("PWD"));
-        }else 
-        badDirectory = 1;
-      }else 
-        badDirectory = 1;
+    changeDir(temp);
+    free(temp);
+  }else if(strcmp(argArray, ".") == 0){
+    changeDir(getenv("PWD"));
+  }else if(strncmp(argArray, "./", 2) == 0){
+    char *argPtr = &argArray[1];
+    char *path = malloc((strlen(getenv("PWD")) + strlen(argPtr))*sizeof(char));
+    strcat(strcpy(path, getenv("PWD")), argPtr);
+    struct stat pathStat;
+    if (stat(path, &pathStat) >= 0){
+      changeDir(path);
     }else 
-        badDirectory = 1;
-    }else if(argArray[0] == '\0'){
-          argArray[0] = '/';
-          badDirectory = 1;
-    }  
-    else {
-      struct stat pathStat;
-      char path[strlen(getenv("PWD")) + strlen(argArray) + 1];
-      strcpy(path, getenv("PWD"));
-      strcat((strcat(path, "/")), argArray);
-      if (stat(path, &pathStat) >= 0){
-          setenv("OLDPWD", getenv("PWD"), 1);
-          setenv("PWD", path, 1); 
-          chdir(getenv("PWD"));
-      }
-      else 
-        badDirectory = 1;
+      badDirectory = 1;
+    free(path);
+  }else if(strcmp(argArray, "..") == 0){
+    char *path = malloc((strlen(getenv("PWD")))*sizeof(char));
+    strcpy(path, getenv("PWD"));
+    parentDirectory(path);
+    changeDir(path);
+    free(path);
+  }else if (strncmp(argArray, "../", 3) == 0){
+    printf("argArray is %s\n", argArray);
+    printf("argArray[2] is %s\n", &argArray[2]);
+    char *argPtr = &argArray[2];
+    char *path = malloc((strlen(getenv("PWD")) + strlen(argPtr))*sizeof(char));
+    strcpy(path, getenv("PWD"));
+    parentDirectory(path);
+    strcat(path, argPtr);
+    printf("argptr is %s\n", argPtr);
+    printf("cd ../ and path is %s\n ", path);
+    struct stat pathStat;
+    if (stat(path, &pathStat) >= 0){
+      changeDir(path);
+    }else 
+      badDirectory = 1;
+    free(path);
+  } else {
+    struct stat pathStat;
+    char *path = malloc((strlen(getenv("PWD")) + strlen(argArray) + 1)*sizeof(char));
+    strcpy(path, getenv("PWD"));
+    strcat((strcat(strcpy(path, getenv("PWD")), "/")), argArray);
+    if (stat(path, &pathStat) >= 0){
+      changeDir(path);
     }
-    if (badDirectory){
-          write(2, "cd: ", 4);
-          write(2, argArray, strlen(argArray));
-          write(2, ": No such file or directory\n", 28);
-          error = 1;
-      }  
+    else 
+      badDirectory = 1;
+    free(path);
   }
+  if (badDirectory){
+      write(2, "cd: ", 4);
+      write(2, argArray, strlen(argArray));
+      write(2, ": No such file or directory\n", 28);
+      error = 1;
+  }  
+}
 void processPwd(){
   char *path;
-  char buf[MAX_INPUT];
+  char *buf = malloc(MAX_INPUT*sizeof(char));
   path = getcwd(buf, MAX_INPUT);
   write(1, path, strlen(path));
   write(1, "\n", 1);
-  printf("pid is %d\n", getpid());
-  fflush(stdout);
+  free(buf);
 }
 void processSet(char argArray[]){
-  char * token;
-  char * token2;
-  char *equals = "=";
-  token = strtok(argArray, equals);
-  token2 = strtok(NULL, equals);
+  char *token = malloc(strlen(argArray)*sizeof(char));
+  char *token2 = malloc(strlen(argArray)*sizeof(char));
+  token = strtok(argArray, "=");
+  token2 = strtok(NULL, "=");
+  printf("argArray has changed to %s\n", argArray);
   printf("token is %s and token2 is %s\n", token, token2);
   if (getenv(token) != NULL){
     printf("setenv returned %d\n", setenv(token, token2, 1));
@@ -558,6 +515,8 @@ void processSet(char argArray[]){
   } else 
     error = 1;
   printf("getenv(%s) is %s\n", token, getenv(token));
+  free(token);
+  free(token2);
 }
 
 void processEcho(char argArray[]){
@@ -589,7 +548,11 @@ void processExit(){
 }
 
 bool executeArgArray(char * argArray[], char * environ[]){
-  int count;
+  printf("-----executeargarray----\narg0 is %s\n", argArray[0]);
+    printf("arg1 is %s\n", argArray[1]);
+    printf("arg2 is %s\n", argArray[2]);
+  int count; 
+
   for(count=0; argArray[count]!=NULL;++count)
   	;
   if(count==0) return false;
@@ -618,26 +581,31 @@ bool executeArgArray(char * argArray[], char * environ[]){
       printf("\nexecute help\n");
       printHelpMenu();
       fflush(stdout);
-    }else if(strcmp(command,"exit")==0){
+    }else 
       processExit();
-    }else{
+  } else if(*(argArray[0]) != '.'){
+    printf("else if arg0 is %s\n", argArray[0]);
+    printf("arg1 is %s\n", argArray[1]);
+    printf("arg2 is %s\n", argArray[2]);
       /* Test Print: Use statfind() to launch the program from shell 
       printf("\nuse statfind() to launch the built in\n");
       printf("%s\n",command);
       fflush(stdout); */
 
       /*Find and execute the binary path */
-      char * fullCommandPath; 
-      fullCommandPath = statFind(argArray[0]);
-      if(fullCommandPath!=NULL){
+    char * fullCommandPath;
+      if((fullCommandPath = statFind(argArray[0]))!=NULL){
+        printf("-----afterstatfind----\narg0 is %s\n", argArray[0]);
+    printf("arg1 is %s\n", argArray[1]);
+    printf("arg2 is %s\n", argArray[2]);
         createNewChildProcess(fullCommandPath,argArray);
+        printf("returned from forking\n");
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
         error = 1;
       }
-    }
-  }else{ /* Is an object file such as a.out */
+  } else{ /* Is an object file such as a.out */
     /*Make buffer */
     int callocSize = MAX_INPUT + strlen(getenv("PWD")) + strlen("320sh> ") + 1;
     char* buffer= calloc(callocSize,1 );
@@ -649,6 +617,8 @@ bool executeArgArray(char * argArray[], char * environ[]){
       	safeFreePtrNull(buffer);
     	printf("dir exists: %s\n",buffer);
     	createNewChildProcess(buffer,argArray);
+      printf("returned from creating child\n");
+      free(buffer);
       }
       else{
       	/*Path Doesn't Exists: user error */
@@ -664,24 +634,155 @@ bool executeArgArray(char * argArray[], char * environ[]){
   }
   return true;
 }
-
+bool validSyntax(char **argArray){
+  int position = 0;
+  bool valid = true;
+  if ((*argArray[position] == '<') || (*argArray[position] == '>') || (*argArray[position] == '|')){
+    valid = false;
+  }
+  while(argArray[position] != NULL){
+    position++;
+  }
+  if ((*argArray[position - 1] == '<') || (*argArray[position - 1] == '>') || (*argArray[position - 1] == '|')){
+    valid = false;
+  }
+  if (!valid)
+    printError(argArray[position]);
+    
+  return valid;
+}
 void createNewChildProcess(char* objectFilePath,char** argArray){
   pid_t pid;
   int status;
-  if((pid=fork())==0){
-    printf("child's parent pid is %d\n", getppid());
-    int ex = execvp(objectFilePath,argArray);
-    if(ex){      
-      printError(objectFilePath);
+  /* check whether arguments start or end with <, >, or | */
+  if (validSyntax(argArray)){
+    /* parse through argArray to find pipes and determine the # of commands */
+    int noOfCmds;
+    noOfCmds = checkPiping(argArray);
+    /* create pipes with each pipe being two values in the array */
+    int pipes[2*(noOfCmds-1];
+    /* pipe every other pipe i.e. 0 with 2, 2, with 4, and so on*/  
+    int i;
+    for (i = 0; i <(noOfCmds - 1), i+=2){
+      if (pipe(pipes + i) < 0){
+        write(2, "Error piping.\n", 14);
+        error = 1;
+      }
     }
-    exit(0);
+    /* commands = index of current command executing (used to determine dup) */
+    int commands = 0;
+    /* nextArgArray contains the next array that will be executed */
+    char **nextArgArray = argArray;
+    /* while number of commands is greater than 0, fork and pipe. (redirect if required) */
+    while(noOfCmds > 0){
+      if((pid=fork())==0){
+        int argNo = 0;
+        int fd;
+        /* check for redirecting into */
+        while (nextArgArray[argNo] != NULL){
+          if (strcmp(nextArgArray[argNo], "<") == 0){
+            fd = open(nextArgArray[argNo + 1], O_RDONLY, 0666);
+            dup2(fd, 0);
+            close(fd);
+          }
+          argNo++;
+        }
+        argNo = 0;
+        /*check for redirecting out of */
+        while (nextArgArray[argNo] != NULL){
+          if (strcmp(nextArgArray[argNo], ">") == 0){
+            fd = open(nextArgArray[argNo + 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+            dup2(fd, 1);
+            close(fd);
+          }
+          argNo++;
+        }
+        /* IF ONLY ONE CMD, EXECUTE AND EXIT */
+        if (commands == 0 && commands == 1){ 
+          if (execvp(objectFilePath,argArray) < 0){
+            printError(objectFilePath);
+            exit(1);
+          }
+          exit(0);
+        }
+        /* --------ELSE MORE THAN ONE COMMAND---------
+                  FIRST CMD */
+        if (commands == 0 && noOfCmds != 1){
+            if (dup2(pipes[commands + 1], 1) < 0){
+              write(2, "Error piping.\n", 14);
+              error = 1;
+            }  
+             /* NOT LAST CMD */
+        } else if (commands != 0 && noOfCmds != 1){
+            if (dup2(pipes[commands*2 + 1], 1) < 0){
+              write(2, "Error piping.\n", 14);
+              error = 1;
+            }
+            /*NOT FIRST CMD */
+        } else if (commands !=0){ 
+            if (dup2(pipes[commands*2 - 2], 0) < 0){
+              write(2, "Error piping.\n", 14);
+              error = 1;
+          }
+        }
+        /* for first command, just execute after creating pipes */
+        if (commands == 0){
+          if (execvp(objectFilePath,argArray) < 0){
+            printError(objectFilePath);
+            exit(1);
+          }
+        /* for remaining commands, determine arg array by getting position after null */
+        } else {
+          int count = 0;
+          while(count != commands){
+            while (nextArgArray != NULL){
+              nextArgArray++;
+            }
+            count++;
+            nextArgArray++;
+          }
+        /* after getting arg array, statfind to find path, and execute */
+          if (execvp(statFind(nextArgArray[0]), nextArgArray) < 0){
+            printError(objectFilePath);
+            exit(1);
+          }
+        }
+        exit(0);
   }else{
+    /* -----to do -------- */
+    /* close certain pipes opened by child in parent (not sure which ones) */
       wait(&status);
       if (status)
         error = 1;
       printf("\nParent Process reaped child process %d\n",pid);
-      fflush(stdout);
   }
+  /* increment and decrements counters */
+  noOfCmds--;
+  commands++;
+}
+}
+}
+/* 
+ * A function that determines if there is piping and returns the number of commands. 
+ * For each pipe found, make null to create the different arrays for each command that will be 
+ * passed into execvp. Returns 0 if there is an error.   
+ */
+int checkPiping(char **argArray){
+  int i = 0;
+  int numberCmds = 1;
+  while(argArray[i] != NULL){
+    if (*argArray[i] == '|' && *argArray[i + 1] != '|'){
+      numberCmds++;
+      argArray[i] = NULL;
+    } 
+    else if (*argArray[i] == '|' && *argArray[i + 1] == '|'){
+      error = 1;
+      printError("| |");
+      return 0;
+    }
+    i++;
+  }
+  return numberCmds;
 }
 
 /* 
@@ -787,11 +888,12 @@ bool saveHistoryToDisk(){
 int main (int argc, char ** argv, char **envp) {
   /*debug flag*/
   int debug = 0;
-  if (argv[1] != NULL){
-    if (strcmp(argv[1], "-d") == 0)
+  int counter = 0;
+  while (counter < argc){
+    if (strcmp(argv[counter], "-d") == 0)
       debug = 1;
+    counter++;
   }
-
   int quote = 0;
   int finished = 0;
   char *prompt = "320sh> ";
@@ -819,7 +921,7 @@ int main (int argc, char ** argv, char **envp) {
 	int lastVisitedHistoryIndex_UP=-1;
 	int lastVisitedHistoryIndex_DOWN=-1;
     // Print the current directory 
-    write(1, "\n[", 2);
+    write(1, "[", 1);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
     write(1, "] ", 2);
 
@@ -1090,16 +1192,15 @@ int main (int argc, char ** argv, char **envp) {
 
     //Upon evaluation, we are back in the commandlineCache. Necessary to keep track of history cycling.
     inCommandlineCache=true; 
-
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
+
     if (debug){
-      char *cmdEnd = strrchr(cmd, '\n');
-        *cmdEnd = '\0';
       write(2, "RUNNING: ", 9);
       write(2, cmd, strlen(cmd));
       error = 0;
     }
+    //checkRedirection(parsedArgArray);
     if(executeArgArray(parsedArgArray,envp)==0) continue;
     
     if (debug){

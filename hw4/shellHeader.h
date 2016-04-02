@@ -92,7 +92,7 @@ char* safeMalloc(char* ptr){
 }
 
 /* Small Helper Functions*/
-char** parseByDelimiter(char** dst,char*src,char* delimiters){
+char** parseByDelimiter(char* dst[],char*src,char* delimiters){
   char* savePtr;
   char* token;
   int argCount=0;
@@ -116,6 +116,9 @@ char** parseByDelimiter(char** dst,char*src,char* delimiters){
     token = strtok_r(NULL,delimiters,&savePtr);
   }
   dst[argCount]='\0';
+  printf("dst is %s\n", dst[0]);
+  printf("dst is %s\n", dst[1]);
+  printf("dst is %s\n", dst[2]);
   return dst;
 }
 
@@ -170,6 +173,54 @@ int statExists(char* dir){
     write(1,": No such file or directory\n", 28);
   }
   return 0;
+}
+char *checkQuote(char *cmd){
+  char *firstQuote;
+  char *nextQuote;
+  char *lastQuote;
+  if ((firstQuote = strchr(cmd, '"')) != NULL){
+    lastQuote = strrchr(cmd, '"');
+    firstQuote++;
+    if (firstQuote == lastQuote){
+        firstQuote--;
+        *firstQuote = ' ';
+        *lastQuote = ' ';
+    }
+    else{
+      while (firstQuote != lastQuote){
+        nextQuote = strchr(firstQuote,'"');
+        if (firstQuote == nextQuote){
+          firstQuote--;
+          *firstQuote = ' ';
+          *nextQuote = ' ';
+        }
+        else{
+          while (firstQuote != nextQuote){
+            if (*firstQuote == ' ')
+              *firstQuote = 0xEA;
+            firstQuote++;
+          }
+        }
+        if (firstQuote != lastQuote){
+          firstQuote++;
+          firstQuote = strchr(firstQuote, '"');
+          firstQuote++;
+          if (firstQuote == lastQuote){
+            firstQuote--;
+            *firstQuote = ' ';
+            *lastQuote = ' ';
+            firstQuote++;
+          }
+        }
+      }
+    }
+  }
+  return cmd;
+}
+void changeDir(char *changeDirTo){
+  setenv("OLDPWD", getenv("PWD"), 1);
+  setenv("PWD", changeDirTo, 1);
+  chdir(changeDirTo); 
 }
 
 /* Test Function*/

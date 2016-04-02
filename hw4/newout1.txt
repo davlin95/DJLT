@@ -1,0 +1,13 @@
+child's parent pid is 6642
+320sh
+320sh.c
+hello.txt
+launcher.sh
+Makefile
+Makefile~
+newout1.txt
+newout.txt
+out1.txt
+out2.txt
+out.txt
+shellHeader.h

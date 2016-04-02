@@ -1,0 +1,9 @@
+total 108
+-rwxrwxr-x 1 wittang wittang 45688 Mar 31 19:32 320sh
+-rw-rw-r-- 1 wittang wittang 33404 Mar 31 19:32 320sh.c
+-rw-rw-r-- 1 wittang wittang     6 Mar 31 18:44 hello.txt
+-rwxrwxr-x 1 wittang wittang   582 Mar 24 18:25 launcher.sh
+-rw-rw-r-- 1 wittang wittang   104 Mar 29 20:21 Makefile
+-rw-rw-r-- 1 wittang wittang   136 Mar 25 22:07 Makefile~
+-rw-rw-r-- 1 wittang wittang     0 Mar 31 19:41 out.txt
+-rw-rw-r-- 1 wittang wittang  6292 Mar 31 19:23 shellHeader.h
