@@ -27,6 +27,7 @@ typedef struct jobNode{
   int exitStatus;
   int runStatus;
   struct jobNode * next;
+  struct jobNode * prev;
 }Job;
 
 
@@ -55,10 +56,21 @@ void  initializeHistory();
 void printHistoryCommand();
 
 //JobNode Program
-Job* getJobNode(pid_t pid);
-void createBackgroundJob(char* newJob, char** argArray);
+bool checkForBackgroundSpecialChar(char* argArray[],int argCount);
+void createBackgroundJob(char* newJob, char** argArray,bool setForeground);
 char* runStatusToString(int runStatus);
 void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
+void printJobList();
+Job* getJobNode(pid_t pid);
+Job* getJobNodeAtPosition(int position);
+int getPositionOfJobNode(Job* node);
+void printJobNode(Job* jobPtr, int JID);
+void processFG(char ** argArray,int argCount);
+bool suspendProcess(pid_t pid);
+bool killProcess(pid_t pid);
+bool continueProcess(pid_t pid);
+void processJobs();
+
 
 
 /* ANSII CODE FOR ARROW MOVEMENT */
@@ -274,6 +286,7 @@ void test(){
 
   /*End Of Test History Command */
 }
+
 
 
      

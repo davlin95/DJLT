@@ -12,7 +12,7 @@ char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o optio
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
 
 /* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit"};
+char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit","jobs"};
 char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
@@ -64,6 +64,7 @@ int current=0;
           
 /* Terminal Variables */
 Job* jobHead=NULL;
+pid_t foreground=-1;
 
 /* 
  * A function that turns relative to absolute path evaluation. 
@@ -109,12 +110,12 @@ char* turnRelativeToAbsolute(char* cmdString,char* buffer, int bufferSize){
 
   	}else if((result = strcmp(traversal[count],"..")) ==0){ /* Move up one parent*/
       parentDirectory(buildingPath);
-      printf("\n moved to parent path: %s\n",buildingPath);
+      //printf("\n moved to parent path: %s\n",buildingPath);
       fflush(stdout);
   	}else{  
   	  /*Append */
       directoryAppendChild(buildingPath,traversal[count]);
-      printf("\nappended child, buildingPathPtr is: %s\n",buildingPath);
+      //printf("\nappended child, buildingPathPtr is: %s\n",buildingPath);
       fflush(stdout);
   	}
     count++; /* Move onto next traversal string */
@@ -427,9 +428,16 @@ void processExit(){
 
 bool executeArgArray(char * argArray[], char * environ[]){
   int count;
-  for(count=0; argArray[count]!=NULL;++count)
-  	;
+  int fgState=0;
+
+  /*Parse through and find count, exit if no args */
+  for(count=0; argArray[count]!=NULL;++count);
   if(count==0) return false;
+
+  /* Look for special '&' background process symbol */
+  fgState = !checkForBackgroundSpecialChar(argArray,count);
+  //printf("fgState is: %d ", fgState);
+
   /*Test: Print count 
   printf("\n value of count of argArray in executeArgArray is: %d\n", count);
   for(int i=0;i<count;i++){
@@ -452,12 +460,15 @@ bool executeArgArray(char * argArray[], char * environ[]){
     }else if(strcmp(command,"set")==0){
       processSet(argArray[1]);
     }else if(strcmp(command,"help")==0){
-      printf("\nexecute help\n");
       printHelpMenu();
-      fflush(stdout);
     }else if(strcmp(command,"exit")==0){
       processExit();
-    }else{
+    }else if (strcmp(command,"jobs")==0){
+      processJobs();
+    }else if(strcmp(command,"fg")==0){
+      processFG(argArray,count);
+    }
+    else{
       /* Test Print: Use statfind() to launch the program from shell 
       printf("\nuse statfind() to launch the built in\n");
       printf("%s\n",command);
@@ -466,10 +477,20 @@ bool executeArgArray(char * argArray[], char * environ[]){
       /*Find and execute the binary path */
       char * fullCommandPath; 
       fullCommandPath = statFind(argArray[0]);
-      if(fullCommandPath!=NULL){
-        createBackgroundJob(fullCommandPath,argArray);
-        return false;
-
+      if(fullCommandPath!=NULL && (!fgState)){
+      	/*ALTERNATE
+      	createNewChildProcess(fullCommandPath,argArray);*/
+      	/*ALTERNATE:*/
+        createBackgroundJob(fullCommandPath,argArray,0);
+        //printf("\nfinished execution createBackgroundJob in executeArgArray\n");
+        return false; //Continue loop upon exit
+      }else if(fullCommandPath!=NULL && fgState ){
+      	/*ALTERNATE */
+      	createNewChildProcess(fullCommandPath,argArray);
+      	/*ALTERNATE:
+		createBackgroundJob(fullCommandPath,argArray,1); */
+        //printf("\nfinished execution createBackgroundJob in executeArgArray\n");
+        return false;//continue loop upon exit
       }else { /*Not found */
       	write(1,argArray[0],strlen(argArray[0]));
         printError(command);
@@ -483,11 +504,17 @@ bool executeArgArray(char * argArray[], char * environ[]){
 
     /*Parse into absolute path */
     if(turnRelativeToAbsolute(argArray[0],buffer,callocSize)!=NULL){
-      printf("\nValue of buffer is: %s\n",buffer);
+      //printf("\nValue of buffer is: %s\n",buffer);
       if(statExists(buffer)){
       	safeFreePtrNull(buffer);
-    	printf("dir exists: %s\n",buffer);
-    	createBackgroundJob(buffer,argArray);
+
+      	/*ALTERNATE
+      	createNewChildProcess(argArray[0],argArray);*/
+
+      	/*ALTERNATE EXECUTION*/
+    	//printf("dir exists: %s\n",buffer);
+    	createBackgroundJob(buffer,argArray,0);
+    	//printf("finished object execution createBackgroundJob\n");
       }
       else{
       	/*Path Doesn't Exists: user error */
@@ -506,65 +533,97 @@ bool executeArgArray(char * argArray[], char * environ[]){
 
 void createNewChildProcess(char* objectFilePath,char** argArray){
   pid_t pid;
-  int status;
+ // int status;
   if((pid=fork())==0){
-    printf("child's parent pid is %d\n", getppid());
+    //printf("child's parent pid is %d\n", getppid());
     int ex = execvp(objectFilePath,argArray);
     if(ex){      
       printError(objectFilePath);
     }
     exit(0);
   }else{
-      wait(&status);
-      if (status)
-        error = 1;
+
+  	  /*KIND OF WORKING 
+  	  while((waitpid(-1,&status,WNOHANG))>0){
+        printf("\nParent Process WNOHANG reaped child process %d\n",pid);
+  	  }*/
+
+       /*SLOW */
+      wait(NULL); 
+
+     /* if (status)
+        error = 1; */
+    /*
       printf("\nParent Process reaped child process %d\n",pid);
-      fflush(stdout);
+      fflush(stdout);*/
   }
 }
 
 /* 
  * An alternate execution method. Used for running background processes 
  */
-void createBackgroundJob(char* newJob, char** argArray){
-  pid_t pid;
-
-  /*Assign handlers*/
+void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
+    /*Assign handlers*/
   signal(SIGCHLD,killChildHandler);
+
+  pid_t pid;
 
   /*Child */
   if((pid=fork())==0){
-
-  	/*Test PID */
+  	/*Test PID 
     printf("child's parent pid is %d\n", getppid());
-    printf("Inside child, pid is %d\n", getpid());
+    printf("Inside child, pid is %d\n", getpid()); */
 
     /* Execute and catch error */
     int ex = execvp(newJob,argArray);
     if(ex){      
-      printf("child process pid: %d not executing %s",pid, newJob);
+      //printf("child process pid: %d not executing %s",pid, newJob);
     }
     kill(getppid(),SIGCHLD);
     exit(0);
-
   	  /*Parent*/
   }else{
+  	//printf("In parent process");
   	/*Implement Add to jobList data structure*/
-  	setpgid(pid,0); // make parent the process group. set child to process group. 
-  	setJobNodeValues(pid,getpgid(pid),newJob,0,2); /*Makes deep copy of newjob, creates node. add to job head.*/
+  	//setpgid(0,0);  	// make parent the process group. set child to process group.
+  	//setpgid(pid,0);  
+  	/*//printf(": pid:%d pgid: %d",getpid(),getpgid(0));*/
+  	setJobNodeValues(pid,getpgid(pid),newJob,0,2); //Makes deep copy of newjob, creates node. add to job head.
+  	if(setForeground){//set foreground
+  	  foreground = pid;
+  	}
+  	//printJobNode(getJobNode(pid),-1);
+  	//printJobList();
   }
 }
 
 void killChildHandler(int sig){
-   while(waitpid(-1,NULL, WNOHANG)>0){
-     printf("child process pid: finished executing\n");
+
+   //write(1,"caught child\0",13);
+   pid_t pid;
+   //Job* terminatedJob;
+  /* Test Print Strings
+   char* pidString="\nPid is: \0";
+   char * str = "\nSignal!child process pid: finished executing\n\0";*/
+
+   while( (pid=waitpid(-1,NULL, WNOHANG)>0) ){
+   /* Test print strings
+   	 write(1,str,strlen(str));
+   	 write(1,pidString,strlen(pidString)); */
+
+   	 /*sio_put("%d",pid);
+		//implement sig blocking
+	 if((terminatedJob=getJobNode(pid))!=NULL){
+       terminatedJob->runStatus =0;
+       printJobNode(terminatedJob,69);
+	 } */
    }
 }
 
 
-
 int main (int argc, char ** argv, char **envp) {
-  test();
+  //int firstTimeRun =1;
+
   /*debug flag*/
   int debug = 0;
   if (argv[1] != NULL){
@@ -585,11 +644,6 @@ int main (int argc, char ** argv, char **envp) {
   while (!finished) {
     char *cursor;  	//current position of modification 
     char *lastCursor;
-    
-    /*Used to shift elements in cmd for insertions. 
-    char *relayer1;
-    char *relayer2;
-    char* tempByte='\0';*/
 
     char buffer; 
     char last_char;
@@ -598,10 +652,22 @@ int main (int argc, char ** argv, char **envp) {
     int count;
 	int lastVisitedHistoryIndex_UP=-1;
 	int lastVisitedHistoryIndex_DOWN=-1;
-    // Print the current directory 
-    write(1, "\n[", 2);
+
+	/*Test Start 
+	printf("cmd is: %s, pid is: %d",cmd,getpid());*/
+
+	// Clear previous cmd, or else first initialize 
+	cmd[0] ='\0';
+
+    /* Print newLine the first time 
+    if(firstTimeRun){
+      firstTimeRun=0;
+      write(1,"\n",1);
+    }*/
+
+    write(1, "[", 1);
     write(1, getenv("PWD"), strlen(getenv("PWD")));
-    write(1, "] ", 2);
+    write(1, "] ", 1);
 
     // Print the shell prompt
     rv = write(1, prompt, strlen(prompt));
@@ -628,14 +694,14 @@ int main (int argc, char ** argv, char **envp) {
 
      /* Continue conditions: Handle at tail end.
      */
-
+    //write(1,"\n at before read forloop\0",25);
     for(rv = 1, count = 0, 
 	  cursor=cmd, lastCursor=cursor,last_char = 1;
 	  rv && (++count < (MAX_INPUT-1))&& (last_char != '\n') ; ) {
-
+      //printf("\tBegin parse forloop\n");
 	  /* Read the value */
       rv = read(0, &buffer, 1);
-
+      //printf(" \tread value\n");
       last_char = buffer; // hold the last_char for evaluation. 
       escapeSeen = false; //enable possible printing to screen
 	  if (last_char == '"'){
@@ -796,6 +862,15 @@ int main (int argc, char ** argv, char **envp) {
       /* Detect CTRL-C */
       else if(last_char == 3) {
         write(1, "^c", 2);
+        Job* fg=getJobNode(foreground);
+        if(fg!=NULL){
+          ((fg->next)->prev)=fg->prev;
+          ((fg->prev)->next)=fg->next;
+          printf("preparing to sigKill");
+          if(kill((fg->pid),SIGKILL)){
+          	printf("\nkilled child: %d",fg->pid);
+          }
+        }
       }else if(last_char=='\n'){
       	char * newline= "\n";
         write(1, newline, 1);
@@ -859,6 +934,8 @@ int main (int argc, char ** argv, char **envp) {
 
     char* argArray[MAX_INPUT]; /* Array of arguments */
     char ** parsedArgArray = parseCommandLine(cmd, argArray); /* Fill up array of arguments */
+
+    /*Print Debug Start */
     if (debug){
       char *cmdEnd = strrchr(cmd, '\n');
         *cmdEnd = '\0';
@@ -866,8 +943,11 @@ int main (int argc, char ** argv, char **envp) {
       write(2, cmd, strlen(cmd));
       error = 0;
     }
+      /* assign signal handling */
+      signal(SIGCHLD,killChildHandler);
     if(executeArgArray(parsedArgArray,envp)==0) continue;
     
+    /*Print debug End */
     if (debug){
       write(2, "ENDED: ", 7);
       write(2, cmd, strlen(cmd));
@@ -877,6 +957,7 @@ int main (int argc, char ** argv, char **envp) {
       else 
         write(2, "0)\n", 3);
     }
+
   }
   return 0;
 }
@@ -1120,8 +1201,117 @@ Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus,
   strcpy(jobNode.jobName,jobName);
   jobNode.exitStatus =exitStatus;
   jobNode.runStatus = runStatus;
+  jobNode.next=NULL;
+  jobNode.prev=NULL;
   return &jobNode;
 }
+
+/*A builtin command that prints the job list */
+void processJobs(){
+  write(1,"\n",1);
+  printJobList();
+}
+
+
+/* A function that takes an arg array and finds the %int parameter for the processFG()
+ * @param argArray, a NULL terminated argument array of string
+ * @param argCount, the size of the arg Array
+ * @return: -1 if an invalid size such as 0,-1. Value of num at %num otherwise
+ */
+int findFGParameter(char ** argArray, int argCount){
+
+	char* str;
+    int num=-1, i;
+    char percentBuff[MAX_INPUT];
+
+    for(i=0;i<argCount;i++){
+      str= argArray[i];
+      if(*str=='%'){
+        str++;
+        if(str!=NULL && *str>=48 && *str<=57){
+          num = atoi(strcpy(percentBuff,str));
+        }
+      }
+    }
+    if(num>0)
+      return num;
+    else return -1;
+}
+
+void processFG(char ** argArray,int argCount){
+  int jobIDPosition=0;
+  Job* nextFGJob;
+
+  /*calculate position from argArray, for the num in job linked list */
+  jobIDPosition = findFGParameter(argArray,argCount);
+  //printf("\nfindFGParameter in processFG() is :%d",jobIDPosition);
+
+
+  /*Get the job at linked list position */
+  nextFGJob = getJobNodeAtPosition(jobIDPosition);
+  if(nextFGJob==NULL){
+  	printf("%d, No such job",jobIDPosition);
+  }else{
+  	/*If to restart the FG Job */
+  	Job* fgNode = getJobNode(foreground);
+  	if( fgNode!=NULL && ((nextFGJob->pid)==(foreground))
+  	  && ((fgNode->runStatus)<2)){
+  		continueProcess(foreground);
+  		printJobNode(fgNode,getPositionOfJobNode(fgNode));
+  		//IGNORE CASE: if equal foreground but already running, runstatus ==2
+  	}else if(fgNode!=NULL && (nextFGJob->pid)!=(foreground)) {
+  		/*If to replace current FG Job*/
+		suspendProcess(foreground);
+		printJobNode(fgNode,getPositionOfJobNode(fgNode));
+		continueProcess((nextFGJob->pid));
+		foreground = (nextFGJob->pid);
+		printJobNode(fgNode,getPositionOfJobNode(fgNode));
+
+  	}else{
+  		/* No active foreground, set the background as the new foreground */
+  		foreground = nextFGJob->pid;
+  		continueProcess(foreground);
+
+  		printJobNode(getJobNode(foreground),getPositionOfJobNode(getJobNode(foreground)));
+  	}
+
+  }
+
+}
+
+bool suspendProcess(pid_t pid){
+  Job* suspendJob;
+  suspendJob = getJobNode(pid);
+  if(suspendJob!=NULL){
+  	suspendJob->runStatus=1;
+  	kill((suspendJob->pid),SIGTSTP);
+  	return true;
+  }
+  return false;
+}
+
+bool killProcess(pid_t pid){
+  Job* killJob;
+  killJob = getJobNode(pid);
+  if(killJob!=NULL){
+  	killJob->runStatus=0;
+  	kill((killJob->pid),SIGSTOP);
+  	return true;
+  }
+  return false;
+}
+bool continueProcess(pid_t pid){
+  Job* continueJob;
+  continueJob = getJobNode(pid);
+  if(continueJob!=NULL){
+  	continueJob->runStatus=2;
+  	kill((continueJob->pid),SIGCONT);
+  	return true;
+  }
+  return false;
+}
+
+
 
 /*
  * A function that sets new values to the jobNode with given pid, or creates a new jobNode with such values
@@ -1131,7 +1321,13 @@ Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus,
  * @return : none
  */
 void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus){
+  
   Job* jobNodePtr = getJobNode(pid);
+
+  /*Test Print 
+  printf("\nIn setJobNodeValues: pid is %d, jobName is %s",pid, jobName);
+  printf("\nfound jobNodePtr==NULL: %d",jobNodePtr==NULL);*/
+
   if(jobNodePtr!=NULL){
     /*Set the Values for the Job Node */
     jobNodePtr->pid = pid;
@@ -1139,24 +1335,34 @@ void setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStat
     strcpy(jobNodePtr->jobName,jobName);
     jobNodePtr->exitStatus = exitStatus;
     jobNodePtr->runStatus = runStatus;
-
   }else{
 
   	/*Create job node */
     jobNodePtr = createJobNode(pid,processGroup,jobName,exitStatus,runStatus);
+    
+    /*Test Printing Node 
+    printf("\ncreated new jobnode:");
+    printJobNode(jobNodePtr,69);
+    printf("\tjobnode next: %p",jobNodePtr->next);
+    printf("\tjobnode prev: %p",jobNodePtr->prev);*/
+
 
     /*Set to the end of the job list */
     Job *jobRunPtr = jobHead;
     while(jobRunPtr!=NULL && (jobRunPtr->next)!=NULL){
       jobRunPtr=jobRunPtr->next;
     }
+
     /*Set to the head */
     if(jobRunPtr==NULL){
-	  jobNodePtr->next = jobHead;
+	  jobNodePtr->next = NULL;
+	  jobNodePtr->prev = NULL;
       jobHead = jobNodePtr;
     }else if((jobRunPtr->next)== NULL){
-      /* Set to the last of the list*/
+      /* Set to the jobNode to last of the list*/
       jobRunPtr->next = jobNodePtr;
+      jobNodePtr->prev = jobRunPtr;
+      jobNodePtr->next =NULL;
     }
   }
 }
@@ -1172,12 +1378,12 @@ Job* getJobNode(pid_t pid){
   Job* jobPtr = jobHead;
 
   /*check case*/
-  if(jobPtr ==NULL) return NULL;
+  if(jobPtr==NULL) return NULL;
   
   /* search list for matching pid*/
   while(jobPtr!=NULL){ 
     jobPID = jobPtr->pid;
-    if( pid==jobPID) 
+    if(pid==jobPID) 
       return jobPtr;
   	else 
   	  jobPtr = jobPtr->next;
@@ -1192,14 +1398,25 @@ Job* getJobNode(pid_t pid){
    Job* jobPtr = jobHead;
    int jobID =1;
    while(jobPtr!=NULL){
-     printf("[%d] (%d) %-10s %s",
-       jobID,
-       jobPtr->pid,
-       runStatusToString(jobPtr->runStatus),
-       jobPtr->jobName);
+     printJobNode(jobPtr,jobID);
+     write(1,"\n",1);
+     /*Print the next Job if possible */
      jobPtr=jobPtr->next;
+     jobID++;
    }
  }
+
+ /* 
+ * A function that prints the job status
+ */
+void printJobNode(Job* jobPtr, int JID){
+
+  printf("[%d] (%d) %-10s %s\n",
+  JID,
+  jobPtr->pid,
+  runStatusToString(jobPtr->runStatus),
+  jobPtr->jobName);
+}
 
 /* 
  * A function that turns the run status int to a string 
@@ -1218,7 +1435,7 @@ char* runStatusToString(int runStatus){
   }
 }
 
-Job* getJobPosition(int position){
+Job* getJobNodeAtPosition(int position){
   Job* curJob = jobHead;
   int i;
   for(i=1;i<position;i++){
@@ -1230,5 +1447,18 @@ Job* getJobPosition(int position){
   }
   return curJob;
 }
+int getPositionOfJobNode(Job* node){
+  int posCount=1;
+  Job* jobPtr=jobHead;
+  while(node!=NULL && jobPtr!=NULL && (node->pid)!=(jobPtr->pid)){
+  	jobPtr = jobPtr->next;
+  	posCount++;
+  }
+  if(node!=NULL && jobPtr!=NULL && (node->pid)==(jobPtr->pid))
+  	return posCount;
+  else 
+  	return -1;
+}
+
 
 
