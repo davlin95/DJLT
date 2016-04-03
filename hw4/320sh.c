@@ -720,6 +720,8 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
   if(pid != 0){
   	/*Make the forked child part of this group*/
   	setpgid(pid,getpid());  
+
+  	/*SIGSUSPEND */
   	sleep(1);
 
   	//ADD JOB TO THE DATASTRUCTURE
@@ -734,10 +736,9 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
       setJobNodeValues(pid,getpgid(pid),newJobString,0,2);
     }
   	if(setForeground){//set foreground
-  	  foreground = pid;
+  		wait(NULL);
   	}else{
   	   printShallowJobNode(getJobNode(pid));
-  	  //printJobListWithHandling();
   	}
   	//UNBLOCKING THE SIGNALS
   	sigprocmask(SIG_SETMASK,&unblock,NULL);
@@ -770,9 +771,9 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
           }
           argNo++;
         }
-    int ex = execvp(newJob,argArray);
-    if(ex){      
-      //printf("child process pid: %d not executing %s",pid, newJob);
+    if (execvp(newJob,argArray)<0){
+    	printError(newJob);
+    	error = 1;
     }
     kill(getppid(),SIGCHLD);
     exit(0);
@@ -1070,16 +1071,15 @@ int main(int argc, char ** argv, char **envp) {
       else if(last_char == 3) {
       	char * sigintString= "^c";
         write(1, sigintString,strlen(sigintString));
-        Job* fg=getJobNode(foreground);
-        //printf("fg==NULL:%d",fg==NULL);
-        if(fg!=NULL){
-          if((fg->next)!=NULL){
-            ((fg->next)->prev)=fg->prev;
+        Job* fgJob=getJobNode(foreground);
+        if(fgJob!=NULL){
+          if((fgJob->next)!=NULL){
+            ((fgJob->next)->prev)=fg->prev;
           }
-          if((fg->next)!=NULL){
-            ((fg->prev)->next)=fg->next;
+          if((fgJob->next)!=NULL){
+            ((fgJob->prev)->next)=fgJob->next;
           }
-          if(kill((fg->pid),SIGKILL)){
+          if(kill((fgJob->pid),SIGKILL)){
           	//printf("\nkilled child: %d",fg->pid);
           }
         }
