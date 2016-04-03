@@ -188,38 +188,146 @@ int alphaNumerical(char *argString){
   return 0; */
 }
 
+                     /*QUOTE PARSING METHODS */
+
+/* Function takes in a pointer position that is in a string. Checks rest of string after 
+ * this position for a char * that is to a quote, without a '\' before it. 
+ * Returns the pointer to the quote. If the given position is the last valid 
+ * quote in the string, returns NULL. 
+ */
+/*
+char* getNextNonEscapeQuoteAfterPosition(char* position){
+  char* nextQuote;
+  nextQuote = strchr(position, '"'); //grab the next quote position
+  if(nextQuote==NULL){ //No quotes available.
+  	return NULL;
+  }else if (position == nextQuote){ //This position IS the quote, 
+    return NULL;
+  }
+  //quote is seen after pointer position. check if current quote is escaped. 
+  char* checkEscape;
+  checkEscape = (nextQuote-1);
+  if(*checkEscape=='\\'){
+      //Ignore this quote, check rest of string 
+      return getNextNonEscapeQuote(nextQuote);
+  }
+  return nextQuote; // found the quote.  
+}
+*/
+
+/* Copies the characters between these two memory positions, and returns the string buffer 
+ * ignores the value of ptr1 and ptr2 in the actual resulting string. 
+ * ptr2 must be after ptr1 in memory. 
+ * must copy into a buffer of up to size ((ptr2-ptr1)-1) + 1 for '\0' byte. 
+*/
+char * copyCharsBetweenTwoPointers(char* ptr1,char* ptr2,char* buffer){
+  char* traversalPtr = ptr1;
+  char* bufferPtr= buffer;
+  int resultSize = ((ptr2-ptr1)-1); // size of byte content to copy
+  if(resultSize<0){
+  	return NULL;
+  }
+  int i;
+  for(i=0;i<resultSize;i++){
+    *bufferPtr=*traversalPtr;
+    bufferPtr++;
+    traversalPtr++;
+  }
+  /*Append on '\0'*/
+  *bufferPtr='\0';
+  return buffer;
+}
+
+
 char ** parseCommandLine(char* cmd, char ** argArray){
 
+  /*****************TEST Print Headline ***********/
   /* Headline printing for debugging
   char * promptString = "\nprinting commandline:\n\0";
   write(1,promptString,strlen(promptString)); 
   int cmdLen = strnlen(cmd,MAX_INPUT); 
   write(1,cmd,cmdLen); */
+  /************************************************/
 
-  /* initialize*/
+  /* initialize */
   char * token;
-  char * savePtr;
+  char * savePtr; 
   int argCount = 0;
   char cmdCopy[MAX_INPUT];
   strcpy(cmdCopy,cmd);
+  
 
-  /* Quote Parsing */
+/*  ALTERNATE QUOTE PARSING
+  char* quote1;
+  char* quote2;
+  char quoteStringBuffer[MAX_INPUT] ={'\0'};
+  //int argCount =0;
+  char* argArrayEndPtr = argArray;
+  char* quoteAnchor = (cmd-1); //anchor to check quote after 
+
+  quote1 = getNextNonEscapeQuote(quoteAnchor);
+  while(quote1 !=NULL){
+  	quote2 = getNextNonEscapeQuote(quote1); // find matching pair
+   
+  	//Store Contents Before the quote 1; 
+  	if((quote1-(quoteAnchor+1))>0){ //Has contents in the region space between the quote anchor and quote1
+
+  	  *quote1='\0'; // stop the substring for parsing
+  	  parseByDelimiter(argArrayEndPtr,(quoteAnchor+1)," ");
+  	  *quote1='"'; //change back
+  	  argArrayEndPtr = argArray + strlen((char*)argArray);
+
+  	}
+  	
+  	//Store contents between quote 1 and quote 2 into parsed args 
+  	if(quote2 !=NULL){
+      copyCharsBetweenTwoPointers(cmd,quote2,quoteStringBuffer);
+	  strcpy(argArrayEndPtr[i],quoteStringBuffer);
+      quoteStringBuffer[0]='\0'; 
+      quoteAnchor = quote2; //reset the anchor 	
+    }else{ // this is an unpaired single quote. exit parsing. 
+    	break;
+    }
+
+     
+    //Store contents between quote 2 and end of string \0, or the next quote 1.
+    quote1 = getNextNonescapeQuote(quoteAnchor);//iterative step
+    if(quote1!=NULL){ // store the value between the next quote pair
+      
+    }else{ //Store the values between quote 2 and end of string 
+
+         i.e. store the values between quoteAnchor and the end of string . Finished.  
+
+    	//quote1 was searched for, it doesnt exist. so exit loop 
+    } 
+    
+    	    // continue loop
+  }
+  
+  parseByDelimiter(argArrayEndPtr,(quoteAnchor+1)," \n");
+  argCount= strlen((char*)argArray);
+  *(argArray+strlen((char *)argArray))= NULL;
+*/
+
+ 
+
+
   char *firstQuote;
   char *nextQuote;
   char *lastQuote;
 
   if ((firstQuote = strchr(cmdCopy, '"')) != NULL){
-    lastQuote = strrchr(cmdCopy, '"');
-    firstQuote++;
+    lastQuote = strrchr(cmdCopy, '"'); //grab the last quote position
+    firstQuote++; 
     if (firstQuote == lastQuote){
         firstQuote--;
         *firstQuote = ' ';
         *lastQuote = ' ';
     }
-    else{
+    else{ // if there are multiple quotes 
       while (firstQuote != lastQuote){
-        nextQuote = strchr(firstQuote,'"');
-        if (firstQuote == nextQuote){
+        nextQuote = strchr(firstQuote,'"'); 
+        if (firstQuote == nextQuote){ 
           firstQuote--;
           *firstQuote = ' ';
           *nextQuote = ' ';
@@ -244,19 +352,19 @@ char ** parseCommandLine(char* cmd, char ** argArray){
         }
       }
     }
-  }
+  } 
 
-  /* Delimit the cmd line by spaces and newline char */
+  // Delimit the cmd line by spaces and newline char 
   token = strtok_r(cmdCopy," \n",&savePtr);
   while(token != NULL){
     argArray[argCount]= token;
     argCount++;
     token = strtok_r(NULL," \n",&savePtr);
   }
-  argArray[argCount]=NULL; /* Null terminate */
+  argArray[argCount]=NULL; //NULL Terminate
   int position;
 
-  /*Reparse, and turn quotes into space */
+  //Reparse, and turn quotes into space 
   for (position = 0; position < argCount; position++){
     char *temp = argArray[position];
     if (*temp == '"'){
@@ -268,8 +376,10 @@ char ** parseCommandLine(char* cmd, char ** argArray){
         if (*current == '\352')
           *current = ' ';
       }
+      argArray[position]=temp;
     }
-  }
+  } 
+
   /* Parsed a non-empty string, store in history*/
   if(argCount>0){
     storeHistory(cmd);
@@ -469,14 +579,13 @@ bool executeArgArray(char * argArray[], char * environ[]){
 
   /* Look for special '&' background process symbol */
   fgState = !checkForBackgroundSpecialChar(argArray,count);
-  //printf("fgState is: %d ", fgState);
 
-  /*Test: Print count 
+  /*Test: Print count  
   printf("\n value of count of argArray in executeArgArray is: %d\n", count);
   for(int i=0;i<count;i++){
   	printf("arg[%d] is %s\n", i,argArray[i]);
   }
-  fflush(stdout);*/
+  fflush(stdout); */
   /*Test end*/
 
   int argPosition =0;

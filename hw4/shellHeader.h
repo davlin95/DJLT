@@ -48,6 +48,7 @@ int isBuiltIn(char * command);
 void printShallowJobNode(Job* jobPtr);
 void killChildHandler();
 void createNewChildProcess(char* objectFilePath,char** argArray);
+char* getNextNonEscapeQuoteAfterPosition(char* position);
 
 //HistoryCommand Program
 int moveBackwardInHistory();
@@ -183,6 +184,10 @@ char* safeMalloc(char* ptr){
 }
 
 /* Small Helper Functions*/
+
+/* Parses src, separating it into tokens by delimiters. Does not affect src array. 
+ * stores the tokens into the destination array dst. when dst array is full of tokens,
+ * end the last element with a terminating byte '\0' " */
 char** parseByDelimiter(char** dst,char*src,char* delimiters){
   char* savePtr;
   char* token;
