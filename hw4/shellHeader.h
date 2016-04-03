@@ -1,23 +1,83 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <termios.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <signal.h>
+#include <stdbool.h>
+#include <curses.h>
 #include <stdlib.h>
 
-#define UP_KEY "^[[A"
-#define DOWN_KEY "^[[B"
-#define RIGHT_KEY "^[[C"
-#define LEFT_KEY "^[[D"
+
 
 
 /* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
 
+/*******************/
+/*  STRUCTS         */
+/********************/
+
+/* Struct Variables */
+typedef struct jobNode{
+  pid_t pid;
+  pid_t processGroup;
+  char jobName[MAX_INPUT];
+  int exitStatus;
+  int runStatus;
+  struct jobNode * next;
+  struct jobNode * prev;
+}Job;
+
+
+/*********************/
 /*Header Prototypes */
-int isBuiltIn(char * command);
-bool saveHistoryToDisk();
+/********************/
+
+//Main Program
 bool executeArgArray(char * argArray[], char * environ[]);
 char ** parseCommandLine(char* cmd, char ** argArray);
 char *statFind(char *cmd);
 void printError(char* command);
 void processExit();
+int isBuiltIn(char * command);
+void printShallowJobNode(Job* jobPtr);
+void killChildHandler();
 void createNewChildProcess(char* objectFilePath,char** argArray);
+
+//HistoryCommand Program
+int moveBackwardInHistory();
+int moveForwardInHistory();
+bool hasHistoryEntry();
+void storeHistory(char * string);
+bool saveHistoryToDisk();
+void storeCommandLineCache(char* cmd);
+void  initializeHistory();
+void printHistoryCommand();
+
+//JobNode Program
+bool checkForBackgroundSpecialChar(char* argArray[],int argCount);
+void createBackgroundJob(char* newJob, char** argArray,bool setForeground);
+char* runStatusToString(int runStatus);
+Job* setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
+void printJobList();
+Job* getJobNode(pid_t pid);
+Job* getJobNodeAtPosition(int position);
+int getPositionOfJobNode(Job* node);
+void printJobNode(Job* jobPtr, int JID);
+void processFG(char ** argArray,int argCount);
+bool suspendProcess(pid_t pid);
+bool killProcess(pid_t pid);
+bool continueProcess(pid_t pid);
+void processJobs();
+int jobSize();
+Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus, int runStatus);
+char* runStateSymbol(int runStatus);
+//SIGNALS
+ void printJobListWithHandling();
 
 /* ANSII CODE FOR ARROW MOVEMENT */
 char* moveLeftAscii = "\033[D";
@@ -28,7 +88,13 @@ char * eraseLineAscii = "\033[0K";
 char * cursorPosAscii = "\033[6n";
 char * saveCursorPosAscii = "\033[s";
 char * loadCursorPosAscii = "\033[u";
+char * queryCursorAscii = "\033[6n";
 
+
+    /*Cursor Wrappers */
+void queryCursorPos(){
+  write(1,queryCursorAscii,strlen(queryCursorAscii));
+}
 void deleteCharAtCursor(){
   write(1,deleteAscii,strlen(deleteAscii));
 }
@@ -52,7 +118,6 @@ void moveCursorBack(int spaces){
     }
   }
 }
-
 void moveCursorForward(int spaces){
   if(spaces<0){
     printError("Can't move cursor back negative spaces\n");
@@ -65,13 +130,37 @@ void moveCursorForward(int spaces){
   }
 }
 
-/* Terminal Variables */
-typedef struct variableNode{
-  char* key;
-  char* value;
-  struct variableNode * next;
-}var;
 
+/* Check for special char & */
+bool checkForBackgroundSpecialChar(char* argArray[],int argCount){
+  char* str;
+  int strLen, i;
+    for(i=0;i<argCount;i++){
+      if(strcmp(argArray[i],"&")==0) {
+        return true;
+      }
+      else{
+      str = argArray[i];
+      strLen = strnlen(str,1024);
+      if(  (*(str+strLen-1)) == '&' ){
+        return true;
+      }
+    }
+  }
+  
+  return false;
+}
+
+void safeDelinkJobNode(Job* jobPtr){
+  if(jobPtr!=NULL){
+    if((jobPtr->prev)!=NULL){
+         (jobPtr->prev)->next = jobPtr->next;
+    }
+    if((jobPtr->next)!=NULL){
+         (jobPtr->next)->prev = jobPtr->prev;
+    }
+  }
+}
 
 void safeFreePtrNull(char* ptr){
   if(ptr!=NULL){
@@ -147,7 +236,7 @@ int parseByDelimiterNumArgs(char*src,char* delimiters){
 void printError(char * command){
   write(2,"\n",1);
   write(2,command,strnlen(command,MAX_INPUT));
-  char * msg = ":command not found\n\0";
+  char * msg = ": command not found\n\0";
   write(2,msg,strlen(msg));  
 }
 
@@ -170,7 +259,7 @@ int statExists(char* dir){
     return 1;
   }else {
     write(1,dir,strlen(dir));
-    write(1,": No such file or directory\n", 28);
+    write(1,":No such file or directory\n", 28);
   }
   return 0;
 }
@@ -225,6 +314,8 @@ void changeDir(char *changeDirTo){
 
 /* Test Function*/
 void test(){
+  char * args[5]={"abc","c", "d","e","f&"};
+  printf("test found & : %d\n",checkForBackgroundSpecialChar(args,5)); fflush(stdout);
 
   // Print environment variables 
   /*
