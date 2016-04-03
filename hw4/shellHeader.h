@@ -44,6 +44,7 @@ char *statFind(char *cmd);
 void printError(char* command);
 void processExit();
 int isBuiltIn(char * command);
+void printShallowJobNode(Job* jobPtr);
 void killChildHandler();
 void createNewChildProcess(char* objectFilePath,char** argArray);
 
@@ -150,7 +151,16 @@ bool checkForBackgroundSpecialChar(char* argArray[],int argCount){
   return false;
 }
 
-
+void safeDelinkJobNode(Job* jobPtr){
+  if(jobPtr!=NULL){
+    if((jobPtr->prev)!=NULL){
+         (jobPtr->prev)->next = jobPtr->next;
+    }
+    if((jobPtr->next)!=NULL){
+         (jobPtr->next)->prev = jobPtr->prev;
+    }
+  }
+}
 
 void safeFreePtrNull(char* ptr){
   if(ptr!=NULL){

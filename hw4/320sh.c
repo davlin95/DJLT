@@ -13,7 +13,7 @@ int current=0;
 
           
 /* Terminal Variables */
-static Job* jobHead=NULL;
+Job* jobHead;
 pid_t foreground=-1;
 
 
@@ -55,6 +55,8 @@ char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
 char restOfCMDLine[MAX_INPUT];
+pid_t deadChildren[MAX_INPUT];
+int deadChildrenCount;
 
 /* Function fills in buffer with the bytes between two cursors, into global array restOfCMDLine*/
 bool storeBytesBetweenPointersIntoGlobalArray(char* cursorSpot, char*lastCursorSpot){
@@ -225,7 +227,7 @@ char ** parseCommandLine(char* cmd, char ** argArray){
         else{
           while (firstQuote != nextQuote){
             if (*firstQuote == ' ')
-              *firstQuote = 0xEA;
+              *firstQuote = (char)0xEA;
             firstQuote++;
           }
         }
@@ -401,9 +403,9 @@ void processPwd(){
   char buf[MAX_INPUT];
   path = getcwd(buf, MAX_INPUT);
   write(1, path, strlen(path));
-  write(1, "\n", 1);
+  /*write(1, "\n", 1);
   printf("pid is %d\n", getpid());
-  fflush(stdout);
+  fflush(stdout); */
 }
 void processSet(char argArray[]){
   char * token;
@@ -411,17 +413,19 @@ void processSet(char argArray[]){
   char *equals = "=";
   token = strtok(argArray, equals);
   token2 = strtok(NULL, equals);
-  printf("token is %s and token2 is %s\n", token, token2);
+ // printf("token is %s and token2 is %s\n", token, token2);
   if (getenv(token) != NULL){
-    printf("setenv returned %d\n", setenv(token, token2, 1));
-    printf("token is %s and token2 is %s\n", token, token2);
+  	setenv(token, token2, 1);
+  //  printf("setenv returned %d\n", setenv(token, token2, 1));
+  //  printf("token is %s and token2 is %s\n", token, token2);
   }
   else if (alphaNumerical(token)){
-    printf("setenv returned %d\n", setenv(token, token2, 1));
-    printf("token is %s and token2 is %s\n", token, token2);
+    setenv(token, token2, 1);
+   /* printf("setenv returned %d\n", setenv(token, token2, 1));
+    printf("token is %s and token2 is %s\n", token, token2); */
   } else 
     error = 1;
-  printf("getenv(%s) is %s\n", token, getenv(token));
+  //printf("getenv(%s) is %s\n", token, getenv(token));
 }
 
 void processEcho(char argArray[]){
@@ -492,7 +496,10 @@ bool executeArgArray(char * argArray[], char * environ[]){
       processExit();
     }else if (strcmp(command,"jobs")==0){
       processJobs();
-    }else if(strcmp(command,"fg")==0){
+    }else if(strcmp(command,"history")==0){
+      printHistoryCommand();
+    }
+    else if(strcmp(command,"fg")==0){
       processFG(argArray,count);
     }
     else{
@@ -596,10 +603,11 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
   pid_t pid;
 
   /*PARENT PROCESS*/
-  if((pid=fork())!=0){
+  pid=fork();
+  if(pid != 0){
   	/*Make the forked child part of this group*/
   	setpgid(pid,getpid());  
-  	sleep(1);
+  	sleep(0.8);
 
   	//ADD JOB TO THE DATASTRUCTURE
   	/*Blocking*/
@@ -615,17 +623,17 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
   	if(setForeground){//set foreground
   	  foreground = pid;
   	}else{
-	  //printJobNode(getJobNode(pid),-1);
-  	  printJobListWithHandling();
+  	   printShallowJobNode(getJobNode(pid));
+  	  //printJobListWithHandling();
   	}
   	//UNBLOCKING THE SIGNALS
   	sigprocmask(SIG_SETMASK,&unblock,NULL);
   }
   else{   /*CHILD*/
 
-  	/*Test PID */
+  	/*Test PID 
     printf("child's parent pid is %d\n", getppid());
-    printf("Inside child, pid is %d\n", getpid()); 
+    printf("Inside child, pid is %d\n", getpid()); */
 
     /* Execute and catch error */
     int ex = execvp(newJob,argArray);
@@ -638,40 +646,55 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
 }
 
 void killChildHandler(){
+	/************* Test print ************/
+	/* printf("Handler is in pid %d",getpid());
+	printf("jobHead==NULL? %d" ,jobHead==NULL); */
+	/*****************************************/
     pid_t pid=0;
     sigset_t block,unblock;
-
   /* Test Print Strings
    char* pidString="\nPid is: \0";
    char * str = "\nSignal!child process pid: finished executing\n\0";*/
- 
-    while((pid=waitpid(-1,NULL, WUNTRACED)>0) ){
-    sigfillset(&block);
-    sigprocmask(SIG_SETMASK,&block,&unblock);
+    pid=waitpid(-1,NULL, WUNTRACED); 
+    while(pid>0){
+      sigfillset(&block);
+      sigprocmask(SIG_SETMASK,&block,&unblock);
 
-    /*TEST PRINT RECEIPT SIGNAL */
-    char reapString[MAX_INPUT]={'\0'};
-    sprintf(reapString,"Reaped Child process: %d ...\n",pid);
-    write(1,reapString,strlen(reapString)); 
+      /*TEST PRINT RECEIPT SIGNAL 
+      char reapString[MAX_INPUT]={'\0'};
+      sprintf(reapString,"Reaped Child process: %d ...\n",pid);
+      write(1,reapString,strlen(reapString)); */
 
-    /*MODIFY THE DATASTRUCTURE*/
-    Job* terminatedJobNode;
-    terminatedJobNode = getJobNode(pid);
-    if(terminatedJobNode!=NULL){
-      terminatedJobNode->runStatus=0;
-	  /*SHOW TO SCREEN*/
-      printJobNode(terminatedJobNode,getPositionOfJobNode(terminatedJobNode));
-    }
+      /*NOTIFY THE CHILD DIED */
+      deadChildren[deadChildrenCount++]=pid;
 
-    /*UNBLOCK ALL SIGNALS*/
-    sigprocmask(SIG_SETMASK,&unblock,NULL);
+/******************* Doesnt work due to Race Condition For Fast Commands ***************/
+      /*MODIFY THE DATASTRUCTURE*/
+      /*Job* terminatedJobNode;
+      terminatedJobNode = getJobNode(pid);
+      printf("\nterminatedJobNode is NULL :%d",terminatedJobNode==NULL);
+	  printf("\nafter terminated jobNode,jobHead==NULL? %d" ,jobHead==NULL);
+      if(terminatedJobNode!=NULL){
+        terminatedJobNode->runStatus=0;
+        printJobNode(terminatedJobNode,getPositionOfJobNode(terminatedJobNode));
+      } */
+/******************* **************************************************** ***************/
+
+
+      /*UNBLOCK ALL SIGNALS*/
+      sigprocmask(SIG_SETMASK,&unblock,NULL);
+      pid=waitpid(-1,NULL, WUNTRACED); 
   }
 }
 
 
-int main (int argc, char ** argv, char **envp) {
+int main(int argc, char ** argv, char **envp) {
   jobHead =NULL;
-  //int firstTimeRun =1;
+  deadChildrenCount=0;
+  int i;
+  for(i=0;i<MAX_INPUT;i++) {
+  	deadChildren[i]=-1;
+  }
 
   /*debug flag*/
   int debug = 0;
@@ -691,6 +714,7 @@ int main (int argc, char ** argv, char **envp) {
   initializeHistory();
 
   while (!finished) {
+  	//printf("\n In while: jobHead==NULL: %d\n", jobHead==NULL);
     char *cursor;  	//current position of modification 
     char *lastCursor;
 
@@ -707,12 +731,6 @@ int main (int argc, char ** argv, char **envp) {
 
 	// Clear previous cmd, or else first initialize 
 	cmd[0] ='\0';
-
-    /* Print newLine the first time 
-    if(firstTimeRun){
-      firstTimeRun=0;
-      write(1,"\n",1);
-    }*/
 
     /*REENTRANT PRINTING 
     write(1, "[", 1);
@@ -916,12 +934,17 @@ int main (int argc, char ** argv, char **envp) {
       }
       /* Detect CTRL-C */
       else if(last_char == 3) {
-        write(1, "^c", 2);
+      	char * sigintString= "^c";
+        write(1, sigintString,strlen(sigintString));
         Job* fg=getJobNode(foreground);
+        printf("fg==NULL:%d",fg==NULL);
         if(fg!=NULL){
-          ((fg->next)->prev)=fg->prev;
-          ((fg->prev)->next)=fg->next;
-          printf("preparing to sigKill");
+          if((fg->next)!=NULL){
+            ((fg->next)->prev)=fg->prev;
+          }
+          if((fg->next)!=NULL){
+            ((fg->prev)->next)=fg->next;
+          }
           if(kill((fg->pid),SIGKILL)){
           	printf("\nkilled child: %d",fg->pid);
           }
@@ -1035,12 +1058,12 @@ extern int current;*/
 void printHistoryCommand(){
     /*If history is NULL */
   int i=0;
-  if(historyCommand[i]==NULL){
-    printf("History command is null");fflush(stdout);
-  } 
+  /*if(historyCommand[i]==NULL){
+    fprintf("History command is null");fflush(stdout);
+  } */
     /*Prints history */
   while(historyCommand[i]!=NULL){
-    printf("\nhistoric string at index %d: %s\n",i,historyCommand[i]);fflush(stdout);
+    printf("%s\n",historyCommand[i]);fflush(stdout);
     i++;
   }
 }
@@ -1128,13 +1151,13 @@ bool saveHistoryToDisk(){
   /*Build the path */
   strcpy(historyPath,getenv("HOME"));
   strcat(historyPath,historyFileExtension);
-  printf("HOME IS: %s", historyPath);
+  //printf("HOME IS: %s", historyPath);
 
   /* Start writing the history file */
   FILE *historyFile;
   historyFile = fopen(historyPath,"w");
-  printf("\nopen to file %d:\n",historyFile==NULL);
-  printHistoryCommand();
+  //printf("\nopen to file %d:\n",historyFile==NULL);
+  //printHistoryCommand();
   /*Tests: 
   printf("\n%s\n",historyPath);
   printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL)); */
@@ -1144,24 +1167,20 @@ bool saveHistoryToDisk(){
   for(i=0; i<historySize;i++){
     currentHistoryIndex = moveBackwardInHistory();
   }
-  printf("moved back to beginning:\n");
+  //printf("moved back to beginning:\n");
    /* IMPORTANT: MUST BE '=', not double equals, "==". Is an assignment */
   while( (nextHistoryIndex=moveForwardInHistory()) 
     && (nextHistoryIndex != currentHistoryIndex) ){ // while there's more strings to store
-      printf("inWhile: %d %d\n",nextHistoryIndex,currentHistoryIndex);
-      printf("string is: %s\n",historyCommand[currentHistoryIndex]);
       // print the current history string to file
       if( historyCommand[currentHistoryIndex] != NULL){
-        printf("File is null: %d\n",historyFile==NULL);
-    fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
-        printf("\nStoring %s",historyCommand[currentHistoryIndex]);
+    	fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
       }
       currentHistoryIndex=nextHistoryIndex;
   }
   /* No more strings left in forwardInHistory, one more time to store the final string */
   if( historyCommand[currentHistoryIndex] !=NULL){
     fprintf(historyFile,"%s\n", historyCommand[currentHistoryIndex]); 
-    printf("last Storing: %s\n", historyCommand[currentHistoryIndex]); 
+    //printf("last Storing: %s\n", historyCommand[currentHistoryIndex]); 
   }
   /*Close file */
   free(historyPath);
@@ -1246,7 +1265,8 @@ int jobSize(){
   int size =0;
   Job* jobPtr = jobHead;
   if(jobPtr!=NULL){
-  	jobPtr++;
+  	jobPtr=jobPtr->next;
+
   }
   return size;
 }
@@ -1277,7 +1297,6 @@ void processJobs(){
   printJobListWithHandling();
 }
 
-
 /* A function that takes an arg array and finds the %int parameter for the processFG()
  * @param argArray, a NULL terminated argument array of string
  * @param argCount, the size of the arg Array
@@ -1303,6 +1322,21 @@ int findFGParameter(char ** argArray, int argCount){
     else return -1;
 }
 
+void updateJobListKilledChidren(){
+  int i;
+  Job* deadChild;
+  for(i=0;i<deadChildrenCount;i++){
+    if(deadChildren[i]>0){
+      deadChild = getJobNode(deadChildren[i]);
+      if(deadChild!=NULL){
+        deadChild->runStatus=0;
+      }
+    }
+    deadChildren[i]= -1;
+  }
+
+}
+
 void processFG(char ** argArray,int argCount){
   int jobIDPosition=0;
   Job* nextFGJob;
@@ -1314,6 +1348,7 @@ void processFG(char ** argArray,int argCount){
 
   /*Get the job at linked list position */
   nextFGJob = getJobNodeAtPosition(jobIDPosition);
+
   if(nextFGJob==NULL){
   	printf("%d, No such job",jobIDPosition);
   }else{
@@ -1452,20 +1487,28 @@ Job* setJobNodeValues(pid_t pid, pid_t processGroup, char* jobName, int exitStat
  * @return Job Ptr: Pointer to the job node struct
  */
 Job* getJobNode(pid_t pid){
+  //printf("\ngetJobNode: jobHead==NULL%d",jobHead==NULL);
   /*Initialize*/
-  pid_t jobPID;
-  Job* jobPtr = jobHead;
-
+  Job* jobSearchPtr = jobHead;
+  //printf("\ngetJobNode() jobHead==NULL: %d",jobHead==NULL);
   /*check case*/
-  if(jobPtr==NULL) return NULL;
-  
+  if(jobHead==NULL) {
+  	return NULL;
+  }
   /* search list for matching pid*/
-  while(jobPtr!=NULL){ 
-    jobPID = jobPtr->pid;
-    if(pid==jobPID) 
-      return jobPtr;
-  	else 
-  	  jobPtr = jobPtr->next;
+  while(jobSearchPtr!=NULL){ 
+    if(pid==(jobSearchPtr->pid)){
+      //printf("found job node %d",pid);
+      return jobSearchPtr;
+    } 
+  	jobSearchPtr = jobSearchPtr->next;
+
+  	/*********** TEST JOBPTR ******************/
+  	/*       
+  	if(jobSearchPtr!=NULL)
+      printf("\ngetJNode search job node %d",jobSearchPtr->pid);
+    else 
+      printf("\nJobSearch Ptr is null"); */
   }
   return NULL;
 }
@@ -1488,9 +1531,9 @@ Job* getJobNode(pid_t pid){
  * the invalid and done jobs
  */
  void printJobListWithHandling(){
+   updateJobListKilledChidren();
    Job* jobPtr = jobHead;
    //Job* freePtr;
-
    int jobID =1;
    while(jobPtr!=NULL){
    	 /*Remove invalid job Nodes*/
@@ -1500,17 +1543,17 @@ Job* getJobNode(pid_t pid){
    	   //freePtr=jobPtr;
 
    	   /*Delink adjacent chains, if they exist*/
-   	 	if((jobPtr->prev)!=NULL){
-   	       ((jobPtr->prev)->next)=jobPtr->next;
-   	 	}
-   	 	if((jobPtr->next)!=NULL){
-   	       ((jobPtr->next)->prev)=jobPtr->prev;
-   	 	}
-   	   jobPtr=jobPtr->next;
+   	   if((jobPtr->prev)!=NULL){
+   	     (jobPtr->prev)->next = jobPtr->next;
+   	   }
+   	   if((jobPtr->next)!=NULL){
+   	     (jobPtr->next)->prev = jobPtr->prev;
+   	   }
+   	   jobPtr= jobPtr->next;
 
    	   /*Release the memory*/
    	   //free(freePtr);
-   	   continue;
+   	   continue; /*CRITICAL TO MOVE ON*/
    	 }
     	 /*Display the next valid Node*/
       printJobNode(jobPtr,jobID);
@@ -1521,15 +1564,15 @@ Job* getJobNode(pid_t pid){
       }
 
       jobPtr=jobPtr->next;
-      jobID++;
+      jobID++;//only increment for valid jobs
    }
-
 }
 
  /* 
  * A function that prints the job status re-entrantly
  */
 void printJobNode(Job* jobPtr, int JID){
+
   char* sprintfStr=calloc(MAX_INPUT,1);
   sprintf(sprintfStr,"[%d]  (%d)%1s  %-12s %-50s\n",
   JID,
@@ -1542,6 +1585,21 @@ void printJobNode(Job* jobPtr, int JID){
   write(1,sprintfStr,strlen(sprintfStr));
   free(sprintfStr);
 }
+
+ /* 
+ * A function that prints the job status re-entrantly
+ */
+void printShallowJobNode(Job* jobPtr){
+  int pos = getPositionOfJobNode(jobPtr);
+  if(pos>0){
+    char* sprintfStr=calloc(MAX_INPUT,1);
+    sprintf(sprintfStr,"[%d]  (%d)\n",pos,(jobPtr->pid));
+  /*CleanUp*/
+  write(1,sprintfStr,strlen(sprintfStr));
+  free(sprintfStr);
+  }
+}
+
 
 /* 
  * A function that turns the run status int to a string 
