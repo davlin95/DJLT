@@ -9,7 +9,7 @@
 #include <curses.h>
 #include <fcntl.h>
 #include "shellHeader.h"
-
+#include <fcntl.h>
 /*****************/
 /*   Globals  ***/
 /***************/
@@ -60,7 +60,8 @@ char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o optio
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
 
 /* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"cd","pwd","help","echo","set","exit"};
+
+char * globalBuiltInCommand[] = {"cd","pwd","help","echo","set","exit","jobs","fg","history","clear-history"};
 char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
@@ -226,7 +227,6 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   strcpy(cmdCopy,cmd),
   checkQuote(cmdCopy);
   token = strtok_r(cmdCopy," ",&savePtr);
-
   while(token != NULL){
     argArray[argCount]= token;
     argCount++;
@@ -253,9 +253,9 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   /* Parsed a non-empty string, store in history*/
   if(argCount>0){
     storeHistory(cmd);
-    //printf("\nStored into historyCommand");fflush(stdout);
+    if(debugHistory){printf("Stored into historyCommand: %s\n", cmd);}
   }else{
-    //printf("\nUnable to store into historyCommand");fflush(stdout);
+  	if(debugHistory){printf("Unable to store into historyCommand\n");fflush(stdout);}
   } 
   return argArray;
 }
@@ -299,6 +299,7 @@ int isBuiltIn(char * command){
   }
   return 0; /*No command match found. return false */
 } 
+
 
 void processCd(char argArray[]){
   printf("cd: argArray is %s\n", argArray);
@@ -420,7 +421,6 @@ void processExit(){
   if(!saveHistoryToDisk()){
   	printError("Error saving history to disk\n");
   }
-  printHistoryCommand();
   exit(0);
 }
 
@@ -468,6 +468,8 @@ bool executeArgArray(char * argArray[], char * environ[]){
       processJobs();
     }else if(strcmp(command,"history")==0){
       printHistoryCommand();
+    }else if(strcmp(command,"clear-history")==0){
+      clearHistory();
     }
     else if(strcmp(command,"fg")==0){
       processFG(argArray,count);
@@ -750,7 +752,7 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
   if(pid != 0){
   	/*Make the forked child part of this group*/
   	setpgid(pid,getpid());  
-  	sleep(0.8);
+  	sleep(1);
 
   	//ADD JOB TO THE DATASTRUCTURE
   	/*Blocking*/
@@ -779,6 +781,27 @@ void createBackgroundJob(char* newJob, char** argArray,bool setForeground){
     printf("Inside child, pid is %d\n", getpid()); */
 
     /* Execute and catch error */
+    int argNo = 0;
+        int fd;
+        /* check for redirecting into */
+        while (argArray[argNo] != NULL){
+          if (strcmp(argArray[argNo], "<") == 0){
+            fd = open(argArray[argNo + 1], O_RDONLY, 0666);
+            dup2(fd, 0);
+            close(fd);
+          }
+          argNo++;
+        }
+        argNo = 0;
+        /*check for redirecting out of */
+        while (argArray[argNo] != NULL){
+          if (strcmp(argArray[argNo], ">") == 0){
+            fd = open(argArray[argNo + 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+            dup2(fd, 1);
+            close(fd);
+          }
+          argNo++;
+        }
     int ex = execvp(newJob,argArray);
     if(ex){      
       //printf("child process pid: %d not executing %s",pid, newJob);
@@ -847,7 +870,6 @@ int main(int argc, char ** argv, char **envp) {
       debug = 1;
     counter++;
   }
-  int quote = 0;
   int finished = 0;
   //char *prompt = "320sh > ";
   char cmd[MAX_INPUT];
@@ -922,9 +944,6 @@ int main(int argc, char ** argv, char **envp) {
       //printf(" \tread value\n");
       last_char = buffer; // hold the last_char for evaluation. 
       escapeSeen = false; //enable possible printing to screen
-	  if (last_char == '"'){
-        quote++;
-      }
       /* Detect escape sequence keys like arrows */
       if(last_char=='\033'){
       	escapeSeen = true; // disable printing to terminal screen. Arrows invisible
@@ -1082,7 +1101,7 @@ int main(int argc, char ** argv, char **envp) {
       	char * sigintString= "^c";
         write(1, sigintString,strlen(sigintString));
         Job* fg=getJobNode(foreground);
-        printf("fg==NULL:%d",fg==NULL);
+        //printf("fg==NULL:%d",fg==NULL);
         if(fg!=NULL){
           if((fg->next)!=NULL){
             ((fg->next)->prev)=fg->prev;
@@ -1091,12 +1110,23 @@ int main(int argc, char ** argv, char **envp) {
             ((fg->prev)->next)=fg->next;
           }
           if(kill((fg->pid),SIGKILL)){
-          	printf("\nkilled child: %d",fg->pid);
+          	//printf("\nkilled child: %d",fg->pid);
           }
         }
       }else if(last_char=='\n'){
-      	char * newline= "\n";
+        char * newline= "\n";
         write(1, newline, 1);
+        char* runCursor=cmd;
+        int quoteCount = 0;
+        while(runCursor<lastCursor){
+          if(*runCursor=='"')
+            quoteCount++;
+          runCursor++;
+        }
+        if(quoteCount%2!=0){
+          last_char=1;
+          write(1, ">", 1);
+        }
       }else {
       	/* If not an escape character, print the byte and reflect change in memory */
       	if(!escapeSeen &&(cursor==lastCursor)){
@@ -1139,10 +1169,6 @@ int main(int argc, char ** argv, char **envp) {
           //*Show no changes to screen or memory. Do nothing. 
 
 		}
-      }
-      if ((quote%2 != 0) && (last_char == '\n')){
-        write(1, ">", 1);
-        last_char = 1;
       }
     if (!rv) { 
       finished = 1;
@@ -1198,17 +1224,51 @@ extern int current;*/
  *  A helper function that prints the history for debugging 
  *  @return: void
  */
-void printHistoryCommand(){
-    /*If history is NULL */
+void printHistoryCommandRaw(){
   int i=0;
-  /*if(historyCommand[i]==NULL){
-    fprintf("History command is null");fflush(stdout);
-  } */
-    /*Prints history */
   while(historyCommand[i]!=NULL){
     printf("%s\n",historyCommand[i]);fflush(stdout);
     i++;
   }
+}
+
+/* PRINT HISTORY FOR USER CHRONONLOGICAL */
+void printHistoryCommand(){
+  int i,currentHistoryIndex=-1,nextHistoryIndex=-1;
+
+  /*Move to the beginning of history */
+  for(i=0;i<historySize;i++){
+  	currentHistoryIndex = moveBackwardInHistory();
+  }
+  /*Queue the next history string, same as currentHistory index if one element */
+  nextHistoryIndex = moveForwardInHistory();
+
+  /*Print valid strings: ITERATIVE STEP ONLY */
+  while(currentHistoryIndex >=0 &&  //Did not get initialized to negative array index 
+    (currentHistoryIndex!=nextHistoryIndex) // not an iterative step
+     && historyCommand[currentHistoryIndex]!=NULL){ // Not null
+    printf("%s\n",historyCommand[currentHistoryIndex]);fflush(stdout);
+
+    /*Move onto next step iteration */
+    currentHistoryIndex = nextHistoryIndex;
+    nextHistoryIndex = moveForwardInHistory(); 
+  }
+  /*Broke out of loop for last history element, print if possible*/
+  if(currentHistoryIndex >=0 && historyCommand[currentHistoryIndex]!=NULL){
+    printf("%s\n",historyCommand[currentHistoryIndex]);fflush(stdout);
+  }
+}
+
+void clearHistory(){
+  /*Reset global vars internally*/
+  historyHead = 0;
+  current = -1;
+
+  for(int i=0;i<historySize;i++){
+    historyCommand[i]='\0';
+  }
+  /*Store empty strings to disk*/
+  saveHistoryToDisk();
 }
 
 /*
@@ -1258,14 +1318,22 @@ void  initializeHistory(){
   historyFile = fopen(historyPath, "r");
   free(historyPath);
 
+  /*Make cleared buffer */
   char line[MAX_INPUT];
-  if(historyFile){ 
-    /*Read for lines from file*/
-    while(fgets(line, sizeof(line), historyFile)){
+  char * linePtr = line;
+  memset(line,0,MAX_INPUT);
+  /* Load history from file*/
+  int bytesRead=0;
+  size_t size = MAX_INPUT;
+  int num=0;
+  if(historyFile!=NULL){ 
+    while(((bytesRead=getline(&linePtr,&size, historyFile))>0)){
       /* Check for NULL lines and lines of spaces, or '\n' */
       if (line != NULL){
-        if(parseByDelimiterNumArgs(line," \n")>0){
+        if(parseByDelimiterNumArgs(line,"\n")>0){
           storeHistory(line);
+          num++;
+          if(debugHistory){printf("LOADED %d: %s\n",num, line);}
         }
       }
     }
@@ -1273,7 +1341,7 @@ void  initializeHistory(){
     fclose(historyFile);
   }else{
     /* Print to stdout */
-    printError("Unable to initialize prompt history");
+    printError("Unable to initialize history");
   }
   //printHistoryCommand();
 }
@@ -1294,14 +1362,13 @@ bool saveHistoryToDisk(){
   /*Build the path */
   strcpy(historyPath,getenv("HOME"));
   strcat(historyPath,historyFileExtension);
-  //printf("HOME IS: %s", historyPath);
 
   /* Start writing the history file */
   FILE *historyFile;
   historyFile = fopen(historyPath,"w");
-  //printf("\nopen to file %d:\n",historyFile==NULL);
-  //printHistoryCommand();
   /*Tests: 
+  printHistoryCommand();
+  printf("SAVE path: %s\n", historyPath);
   printf("\n%s\n",historyPath);
   printf("\nhistoryFILE NULL?%d\n",(historyFile==NULL)); */
 
@@ -1310,25 +1377,35 @@ bool saveHistoryToDisk(){
   for(i=0; i<historySize;i++){
     currentHistoryIndex = moveBackwardInHistory();
   }
-  //printf("moved back to beginning:\n");
+  if(debugHistory){
+      printf("currentHistoryIndex back to beginning: %d\n",currentHistoryIndex);
+  }
    /* IMPORTANT: MUST BE '=', not double equals, "==". Is an assignment */
-  while( (nextHistoryIndex=moveForwardInHistory()) 
-    && (nextHistoryIndex != currentHistoryIndex) ){ // while there's more strings to store
+  nextHistoryIndex=moveForwardInHistory();
+  while( nextHistoryIndex != currentHistoryIndex ){ // while there's more strings to store
       // print the current history string to file
       if( historyCommand[currentHistoryIndex] != NULL){
+        if(debugHistory){
+          printf("Storing CI:%d NI: %d String: %s\n",currentHistoryIndex,nextHistoryIndex, historyCommand[currentHistoryIndex]); 
+    	}
     	fprintf(historyFile, "%s\n", historyCommand[currentHistoryIndex]); 
       }
       currentHistoryIndex=nextHistoryIndex;
+      nextHistoryIndex=moveForwardInHistory();
   }
+    if(debugHistory){
+    	printf("\nbroke out of loop: CI%d NI%d\n",currentHistoryIndex,nextHistoryIndex);
+    }
   /* No more strings left in forwardInHistory, one more time to store the final string */
   if( historyCommand[currentHistoryIndex] !=NULL){
     fprintf(historyFile,"%s\n", historyCommand[currentHistoryIndex]); 
-    //printf("last Storing: %s\n", historyCommand[currentHistoryIndex]); 
+    if(debugHistory){
+    	printf("Last Storing CI:%d NI: %d String: %s\n",currentHistoryIndex,nextHistoryIndex, historyCommand[currentHistoryIndex]); 
+  	}
   }
   /*Close file */
   free(historyPath);
   fclose(historyFile);
-  printf("Done saving to disk:\n");
   return true;
 }
 
@@ -1344,11 +1421,17 @@ int moveForwardInHistory(){
    * 2) next history string is not the buffered input [address of historyHead]
    */
   if( (current<historyHead) && 
-    (( (current+1)%historySize) != (historyHead%historySize))) {
+    ( ((current+1)%historySize) != (historyHead%historySize))){
     current++;
+	if(debugHistory){
+		printf("In moveForwardHistory() current: %d, historyHead: %d\n",(current%historySize),(historyHead%historySize));
+    }
     return (current%historySize);
   }
   /* Can't move forward, don't increment */
+  if(debugHistory){
+      printf("In moveForwardHistory() current: %d, historyHead: %d\n",(current%historySize),(historyHead%historySize));
+  }
   return(current%historySize); 
 }
 
@@ -1493,7 +1576,7 @@ void processFG(char ** argArray,int argCount){
   nextFGJob = getJobNodeAtPosition(jobIDPosition);
 
   if(nextFGJob==NULL){
-  	printf("%d, No such job",jobIDPosition);
+  	printf("%d, No such job\n",jobIDPosition);
   }else{
   	/*If to restart the FG Job */
   	Job* fgNode = getJobNode(foreground);
@@ -1521,6 +1604,7 @@ void processFG(char ** argArray,int argCount){
   }
 
 }
+
 
 bool suspendProcess(pid_t pid){
   Job* suspendJob;

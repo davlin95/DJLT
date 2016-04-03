@@ -12,10 +12,11 @@
 #include <stdlib.h>
 
 
-
-
 /* Assume no input line will be longer than 1024 bytes */
 #define MAX_INPUT 1024
+
+/*Debug variables */
+int debugHistory = 0;
 
 /*******************/
 /*  STRUCTS         */
@@ -57,6 +58,7 @@ bool saveHistoryToDisk();
 void storeCommandLineCache(char* cmd);
 void  initializeHistory();
 void printHistoryCommand();
+void clearHistory();
 
 //JobNode Program
 bool checkForBackgroundSpecialChar(char* argArray[],int argCount);
