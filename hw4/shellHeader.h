@@ -58,6 +58,7 @@ bool saveHistoryToDisk();
 void storeCommandLineCache(char* cmd);
 void  initializeHistory();
 void printHistoryCommand();
+void clearHistory();
 
 //JobNode Program
 bool checkForBackgroundSpecialChar(char* argArray[],int argCount);

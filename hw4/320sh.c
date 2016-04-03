@@ -50,7 +50,7 @@ char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o optio
 "ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
 
 /* Make global array of built-in strings */
-char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit","jobs","fg","history"};
+char * globalBuiltInCommand[] = {"ls","cd","pwd","help","echo","set","ps","printenv","exit","jobs","fg","history","clear-history"};
 char temporaryCommandlineCache[MAX_INPUT];
 char *temporaryCommandlineCachePtr;
 bool inCommandlineCache;
@@ -273,9 +273,9 @@ char ** parseCommandLine(char* cmd, char ** argArray){
   /* Parsed a non-empty string, store in history*/
   if(argCount>0){
     storeHistory(cmd);
-    printf("Stored into historyCommand: %s\n", cmd);
+    if(debugHistory){printf("Stored into historyCommand: %s\n", cmd);}
   }else{
-    printf("Unable to store into historyCommand\n");fflush(stdout);
+  	if(debugHistory){printf("Unable to store into historyCommand\n");fflush(stdout);}
   } 
   return argArray;
 }
@@ -500,6 +500,8 @@ bool executeArgArray(char * argArray[], char * environ[]){
       processJobs();
     }else if(strcmp(command,"history")==0){
       printHistoryCommand();
+    }else if(strcmp(command,"clear-history")==0){
+      clearHistory();
     }
     else if(strcmp(command,"fg")==0){
       processFG(argArray,count);
@@ -1078,17 +1080,51 @@ extern int current;*/
  *  A helper function that prints the history for debugging 
  *  @return: void
  */
-void printHistoryCommand(){
-    /*If history is NULL */
+void printHistoryCommandRaw(){
   int i=0;
-  /*if(historyCommand[i]==NULL){
-    fprintf("History command is null");fflush(stdout);
-  } */
-    /*Prints history */
   while(historyCommand[i]!=NULL){
     printf("%s\n",historyCommand[i]);fflush(stdout);
     i++;
   }
+}
+
+/* PRINT HISTORY FOR USER CHRONONLOGICAL */
+void printHistoryCommand(){
+  int i,currentHistoryIndex=-1,nextHistoryIndex=-1;
+
+  /*Move to the beginning of history */
+  for(i=0;i<historySize;i++){
+  	currentHistoryIndex = moveBackwardInHistory();
+  }
+  /*Queue the next history string, same as currentHistory index if one element */
+  nextHistoryIndex = moveForwardInHistory();
+
+  /*Print valid strings: ITERATIVE STEP ONLY */
+  while(currentHistoryIndex >=0 &&  //Did not get initialized to negative array index 
+    (currentHistoryIndex!=nextHistoryIndex) // not an iterative step
+     && historyCommand[currentHistoryIndex]!=NULL){ // Not null
+    printf("%s\n",historyCommand[currentHistoryIndex]);fflush(stdout);
+
+    /*Move onto next step iteration */
+    currentHistoryIndex = nextHistoryIndex;
+    nextHistoryIndex = moveForwardInHistory(); 
+  }
+  /*Broke out of loop for last history element, print if possible*/
+  if(currentHistoryIndex >=0 && historyCommand[currentHistoryIndex]!=NULL){
+    printf("%s\n",historyCommand[currentHistoryIndex]);fflush(stdout);
+  }
+}
+
+void clearHistory(){
+  /*Reset global vars internally*/
+  historyHead = 0;
+  current = -1;
+
+  for(int i=0;i<historySize;i++){
+    historyCommand[i]='\0';
+  }
+  /*Store empty strings to disk*/
+  saveHistoryToDisk();
 }
 
 /*
