@@ -651,7 +651,27 @@ bool validSyntax(char **argArray){
     
   return valid;
 }
+int checkPiping(char **argArray){
+  printf("made it to check piping\n");
+  int i = 0;
+  int numberCmds = 1;
+  int prevIsPipe = 0;
+  while(argArray[i] != NULL){
+    if (*argArray[i] == '|' && !prevIsPipe){
+      argArray[i] = NULL;
+      numberCmds++;
+      prevIsPipe = 1;
+    }else if (*argArray[i] == '|' && prevIsPipe){
+      return 0;  
+    }else 
+      prevIsPipe = 0;
+    i++;
+  }
+    return numberCmds;
+}
+
 void createNewChildProcess(char* objectFilePath,char** argArray){
+  printf("made it to create new child\n");
   pid_t pid;
   int status;
   /* check whether arguments start or end with <, >, or | */
@@ -660,10 +680,10 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
     int noOfCmds;
     noOfCmds = checkPiping(argArray);
     /* create pipes with each pipe being two values in the array */
-    int pipes[2*(noOfCmds-1];
+    int pipes[2*(noOfCmds-1)];
     /* pipe every other pipe i.e. 0 with 2, 2, with 4, and so on*/  
     int i;
-    for (i = 0; i <(noOfCmds - 1), i+=2){
+    for (i = 0; i <(noOfCmds - 1); i+=2){
       if (pipe(pipes + i) < 0){
         write(2, "Error piping.\n", 14);
         error = 1;
@@ -672,16 +692,15 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
     /* commands = index of current command executing (used to determine dup) */
     int commands = 0;
     /* nextArgArray contains the next array that will be executed */
-    char **nextArgArray = argArray;
     /* while number of commands is greater than 0, fork and pipe. (redirect if required) */
     while(noOfCmds > 0){
       if((pid=fork())==0){
         int argNo = 0;
         int fd;
         /* check for redirecting into */
-        while (nextArgArray[argNo] != NULL){
-          if (strcmp(nextArgArray[argNo], "<") == 0){
-            fd = open(nextArgArray[argNo + 1], O_RDONLY, 0666);
+        while (argArray[argNo] != NULL){
+          if (strcmp(argArray[argNo], "<") == 0){
+            fd = open(argArray[argNo + 1], O_RDONLY, 0666);
             dup2(fd, 0);
             close(fd);
           }
@@ -689,37 +708,32 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
         }
         argNo = 0;
         /*check for redirecting out of */
-        while (nextArgArray[argNo] != NULL){
-          if (strcmp(nextArgArray[argNo], ">") == 0){
-            fd = open(nextArgArray[argNo + 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
+        while (argArray[argNo] != NULL){
+          if (strcmp(argArray[argNo], ">") == 0){
+            fd = open(argArray[argNo + 1], O_RDWR | O_CREAT | O_TRUNC, 0666);
             dup2(fd, 1);
             close(fd);
           }
           argNo++;
         }
         /* IF ONLY ONE CMD, EXECUTE AND EXIT */
-        if (commands == 0 && commands == 1){ 
+        if (commands == 0 && noOfCmds == 1){ 
           if (execvp(objectFilePath,argArray) < 0){
             printError(objectFilePath);
             exit(1);
           }
           exit(0);
         }
-        /* --------ELSE MORE THAN ONE COMMAND---------
-                  FIRST CMD */
-        if (commands == 0 && noOfCmds != 1){
-            if (dup2(pipes[commands + 1], 1) < 0){
-              write(2, "Error piping.\n", 14);
-              error = 1;
-            }  
-             /* NOT LAST CMD */
-        } else if (commands != 0 && noOfCmds != 1){
+        /* --------ELSE MORE THAN ONE COMMAND---------*/
+         /* NOT LAST CMD */
+        if (noOfCmds != 1){
             if (dup2(pipes[commands*2 + 1], 1) < 0){
               write(2, "Error piping.\n", 14);
               error = 1;
             }
+        }
             /*NOT FIRST CMD */
-        } else if (commands !=0){ 
+        if(commands !=0){ 
             if (dup2(pipes[commands*2 - 2], 0) < 0){
               write(2, "Error piping.\n", 14);
               error = 1;
@@ -733,22 +747,62 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
           }
         /* for remaining commands, determine arg array by getting position after null */
         } else {
+
           int count = 0;
+          int i = 0; 
           while(count != commands){
-            while (nextArgArray != NULL){
-              nextArgArray++;
+            printf("count is %d and commands is %d\n", count, commands);
+            while (argArray[i] !=NULL){
+              i++;
+              printf("i = %d\n", i);
             }
+            i++;
+            printf("i = %d\n", i);
             count++;
-            nextArgArray++;
           }
+          printf("i = %d\n", i);
+          printf("count is %d but should be 3\n", i);
+          printf("argArray[0] = %s\n", argArray[0]);
+          printf("argArray[1] = %s\n", argArray[1]);
+          printf("argArray[2] = %s\n", argArray[2]);
+          printf("argArray[3] = %s\n", argArray[3]);
+          printf("argArray[4] = %s\n", argArray[4]);
+          printf("argArray[5] = %s\n", argArray[5]);
+          printf("argArray[6] = %s\n\n", argArray[6]);
+          printf("argArray[7] = %s\n\n", argArray[7])
+
+          printf("argArray[null+1] = %s\n", argArray[i]);
+          printf("argArray[null+2] = %s\n", argArray[i+1]);
+          char *nextArgArray[MAX_INPUT];
+          memset(nextArgArray, '\0', MAX_INPUT);
+          int j = 0;
+          while(argArray[i] != NULL){
+            nextArgArray[j] = malloc(strlen(argArray[i]));
+            strcpy(nextArgArray[j], argArray[i]);
+            j++;
+            i++;
+          }
+          nextArgArray[j+1] = NULL;
         /* after getting arg array, statfind to find path, and execute */
           if (execvp(statFind(nextArgArray[0]), nextArgArray) < 0){
-            printError(objectFilePath);
+            printError(nextArgArray[0]);
             exit(1);
+          }
+          int k = 0;
+          while(nextArgArray[k] != NULL){
+            free(nextArgArray[k]);
           }
         }
         exit(0);
   }else{
+    if (noOfCmds != 1){
+      close(pipes[commands*2 + 1]);
+    }
+    if (commands!=0){
+      close(pipes[commands*2 - 2]);
+    }
+    noOfCmds--;
+    commands++;
     /* -----to do -------- */
     /* close certain pipes opened by child in parent (not sure which ones) */
       wait(&status);
@@ -756,9 +810,6 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
         error = 1;
       printf("\nParent Process reaped child process %d\n",pid);
   }
-  /* increment and decrements counters */
-  noOfCmds--;
-  commands++;
 }
 }
 }
@@ -767,23 +818,7 @@ void createNewChildProcess(char* objectFilePath,char** argArray){
  * For each pipe found, make null to create the different arrays for each command that will be 
  * passed into execvp. Returns 0 if there is an error.   
  */
-int checkPiping(char **argArray){
-  int i = 0;
-  int numberCmds = 1;
-  while(argArray[i] != NULL){
-    if (*argArray[i] == '|' && *argArray[i + 1] != '|'){
-      numberCmds++;
-      argArray[i] = NULL;
-    } 
-    else if (*argArray[i] == '|' && *argArray[i + 1] == '|'){
-      error = 1;
-      printError("| |");
-      return 0;
-    }
-    i++;
-  }
-  return numberCmds;
-}
+
 
 /* 
  * A function that initializes the historyCommand global var, from a searched dir path 
