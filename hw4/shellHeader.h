@@ -81,6 +81,7 @@ Job* createJobNode(pid_t pid, pid_t processGroup, char* jobName, int exitStatus,
 char* runStateSymbol(int runStatus);
 //SIGNALS
  void printJobListWithHandling();
+ void waitKillChildHandler();
 
 /* ANSII CODE FOR ARROW MOVEMENT */
 char* moveLeftAscii = "\033[D";

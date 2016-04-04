@@ -56,8 +56,9 @@ void testJobNode(){
 int error = 0;
 
 /*Strings for help menu: WARNING!!! LAST ELEMENT MUST BE NULL, for the printHelpMenu() function */
-char * helpStrings[]={"exit [n]","pwd -[LP]","set [-abefhkmnptuvxBCHP] [-o option->",
-"ls [-l]","cd [-L|[-P [-e]] [-@]] [dir] ", "echo [-neE] [arg ...]","ps [n]","printenv [n]",NULL};
+char * helpStrings[]={"exit [n] terminates program ","pwd -[LP] print working directory","set [-abefhkmnptuvxBCHP] [-o option-> set env variables",
+"ls [-l] print dir contents","cd [-L|[-P [-e]] [-@]] [dir] change dir", "echo [-neE] [arg ...]","ps [n] display to screen",
+"history [n] displays history","clear-history[n] clears history",NULL};
 
 /* Make global array of built-in strings */
 
@@ -103,8 +104,6 @@ void printHelpMenu(){
   }
   fflush(stdout);
 }
-
-
 
 /* 
  * A function that turns relative to absolute path evaluation. 
@@ -357,7 +356,7 @@ int isBuiltIn(char * command){
 
 
 void processCd(char argArray[]){
-  printf("cd: argArray is %s\n", argArray);
+  //printf("cd: argArray is %s\n", argArray);
   int badDirectory = 0;
   if (argArray != NULL && argArray[strlen(argArray)-1] == '/'){
     argArray[strlen(argArray)-1] = '\0';
@@ -388,15 +387,15 @@ void processCd(char argArray[]){
     changeDir(path);
     free(path);
   }else if (strncmp(argArray, "../", 3) == 0){
-    printf("argArray is %s\n", argArray);
-    printf("argArray[2] is %s\n", &argArray[2]);
+    //printf("argArray is %s\n", argArray);
+    //printf("argArray[2] is %s\n", &argArray[2]);
     char *argPtr = &argArray[2];
     char *path = malloc((strlen(getenv("PWD")) + strlen(argPtr))*sizeof(char));
     strcpy(path, getenv("PWD"));
     parentDirectory(path);
     strcat(path, argPtr);
-    printf("argptr is %s\n", argPtr);
-    printf("cd ../ and path is %s\n ", path);
+    //printf("argptr is %s\n", argPtr);
+    //printf("cd ../ and path is %s\n ", path);
     struct stat pathStat;
     if (stat(path, &pathStat) >= 0){
       changeDir(path);
@@ -431,42 +430,43 @@ void processPwd(){
   free(buf);
 }
 
-void processSet(char argArray[]){
-  char * token;
-  char * token2;
-  char *equals = "=";
-  token = strtok(argArray, equals);
-  token2 = strtok(NULL, equals);
- // printf("token is %s and token2 is %s\n", token, token2);
-  if (getenv(token) != NULL){
-  	setenv(token, token2, 1);
-  //  printf("setenv returned %d\n", setenv(token, token2, 1));
-  //  printf("token is %s and token2 is %s\n", token, token2);
-  }
-  else if (alphaNumerical(token)){
-    setenv(token, token2, 1);
-   /* printf("setenv returned %d\n", setenv(token, token2, 1));
-    printf("token is %s and token2 is %s\n", token, token2); */
-  } else 
+void processSet(char **argArray){
+  if (argArray[1] != NULL && strcmp(argArray[2], "=")==0 && argArray[3] != NULL){
+    char* var = argArray[1];
+    var++;
+    if (getenv(var) != NULL){
+    //printf("environmental variable already exists\n");
+    setenv(var, argArray[3], 1);
+    }
+    else if (alphaNumerical(var)){
+    //printf("is alphaNumerical\n");
+    setenv(var, argArray[3], 1);
+    }
+    //printf("getenv(%s) = %s\n", var, getenv(var));
+  } else
     error = 1;
 }
 
-void processEcho(char argArray[]){
-  char *argPtr = &argArray[1];
-  if (argArray != NULL){
-    if (argArray[0] == '$'){
+void processEcho(char **argArray){ 
+  char *argPtr = argArray[1];
+  if (argPtr != NULL){
+    if (*argPtr == '$'){
+      argPtr++;
       if (strcmp(argPtr, "?")==0){
-        if (error)
-          write(1, "1", 1);
-        else
-          write(1, "0", 1);
+        if (error){
+            write(1, "1", 1);
+        }
+        else{
+            write(1, "0", 1);
+        }
         error = 0;
       }
-      else if (getenv(argPtr) != NULL)
-        write(1, getenv(argPtr), strlen(getenv(argPtr)));
+      else if (getenv(argPtr) != NULL){
+            write(1, getenv(argPtr), strlen(getenv(argPtr)));
+      }
     }
     else {
-        write(1, argArray, strlen(argArray));
+      write(1, argArray[1], strlen(argArray[1]));
     }
   }
   write(1, "\n", 2);
@@ -511,9 +511,9 @@ bool executeArgArray(char * argArray[], char * environ[]){
     }else if(strcmp(command,"pwd")==0){
       processPwd();
     }else if(strcmp(command,"echo")==0){
-      processEcho(argArray[1]);
+      processEcho(argArray);
     }else if(strcmp(command,"set")==0){
-      processSet(argArray[1]);
+      processSet(argArray);
     }else if(strcmp(command,"help")==0){
       printHelpMenu();
     }else if(strcmp(command,"exit")==0){
@@ -550,15 +550,14 @@ bool executeArgArray(char * argArray[], char * environ[]){
       if(turnRelativeToAbsolute(argArray[0],buffer,callocSize)!=NULL){
         //printf("\nValue of buffer is: %s\n",buffer);
           if(statExists(buffer)){
-             safeFreePtrNull(buffer);
       	     /*ALTERNATE */
       	     createNewChildProcess(argArray[0],argArray,fgState);
+      	     safeFreePtrNull(buffer);
           }else{
              /*Path Doesn't Exists: user error */
               error = 1;
       	      safeFreePtrNull(buffer);
           }
-
       }else{
             /*turnRelativePathToAbsolute is erroneous, conversion error */
             safeFreePtrNull(buffer);
@@ -606,9 +605,9 @@ int checkPiping(char **argArray){
     return numberCmds;
 }
 
-void createNewChildProcess(char* objectFilePath,char** argArray,int foreground){
+void createNewChildProcess(char* objectFilePath,char** argArray,int fgState){
   pid_t pid;
-  int status;
+  //int status;
   /* check whether arguments start or end with <, >, or | */
   if (validSyntax(argArray)){
     int noOfCmds;    /* parse through argArray to find pipes and determine the # of commands */
@@ -744,22 +743,23 @@ void createNewChildProcess(char* objectFilePath,char** argArray,int foreground){
     char* newJobString = malloc( sizeof(char)*(strlen(objectFilePath)+1))	;
     strcpy(newJobString,objectFilePath);
     //ADD JOB TO THE DATASTRUCTURE
+
   	  /*Blocking*/
   	  sigset_t block,unblock;
   	  sigfillset(&block);
       sigprocmask(SIG_BLOCK,&block,&unblock);
       setJobNodeValues(pid,getpgid(pid),newJobString,0,2);
+
       //UNBLOCKING THE SIGNALS
   	  sigprocmask(SIG_SETMASK,&unblock,NULL);
-  	if(foreground){//set foreground
+  	if(fgState){//set foreground
   	  sleep(1);
-  	  wait(&status);
+  	  foreground = pid;
+  	  signal(SIGCHLD,waitKillChildHandler);
   	}else{
   	   printShallowJobNode(getJobNode(pid));
   	}
-    /* close certain pipes opened by child in parent (not sure which ones) */
-      if (status)
-        error = 1;
+
 	  }
     }
   }
@@ -873,14 +873,51 @@ void killChildHandler(){
         printJobNode(terminatedJobNode,getPositionOfJobNode(terminatedJobNode));
       } */
 /******************* **************************************************** ***************/
-
-
       /*UNBLOCK ALL SIGNALS*/
       sigprocmask(SIG_SETMASK,&unblock,NULL);
       pid=waitpid(-1,NULL, WUNTRACED); 
   }
 }
 
+void waitKillChildHandler(){
+	/************* Test print ************/
+	/* printf("Handler is in pid %d",getpid());
+	printf("jobHead==NULL? %d" ,jobHead==NULL); */
+	/*****************************************/
+    pid_t pid=0;
+    sigset_t block,unblock;
+  /* Test Print Strings
+   char* pidString="\nPid is: \0";
+   char * str = "\nSignal!child process pid: finished executing\n\0";*/
+    pid=waitpid(-1,NULL, 0); 
+    while(pid>0){
+      sigfillset(&block);
+      sigprocmask(SIG_SETMASK,&block,&unblock);
+
+      /*TEST PRINT RECEIPT SIGNAL 
+      char reapString[MAX_INPUT]={'\0'};
+      sprintf(reapString,"Reaped Child process: %d ...\n",pid);
+      write(1,reapString,strlen(reapString)); */
+
+      /*NOTIFY THE CHILD DIED */
+      deadChildren[deadChildrenCount++]=pid;
+
+/******************* Doesnt work due to Race Condition For Fast Commands ***************/
+      /*MODIFY THE DATASTRUCTURE*/
+      /*Job* terminatedJobNode;
+      terminatedJobNode = getJobNode(pid);
+      printf("\nterminatedJobNode is NULL :%d",terminatedJobNode==NULL);
+	  printf("\nafter terminated jobNode,jobHead==NULL? %d" ,jobHead==NULL);
+      if(terminatedJobNode!=NULL){
+        terminatedJobNode->runStatus=0;
+        printJobNode(terminatedJobNode,getPositionOfJobNode(terminatedJobNode));
+      } */
+/******************* **************************************************** ***************/
+      /*UNBLOCK ALL SIGNALS*/
+      sigprocmask(SIG_SETMASK,&unblock,NULL);
+      pid=waitpid(-1,NULL, WUNTRACED); 
+  }
+}
 
 int main(int argc, char ** argv, char **envp) {
   jobHead =NULL;
@@ -1129,15 +1166,27 @@ int main(int argc, char ** argv, char **envp) {
         write(1, sigintString,strlen(sigintString));
         Job* fgJob=getJobNode(foreground);
         if(fgJob!=NULL){
-          if((fgJob->next)!=NULL){
-            ((fgJob->next)->prev)=fgJob->prev;
-          }
-          if((fgJob->next)!=NULL){
-            ((fgJob->prev)->next)=fgJob->next;
-          }
-          if(kill((fgJob->pid),SIGKILL)){
-          	//printf("\nkilled child: %d",fg->pid);
-          }
+          fgJob->runStatus =0;
+          // if((fgJob->next)!=NULL){
+          //   ((fgJob->next)->prev)=fgJob->prev;
+          // }
+          // if((fgJob->next)!=NULL){
+          //   ((fgJob->prev)->next)=fgJob->next;
+          // }
+          // if(kill((fgJob->pid),SIGKILL)){
+          // }
+          kill((fgJob->pid),SIGKILL);
+          write(1, "\n", 1);
+          break;
+        }
+      }/* Detect CTRL-C */
+      else if(last_char == 0x1A) {
+        Job* fgJob=getJobNode(foreground);
+        if(fgJob!=NULL){
+          fgJob->runStatus = 1;
+          kill((fgJob->pid),SIGTSTP);
+          write(1, "\n", 1);
+          break;
         }
       }else if(last_char=='\n'){
         char * newline= "\n";
@@ -1874,15 +1923,10 @@ char* runStatusToString(int runStatus){
  * A function that turns the symbol for the run state. 
  */
 char* runStateSymbol(int runStatus){
-  if(runStatus==0){
-    return "S\0";
-  }else if(runStatus==1){
-    return "s\0";
-  }else if(runStatus==2){
+  if(runStatus==foreground){
     return "+\0";
-  }else{
-    return "?\0";
   }
+  return "\0";
 }
 
 Job* getJobNodeAtPosition(int position){
