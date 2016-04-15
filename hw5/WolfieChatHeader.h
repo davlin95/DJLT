@@ -13,19 +13,20 @@
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
 						/**********************************************************************/
-typedef struct clientData{
-	char* userName;
-  Session* session;
-}Client;
 
 typedef struct sessionData{
   clock_t start;
   clock_t end;
 }Session;
 
+typedef struct clientData{
+	char* userName;
+  Session* session;
+}Client;
+
 typedef struct accountData{
-	char* userName,
-	char* password,
+	char* userName;
+	char* password;
 }Account;
 
 						/***********************************************************************/
