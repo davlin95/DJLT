@@ -534,6 +534,8 @@ bool executeArgArray(char * argArray[], char * environ[]){
 
       /*Find and execute the binary path */
       char * fullCommandPath = statFind(argArray[0]);
+      write(1,fullCommandPath,strlen(fullCommandPath));
+      write(1,"\n",1);
       if(fullCommandPath!=NULL){
       	  createNewChildProcess(fullCommandPath,argArray,fgState);
           return false;//continue loop upon exit
@@ -606,12 +608,14 @@ int checkPiping(char **argArray){
 }
 
 void createNewChildProcess(char* objectFilePath,char** argArray,int fgState){
+  printf("objectFilePath: %s\n", objectFilePath);
   pid_t pid;
   //int status;
   /* check whether arguments start or end with <, >, or | */
   if (validSyntax(argArray)){
     int noOfCmds;    /* parse through argArray to find pipes and determine the # of commands */
     noOfCmds = checkPiping(argArray);
+    printf("noOfCmds: %d\n",noOfCmds);
     /* create pipes with each pipe being two values in the array */
     int pipes[2*(noOfCmds-1)];
     /* pipe every other pipe i.e. 0 with 2, 2, with 4, and so on*/  
