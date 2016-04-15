@@ -8,20 +8,23 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <fcntl.h>
-#include <sys/socket.h>
 #include <netinet/in.h>
 
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
 						/**********************************************************************/
 typedef struct clientData{
-	char* userName,
-	unsigned long long connectionTime,
-  
+	char* userName;
+  Session* session;
 }Client;
 
+typedef struct sessionData{
+  clock_t start;
+  clock_t end;
+}Session;
+
 typedef struct accountData{
-	int accountId,
+	char* userName,
 	char* password,
 }Account;
 
@@ -37,6 +40,8 @@ AccountData* getAccount(int accountId);
 void setAccount(AccountData* newAccount);
 
             /************ STDIN READING ***********/
+
+
 
 
 
@@ -184,6 +189,8 @@ void processUsers();
  * @return: value in seconds client was connected for.
  */
  unsigned long long returnClientConnectedtime(int clientID);
+ void startSession(Session* session);
+ void endSession(Session* session);
 
 /*
  * Finds the client struct associated with the clientID 

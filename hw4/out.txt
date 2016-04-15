@@ -1,9 +1,0 @@
-child's parent pid is 6503
-320sh
-320sh.c
-hello.txt
-launcher.sh
-Makefile
-Makefile~
-out.txt
-shellHeader.h
