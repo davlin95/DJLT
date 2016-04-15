@@ -2,7 +2,7 @@
 
 /************* SERVER-SIDE: USER TIME TRACKING ************/
  unsigned long long returnClientConnectedtime(int clientID){
-   
+
  }
  void startSession(Session* session){
  	session->start= clock();

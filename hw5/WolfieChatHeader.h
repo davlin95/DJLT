@@ -9,6 +9,9 @@
 #include <stdbool.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <pthread.h>
+
+#define _GNU_SOURCE
 
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
@@ -24,9 +27,15 @@ typedef struct sessionData{
 }Session;
 
 typedef struct accountData{
-	char* userName,
-	char* password,
+	char* userName;
+	char* password;
 }Account;
+
+client* clientList;
+Account* accountList;
+
+char* serverHelpMenuStrings[]={};
+char* clientHelpMenuStrings[]={"logout"};
 
 						/***********************************************************************/
 						/*                    SERVER PROGRAM FUNCTIONS                         */
@@ -191,6 +200,7 @@ void processUsers();
  unsigned long long returnClientConnectedtime(int clientID);
  void startSession(Session* session);
  void endSession(Session* session);
+ clock_t sessionLength(Session* session);
 
 /*
  * Finds the client struct associated with the clientID 
