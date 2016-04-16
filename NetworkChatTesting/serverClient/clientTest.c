@@ -53,14 +53,25 @@ int main(){
 
   status = connect(clientFd, results->ai_addr, results->ai_addrlen);
   if(status<0){
-    fprintf(stderr,"Connect():%s\n",strerror(errno)); //@todo set and print errno
+    fprintf(stderr,"Connect():%s\n",strerror(errno)); 
     exit(1);
   }
 
 
-  /*---- Read the message from the server into the buffer ----*/
-  recv(clientFd, message, 1024, 0);
-  printf("Data received: %s",message);   
+  strcpy(message,"Hi I'm client\n");
+  send(clientFd,message,(strlen(message)),0);
+
+  while(1){
+    /*---- Read the message from the server into the buffer ----
+    recv(clientFd, message, 1024, 0);
+    printf("Data received: %s\n",message);   */
+
+    sleep(5);
+
+    strcpy(message,"Hi I'm client\n");
+    send(clientFd,message,(strlen(message)),0);
+  }
+  
 
   freeaddrinfo(results);
 
