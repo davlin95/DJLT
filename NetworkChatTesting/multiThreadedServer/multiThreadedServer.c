@@ -8,6 +8,8 @@
 #include <errno.h>
 #include <netdb.h>
 #include <sys/types.h>
+#include <pthread.h>
+
 
 
 /* Create file defining WOLFIE PROTOCOL */
@@ -15,8 +17,7 @@
 #define PROTOCOL_WOLFIE "WOLFIE"
 #endif 
 
-
-int main(){
+void* acceptThread(void* args){
   char messageOfTheDay[1024];
   int serverFd, connfd, status=0;
 
@@ -104,6 +105,19 @@ int main(){
     close(connfd);
     printf("closed connfd\n");
   }
+  return NULL;
+}
+
+
+int main(){
+  int threadStatus;
+  int tid[1026];
+
+  threadStatus = pthread_create(&(tid[0]), NULL, &acceptThread, NULL);
+
+  pthread_join(tid[0],NULL);
+  while(1);
   return 0;
+
 }
 
