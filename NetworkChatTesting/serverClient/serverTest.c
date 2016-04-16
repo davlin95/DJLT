@@ -23,9 +23,9 @@ int main(){
   /*Build addrinfo structs*/
   struct addrinfo settings, *results;
   memset(&settings,0,sizeof(settings));
-  settings.ai_family=AF_UNSPEC;
+  settings.ai_family=AF_INET;
   settings.ai_socktype=SOCK_STREAM;
-  settings.ai_flags=AI_PASSIVE;
+  //settings.ai_flags=AI_PASSIVE;
 
   /*Create linked list of socketaddresses */
   status = getaddrinfo(NULL,"1234",&settings,&results);
@@ -38,7 +38,7 @@ int main(){
   /*Build a socket */
   serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol);
   if(serverFd==-1){
-    fprintf(stderr,"socket(): error\n"); //@todo print errno
+    fprintf(stderr,"socket(): %s\n", strerror(errno)); 
     exit(1);
   }
    /* Make the socket address reuseable immediatley on closeure. */
@@ -72,7 +72,10 @@ int main(){
   }
 
   if(listen(serverFd,1024)<0){
-    fprintf(stderr,"listen(): error\n"); // @todo: print errno
+    if(close(serverFd)<0){
+      fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
+    }
+    fprintf(stderr,"listen(): %s\n",strerror(errno)); // @todo: print errno
     exit(1);
   }
   else{
@@ -83,7 +86,7 @@ int main(){
   socklen_t addr_size = sizeof(serverStorage);
   connfd = accept(serverFd, (struct sockaddr *) &serverStorage, &addr_size);
   if(connfd<0){
-    fprintf(stderr,"accept(): error\n"); // @todo: print errno
+    fprintf(stderr,"accept(): %s\n",strerror(errno)); // @todo: print errno
   }else{
       printf("Accepted!\n");
    // printf("Accepted!:%s\n",serverStorage.sin_addr.s_addr);

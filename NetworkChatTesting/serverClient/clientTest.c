@@ -6,6 +6,7 @@
 #include <netdb.h>
 #include <string.h>
 #include <stdlib.h> 
+#include <errno.h>
 
 int main(){
   int clientFd,status;
@@ -31,14 +32,14 @@ int main(){
  settings.ai_protocol=0;
  status = getaddrinfo("127.0.0.1","1234",&settings,&results);
  if(status!=0){
-    fprintf(stderr,"getaddrinfo():Error\n"); //@todo set and print errno
+    fprintf(stderr,"getaddrinfo():%s\n",strerror(errno)); //@todo set and print errno
     exit(1);
  }
 
  /*Build clientFd, to match the server's domain,socket type, and domain*/
   clientFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol);
   if(clientFd<0){
-    fprintf(stderr,"socket():Error\n"); //@todo set and print errno
+    fprintf(stderr,"socket():%s\n",strerror(errno)); //@todo set and print errno
     exit(1);  
   }
   
@@ -52,7 +53,7 @@ int main(){
 
   status = connect(clientFd, results->ai_addr, results->ai_addrlen);
   if(status<0){
-    fprintf(stderr,"Connect():Error\n"); //@todo set and print errno
+    fprintf(stderr,"Connect():%s\n",strerror(errno)); //@todo set and print errno
     exit(1);
   }
 
