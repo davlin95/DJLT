@@ -41,6 +41,17 @@ int main(){
     fprintf(stderr,"socket(): error\n"); //@todo print errno
     exit(1);
   }
+   /* Make the socket address reuseable immediatley on closeure. */
+  int val=1;
+  status=setsockopt(serverFd, SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val));
+  if (status < 0)
+  {
+      fprintf(stderr,"setsockopt(): %s\n",strerror(errno)); 
+      freeaddrinfo(results);
+      close(serverFd);
+      exit(-1);
+  }
+
   /******************** OLD WAY OF GETTING ADDRESS *************/
   /*struct sockaddr serverAddr;
   struct sockaddr_storage serverStorage;
@@ -56,10 +67,10 @@ int main(){
   /* Bind socket to address */
   status = bind(serverFd, results->ai_addr, results->ai_addrlen);
   if(status==-1){
-
     fprintf(stderr,"bind(): %s\n",strerror(errno));
     exit(1);
   }
+
   if(listen(serverFd,1024)<0){
     fprintf(stderr,"listen(): error\n"); // @todo: print errno
     exit(1);
@@ -77,8 +88,6 @@ int main(){
       printf("Accepted!\n");
    // printf("Accepted!:%s\n",serverStorage.sin_addr.s_addr);
   }
-
-
   strcpy(messageOfTheDay,"Hello World\n");
   send(connfd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
 
