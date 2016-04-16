@@ -10,7 +10,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/epoll.h>
-
+#include <sys/fcntl.h>
 
 
 /* Create file defining WOLFIE PROTOCOL */
@@ -51,6 +51,7 @@ void* acceptThread(void* args){
       close(serverFd);
       exit(-1);
   }
+  fcntl(serverFd,F_SETFL,O_NONBLOCK); 
 
   /******************** OLD WAY OF GETTING ADDRESS *************/
   /*struct sockaddr serverAddr;
@@ -91,19 +92,20 @@ void* acceptThread(void* args){
   allEpollEvents = calloc(1024,sizeof(epollEvent));
 
   int epollFd,eStatus,numEpollFds;
-  epollFd = epoll_create(1);
+  epollFd = epoll_create(1024);
 
   /* Set epollEvent for serverFd */
   epollEvent.data.fd = serverFd;
-  epollEvent.events = EPOLLIN;
+  epollEvent.events = EPOLLIN|EPOLLET;
   eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,serverFd,&epollEvent);
   if(eStatus<0){
     fprintf(stderr,"epoll_ctl() serverFd :%s",strerror(errno));
   }
 
   /* Set epollEvent for server stdin */
+  fcntl(0,F_SETFL,O_NONBLOCK); 
   epollEvent.data.fd = 0;
-  epollEvent.events = EPOLLIN;
+  epollEvent.events = EPOLLIN|EPOLLET;
   eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,0,&epollEvent);
   if(eStatus<0){
     fprintf(stderr,"epoll_ctl() stdin :%s",strerror(errno));
@@ -124,11 +126,11 @@ void* acceptThread(void* args){
 
        if(allEpollEvents[i].events &epollErrors){
          /* Check for erros */
-         fprintf(stderr,"epollErrors after waiting:%s",strerror(errno));
+         fprintf(stderr,"epollErrors after waiting:%s\n",strerror(errno));
 
        }else if(allEpollEvents[i].data.fd==serverFd){
          /*Server has incoming new client */
-
+          printf("Server is taking in a client\n");
           struct sockaddr_storage newClientStorage;
           socklen_t addr_size = sizeof(newClientStorage);
           connfd = accept(serverFd, (struct sockaddr *) &newClientStorage, &addr_size);
@@ -139,8 +141,9 @@ void* acceptThread(void* args){
           }             
           printf("Accepted new client! %d\n", connfd);
           /* Add the connfd into the listening set */
+          fcntl(connfd,F_SETFL,O_NONBLOCK); 
           epollEvent.data.fd = connfd;
-          epollEvent.events = EPOLLIN;
+          epollEvent.events = EPOLLIN|EPOLLET;
           eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,connfd,&epollEvent);
           if(eStatus<0){
              fprintf(stderr,"epoll_ct() on new client: %s\n",strerror(errno));

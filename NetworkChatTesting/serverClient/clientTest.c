@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdlib.h> 
 #include <errno.h>
+#include <sys/fcntl.h>
+
 
 int main(){
   int clientFd,status;
@@ -38,6 +40,7 @@ int main(){
 
  /*Build clientFd, to match the server's domain,socket type, and domain*/
   clientFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol);
+  fcntl(clientFd,F_SETFL,O_NONBLOCK); 
   if(clientFd<0){
     fprintf(stderr,"socket():%s\n",strerror(errno)); //@todo set and print errno
     exit(1);  
