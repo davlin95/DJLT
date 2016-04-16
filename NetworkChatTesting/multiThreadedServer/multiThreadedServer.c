@@ -72,11 +72,12 @@ void* acceptThread(void* args){
     exit(1);
   }
 
+  /* Listen in on the socket */
   if(listen(serverFd,1024)<0){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
-    fprintf(stderr,"listen(): %s\n",strerror(errno)); // @todo: print errno
+    fprintf(stderr,"listen(): %s\n",strerror(errno)); 
     exit(1);
   }
   else{
@@ -87,7 +88,7 @@ void* acceptThread(void* args){
   socklen_t addr_size = sizeof(serverStorage);
   connfd = accept(serverFd, (struct sockaddr *) &serverStorage, &addr_size);
   if(connfd<0){
-    fprintf(stderr,"accept(): %s\n",strerror(errno)); // @todo: print errno
+    fprintf(stderr,"accept(): %s\n",strerror(errno)); 
   }else{
       printf("Accepted!\n");
    // printf("Accepted!:%s\n",serverStorage.sin_addr.s_addr);
@@ -111,12 +112,17 @@ void* acceptThread(void* args){
 
 int main(){
   int threadStatus;
-  int tid[1026];
+  pthread_t tid[1026];
 
   threadStatus = pthread_create(&(tid[0]), NULL, &acceptThread, NULL);
+  printf("main thread");
+  
+  char str[1024];
+  int readStatus=0;
+  int status = read(0,&str,1024);
+  write(1,str,strlen(str));
 
-  pthread_join(tid[0],NULL);
-  while(1);
+  sleep(15);
   return 0;
 
 }
