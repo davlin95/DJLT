@@ -25,6 +25,7 @@ void killServerHandler(){
 int main(int argc, char* argv[]){
   int threadStatus;
   pthread_t tid[1026];
+  signal(SIGINT,killServerHandler);
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
 
@@ -38,7 +39,6 @@ int main(int argc, char* argv[]){
   ***************/
   // pthread_join(tid[0],NULL);
 
-signal(SIGINT,killServerHandler);
 char messageOfTheDay[1024];
   int serverFd, connfd;
   char *portNumber = "1234";

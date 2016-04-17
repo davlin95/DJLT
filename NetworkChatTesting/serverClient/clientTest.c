@@ -9,14 +9,24 @@
 #include <sys/fcntl.h>
 #include <sys/epoll.h>
 #include <sys/poll.h>
+#include <signal.h>
 #include "../../hw5/clientHeader.h"
 #include "../multiThreadedServer/WolfieProtocolVerbs.h"
 
+int clientFd=-1; 
+void killClientProgramHandler(int fd){
+    if(fd >0){
+      close(fd);
+    }
+    printf("Clean exit on clientFd\n");
+    exit(0);
+}
 
-int main(){
-  int clientFd; 
+int main(int argc, char* argv[]){
   char *portNumber = "1234";
   char message[1024];
+  signal(SIGINT,killClientProgramHandler);
+
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     printf("error createandconnect\n");
     exit(0);
@@ -52,7 +62,9 @@ int main(){
       }
       int i;
       for(i=0;i<pollNum;i++){
-        if(pollFds[i].revents==0) continue;
+        if(pollFds[i].revents==0){
+          continue; 
+        } 
         if(pollFds[i].revents!=POLLIN){
           fprintf(stderr,"poll.revents:%s",strerror(errno));
           break;
@@ -107,6 +119,5 @@ int main(){
       }
     /* FOREVER RUNNING LOOP */ 
     }
-
   return 0;
 }

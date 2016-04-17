@@ -222,16 +222,20 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 if(optionalString!=NULL){
                   buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
                 send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
+
     case MOTD:   
                 if(optionalString!=NULL){
                   buildProtocolString(buffer, PROTOCOL_MOTD, optionalString);
-                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case HI:   
                 if(optionalString!=NULL){
                   buildProtocolString(buffer, PROTOCOL_HI, optionalString);
-                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case LISTU:   
                 send(fd,PROTOCOL_LISTU,strlen(PROTOCOL_LISTU),0); // MACRO NULL TERMINATED BY DEFAULT
@@ -239,7 +243,8 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
     case UTSIL:   
                 if(optionalString!=NULL){
                   buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case TIME:   
                 send(fd,PROTOCOL_TIME,strlen(PROTOCOL_TIME),0); // MACRO NULL TERMINATED BY DEFAULT
@@ -247,7 +252,8 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
     case EMIT:   
                 if(optionalString!=NULL){
                   buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     /*case MSG:   
                 send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
