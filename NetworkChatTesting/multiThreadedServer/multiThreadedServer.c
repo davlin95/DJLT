@@ -228,6 +228,9 @@ void* acceptThread(void* args){
             printf("RESPONSE MESSAGE 1 to CLIENT: %d\n",epollEvent.data.fd);
             strcpy(messageOfTheDay,"Dear Client ... from server\n");
             send(epollEvent.data.fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
+            if(strcmp(clientMessage,"close\n")==0){
+              doneReading=1;
+            }
          }
          /*******************************/
          /*   EXIT READING FROM CLIENT */
@@ -236,7 +239,6 @@ void* acceptThread(void* args){
            printf("closing client descriptor %d\n",allEpollEvents[i].data.fd);
            close(allEpollEvents[i].data.fd);
          }
-
 
        }
      }

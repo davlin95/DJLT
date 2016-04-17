@@ -126,6 +126,14 @@ int main(){
          memset(&stdinBuffer,0,1024);
          while( (bytes=read(0,&stdinBuffer,1024))>0){
             printf("reading from client STDIN...\n");
+
+            /****** @TODO Make logout connected to BYE\r\n\r\n **********/
+            if(strcmp(stdinBuffer,"/logout\n")==0){
+              close(clientFd);
+              freeaddrinfo(results);
+              exit(EXIT_SUCCESS);
+              break;
+            }
             send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
             printf("sent string :%s from client to server\n",stdinBuffer);
             memset(&stdinBuffer,0,strlen(stdinBuffer));
