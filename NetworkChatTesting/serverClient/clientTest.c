@@ -43,7 +43,7 @@ int main(){
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
     fcntl(0,F_SETFL,O_NONBLOCK); 
-
+    int t=0;
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
@@ -74,6 +74,19 @@ int main(){
             close(clientFd);
             exit(0);
           }
+          while (t<1){    
+          protocolMethod(clientFd, WOLFIE, NULL);
+          protocolMethod(clientFd, EIFLOW, NULL);
+          protocolMethod(clientFd, BYE, NULL);
+          protocolMethod(clientFd, IAM, "Wilson");
+          protocolMethod(clientFd, MOTD, "Hello World");
+          protocolMethod(clientFd, HI, "David");
+          protocolMethod(clientFd, LISTU, NULL);
+          protocolMethod(clientFd, UTSIL, "Wilson\r\nDavid");
+          protocolMethod(clientFd, TIME, NULL);
+          protocolMethod(clientFd, EMIT, "25");
+          t++;
+        }
         }
 
 
