@@ -98,12 +98,9 @@ void* acceptThread(void* args){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
-<<<<<<< Updated upstream
-    fprintf(stderr,"listen(): %s\n",strerror(errno)); 
-=======
+
     fprintf(stderr,"listen(): %s\n",strerror(errno)); // @todo: print errno
     freeaddrinfo(results);
->>>>>>> Stashed changes
     exit(1);
   }
   else{
