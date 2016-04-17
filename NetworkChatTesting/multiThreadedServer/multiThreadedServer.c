@@ -11,18 +11,40 @@
 #include <sys/epoll.h>
 #include <sys/poll.h>
 #include <sys/fcntl.h>
+#include <signal.h>
 #include "../../hw5/serverHeader.h"
 #include "WolfieProtocolVerbs.h"
 
-/*******************************/
-/*      ACCEPT THREAD         */
-/*****************************/
-void* acceptThread(void* args){
-  char messageOfTheDay[1024];
+
+void killServerHandler(){
+    disconnectAllUsers();
+    printf("disconnected All users\n");
+    exit(EXIT_SUCCESS);
+}
+
+int main(int argc, char* argv[]){
+  int threadStatus;
+  pthread_t tid[1026];
+
+  // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
+
+
+  /**************
+  printf("main thread");
+  char str[1024];
+  int readStatus=0;
+  int status = read(0,&str,1024);
+  write(1,str,strlen(str));
+  ***************/
+  // pthread_join(tid[0],NULL);
+
+signal(SIGINT,killServerHandler);
+char messageOfTheDay[1024];
   int serverFd, connfd;
   char *portNumber = "1234";
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
+    exit(0);
   } else
     printf("Listening\n");
 
@@ -32,7 +54,7 @@ void* acceptThread(void* args){
     /* Initialize Polls Interface*/
     struct pollfd pollFds[1024];
     memset(pollFds, 0 , sizeof(pollFds));
-    int pollStatus,pollNum=2;
+    int pollStatus,pollNum=2,compactDescriptors=0;
 
     /* Set poll for serverFd */
     pollFds[0].fd = serverFd;
@@ -123,7 +145,7 @@ void* acceptThread(void* args){
           printf("\n/***********************************/\n");
           printf("/*   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
           printf("/***********************************/\n");
-          int bytes,doneReading,writeStatus=-1;
+          int bytes,doneReading=0,writeStatus=-1;
           char clientMessage[1024];
 
           /***********************/
@@ -139,6 +161,7 @@ void* acceptThread(void* args){
               }
               break;
             }else if(bytes==0){
+              doneReading=1;
               break;
             }  
             /*********************************/
@@ -165,13 +188,31 @@ void* acceptThread(void* args){
          if(doneReading){
            printf("closing client descriptor %d\n",pollFds[i].fd);
            close(pollFds[i].fd);
+           pollFds[i].fd=-1;
+           compactDescriptors=1;
          }
         }
 
-
         /* MOVE ON TO NEXT POLL FD */
       }
-
+      if (compactDescriptors)
+      {
+        compactDescriptors=0;
+        int i,j;
+        for (i=0; i<pollNum; i++)
+        {
+          // IF ENCOUNTER A CLOSED FD
+          if (pollFds[i].fd == -1)
+          {
+            // SHIFT ALL SUBSEQUENT ELEMENTS LEFT BY ONE SLOT
+            for(j = i; j < pollNum; j++)
+            {
+              pollFds[j].fd = pollFds[j+1].fd;
+            }
+             pollNum--;
+          }
+        }
+      }
     /* FOREVER RUNNING LOOP */ 
     }
 
@@ -187,24 +228,7 @@ void* acceptThread(void* args){
     close(connfd);
     printf("closed connfd\n");
   }
-  return NULL;
-}
 
-
-int main(int argc, char* argv[]){
-  int threadStatus;
-  pthread_t tid[1026];
-
-  threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
-
-  /**************
-  printf("main thread");
-  char str[1024];
-  int readStatus=0;
-  int status = read(0,&str,1024);
-  write(1,str,strlen(str));
-  ***************/
-  pthread_join(tid[0],NULL);
   return 0;
 
 }
@@ -301,3 +325,4 @@ void loginThread(void* args, int fd){
 
 
 }*/
+

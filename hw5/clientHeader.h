@@ -121,23 +121,23 @@ int makeReusable(int fd){
  *@return: clientFD, -1 otherwise
  */
 int createAndConnect(char* portNumber, int clientFd){
-	bool error = false;
-  	struct addrinfo *results, *resultsPtr;
-  	if ((results = buildAddrInfoStructs(results, portNumber)) == NULL)
-    	error = true;
-  	for (resultsPtr = results; resultsPtr; resultsPtr->ai_next){    	if ((clientFd = socket(resultsPtr->ai_family, resultsPtr->ai_socktype, resultsPtr->ai_protocol)) < 0)
-      		continue;
-    	if (connect(clientFd, resultsPtr->ai_addr, resultsPtr->ai_addrlen)!=-1)
-      		break;
-    	if (close(clientFd) < 0){
-      		fprintf(stderr,"close(): %s\n",strerror(errno));
-      		error = true;
-    	}
-  	}
-  	freeaddrinfo(results);
-  	if (error)
-  		return -1;
-  	return clientFd;
+  struct addrinfo *results, *resultsPtr;
+  if((results = buildAddrInfoStructs(results, portNumber)) == NULL){
+    return -1;
+  }
+  if ((clientFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
+    freeaddrinfo(results);
+    return -1;
+  }
+  if (connect(clientFd, results->ai_addr, results->ai_addrlen)!=-1){
+    freeaddrinfo(results);
+    return clientFd;
+  }
+  if (close(clientFd) < 0){
+    fprintf(stderr,"close(): %s\n",strerror(errno));
+  }
+  freeaddrinfo(results);
+  return -1;
 }
 /*
  *A function that makes the socket non-blocking
@@ -157,6 +157,8 @@ int makeNonBlocking(int fd){
   }
   return 0;
 }
+
+
 
 
 

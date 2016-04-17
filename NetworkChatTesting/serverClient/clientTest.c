@@ -16,8 +16,10 @@ int main(){
   int clientFd; 
   char *portNumber = "1234";
   char message[1024];
-  if ((clientFd = createAndConnect(portNumber, clientFd)) < 0)
+  if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     printf("error createandconnect\n");
+    exit(0);
+  }
 
   /*********** NOTIFY SERVER OF CONNECTION *****/
   fcntl(clientFd,F_SETFL,O_NONBLOCK); 
@@ -66,7 +68,13 @@ int main(){
             printf("Data received: %s\n",message);
             memset(&message,0,1024);   
           }
+          if((serverBytes=read(clientFd,message,1))==0){
+            printf("CLOSING CLIENTFD\n");
+            close(clientFd);
+            exit(0);
+          }
         }
+
 
         /***********************************/
         /*   POLLIN FROM STDIN            */
@@ -94,10 +102,8 @@ int main(){
             memset(&stdinBuffer,0,strlen(stdinBuffer));
           }
         }
-
         /* MOVE ON TO NEXT POLL FD */
       }
-
     /* FOREVER RUNNING LOOP */ 
     }
 

@@ -140,7 +140,9 @@ void addUser(int clientFd);
 /*
  * A function that disconnects all connected users. 
  */
- void disconnectAllUsers();
+ void disconnectAllUsers(){
+  
+ }
 /*
  * A function that prints the account struct into string
  * @param accountData: account struct to be printed
