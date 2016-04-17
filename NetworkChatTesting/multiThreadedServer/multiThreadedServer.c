@@ -11,12 +11,7 @@
 #include <sys/epoll.h>
 #include <sys/fcntl.h>
 #include "../../hw5/serverHeader.h"
-
-
-/* Create file defining WOLFIE PROTOCOL */
-#ifndef PROTOCOL_WOLFIE
-#define PROTOCOL_WOLFIE "WOLFIE"
-#endif 
+#include "WolfieProtocolVerbs.h"
 
 
 /*******************************/
@@ -30,6 +25,26 @@ void* acceptThread(void* args){
     printf("error createBindListen\n");
   } else
     printf("Listening\n");
+
+
+    /******************************************/
+    /*        IMPLEMENT POLL                 */
+    /****************************************/
+    /* Initialize Polls Interface*/
+    struct pollfd pollFds[1024];
+    memset(pollFds, 0 , sizeof(pollFds));
+    int pollStatus,pollNum;
+
+    /* Set epollEvent for serverFd */
+    epollEvent.data.fd = serverFd;
+    epollEvent.events = EPOLLIN|EPOLLET;
+    eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,serverFd,&epollEvent);
+    if(eStatus<0){
+     fprintf(stderr,"epoll_ctl() serverFd :%s",strerror(errno));
+    }
+
+    fds[0].fd = listen_sd;
+    fds[0].events = POLLIN;
 
 
     /******************************************/
@@ -208,3 +223,93 @@ int main(){
 
 }
 
+void protocolMethod(int fd, int wolfieVerb, char* optionalString){
+  char userName[1032];
+  switch(wolfieVerb){
+
+    case WOLFIE: 
+                send(fd,PROTOCOL_WOLFIE,strlen(PROTOCOL_WOLFIE),0); // MACRO NULL TERMINATED BY DEFAULT
+                
+                break;
+    case EIFLOW:
+                send(fd,PROTOCOL_EIFLOW,strlen(PROTOCOL_EIFLOW),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+    case BYE:   
+                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+    case IAM:   
+                memset(&userName,0,1032);
+                if(optionalString!=NULL){
+                  strcpy(userName,PROTOCOL_IAM);
+                  strcpy(userName," ");
+                  strcpy(userName,optionalString);
+                  strcpy(userName," ");
+                  strcpy(userName,"\r\n\r\n");
+                }
+                send(fd,userName,strlen(userName),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+
+  }
+
+}
+
+
+char* protocol_IAM_Helper(char* string,int stringLength){
+
+    /****************** ABANDONED CODE *********************/
+    /*char* anchor;
+    char user[1024];
+    memset(&user,0,1024);
+
+    anchor = strstr(string,PROTOCOL_IAM);
+    if(anchor==NULL){ //PROTOCOL DOESN'T EXIST IN STRING
+        return NULL;
+    } 
+    else if(anchor!=string){ //PROTOCOL IS NOT STARTING AS THE VERY FIRST BYTE
+        return NULL;
+    } 
+    anchor+=strlen(PROTOCOL_IAM)); // MOVE TO BYTE AFTER PROTOCOL
+    if(*anchor!=" ")return NULL; // MISSING SPACE
+    anchor++; // MOVE TO NEXT BYTE
+    while(*anchor==" ") anchor++; //FIRST BYTE OF USERNAME */
+    /********************************************************/
+
+}
+
+bool buildProtocolString(char* buffer,char* protocol, char* middle){
+  if(buffer==NULL) return 0;
+  strcpy(buffer,protocol);
+  strcpy(buffer,middle);
+  strcpy(buffer,"\r\n\r\n");
+  return 1;
+}
+
+bool performProtocolProcedure(int fd,char* userBuffer){
+  char protocolBuffer[1024];
+  memset(&protocolBuffer,0,1024);
+
+  int bytes=-1;
+  bytes = read(fd,&protocolBuffer,1024);
+  if(strcmp(protocolBuffer,PROTOCOL_WOLFIE)!=0){
+    return 0;
+  }else{
+    protocolMethod(fd,PROTOCOL_EIFLOW,NULL);
+  }
+  memset(&protocolBuffer,0,1024);
+  bytes =-1;
+  bytes = read(fd,&protocolMethod,1024);
+  char* result = protocol_IAM_Helper(protocolBuffer);
+  if(result==NULL) return 0;
+  else{
+    char welcomeProtocol[1024];
+    memset(&welcomeProtocol,0,1024);
+    buildProtocolString(welcomeProtocol,"HI ",result);
+    send(fd,welcomeProtocol,strlen(welcomeProtocol),0); 
+    return 1;
+  }
+}
+
+void loginThread(void* args, int fd){
+
+
+}
