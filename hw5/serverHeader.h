@@ -55,6 +55,17 @@ Client *createClient(){
   return client;
 }
 
+void setClientUserName(Client* client,char* name){
+  client->userName = malloc( (strlen(name)+1)*sizeof(char) );
+  strcpy(client->userName,name);
+}
+
+void addClientToList(Client* client){
+  client->next=clientHead;
+  client->prev=NULL;
+  clientHead=client;
+}
+
 Account *createAccount(){
   Account *account = malloc(sizeof(struct accountData));
   return account;
@@ -141,7 +152,7 @@ void addUser(int clientFd);
  * A function that disconnects all connected users. 
  */
  void disconnectAllUsers(){
-  
+
  }
 /*
  * A function that prints the account struct into string

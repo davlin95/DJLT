@@ -15,16 +15,20 @@
 #include "../../hw5/serverHeader.h"
 #include "WolfieProtocolVerbs.h"
 
-
+void* loginThread(void* args);
 void killServerHandler(){
     disconnectAllUsers();
     printf("disconnected All users\n");
     exit(EXIT_SUCCESS);
 }
 
+struct pollfd pollFds[1024];
+int pollNum=0;
+
+
 int main(int argc, char* argv[]){
-  int threadStatus;
-  pthread_t tid[1026];
+  int threadStatus,threadNum=0;
+  pthread_t threadId[1026];
   signal(SIGINT,killServerHandler);
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
@@ -52,9 +56,9 @@ char messageOfTheDay[1024];
     /*        IMPLEMENT POLL                 */
     /****************************************/
     /* Initialize Polls Interface*/
-    struct pollfd pollFds[1024];
     memset(pollFds, 0 , sizeof(pollFds));
-    int pollStatus,pollNum=2,compactDescriptors=0;
+    pollNum=2;
+    int pollStatus,compactDescriptors=0;
 
     /* Set poll for serverFd */
     pollFds[0].fd = serverFd;
@@ -85,12 +89,11 @@ char messageOfTheDay[1024];
           printf("\n/***********************************/\n");
           printf("/*   Server is taking in clients   */\n");
           printf("/***********************************/\n");
-          while(1){
 
+          while(1){
             /************* STORING ALL INCOMING CONNECTS ****/
             struct sockaddr_storage newClientStorage;
             socklen_t addr_size = sizeof(newClientStorage);
-
             connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
             if(connfd<0){
               if(errno!=EWOULDBLOCK){
@@ -99,19 +102,12 @@ char messageOfTheDay[1024];
               }
               break;
             }
-            printf("Accepted new client! %d\n", connfd);
-            fcntl(connfd,F_SETFL,O_NONBLOCK); 
-            pollFds[pollNum].fd = connfd;
-            pollFds[pollNum].events = POLLIN;
-            pollNum++;
-            /***** SEND MESSAGE TO CLIENT ****/
-            printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
-            printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
+            threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, connfd);
+            if(threadStatus<0){
+              printf("Error spawning login thread for descriptor %d\n",connfd);
+            }
+          }
 
-            memset(&messageOfTheDay,0,strlen(messageOfTheDay));
-            strcpy(messageOfTheDay,"Hello World ...");
-            send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-          } 
         }
 
         /***********************************/
@@ -257,7 +253,7 @@ char* protocol_IAM_Helper(char* string,int stringLength){
 
 }
 
-
+/*
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) return 0;
   strcat(buffer,protocol);
@@ -291,10 +287,31 @@ bool performProtocolProcedure(int fd,char* userBuffer){
     send(fd,welcomeProtocol,strlen(welcomeProtocol),0); 
     return 1;
   }
-}
+}*/
 
-void loginThread(void* args, int fd){
+void* loginThread(void* args){
+  int connfd = (int)args;
+  char messageOfTheDay[1024];
 
+  printf("Accepted new client in loginThread! %d\n", connfd);
+  fcntl(connfd,F_SETFL,O_NONBLOCK); 
+  pollFds[pollNum].fd = connfd;
+  pollFds[pollNum].events = POLLIN;
+  pollNum++;
 
+  /*********** TEST CREATE CLIENT STRUCT **********/
+  Client* newClient = createClient();
+  setClientUserName(newClient,"SENOR CHAPO");
+  addClientToList(newClient);
+  processUsersRequest();
+
+  /***** SEND MESSAGE TO CLIENT ****/
+  printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
+  printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
+
+  memset(&messageOfTheDay,0,strlen(messageOfTheDay));
+  strcpy(messageOfTheDay,"Hello World ...");
+  send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
+  return NULL;
 }
 
