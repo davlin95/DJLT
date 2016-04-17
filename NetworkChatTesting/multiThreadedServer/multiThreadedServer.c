@@ -39,9 +39,9 @@ void* acceptThread(void* args){
     pollFds[0].events = POLLIN;
 
     /* Set poll for stdin */
+    fcntl(0,F_SETFL,O_NONBLOCK); 
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
-    fcntl(serverFd,F_SETFL,O_NONBLOCK); 
 
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
@@ -85,8 +85,10 @@ void* acceptThread(void* args){
             /***** SEND MESSAGE TO CLIENT ****/
             printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
             printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
+
+            memset(&messageOfTheDay,0,strlen(messageOfTheDay));
             strcpy(messageOfTheDay,"Hello World ...");
-            send(pollFds[pollNum].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
+            send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
           } 
         }
 
