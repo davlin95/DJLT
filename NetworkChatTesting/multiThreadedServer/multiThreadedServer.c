@@ -170,13 +170,27 @@ void* acceptThread(void* args){
           }
 
           // printf("Accepted!:%s\n",serverStorage.sin_addr.s_addr);
-          strcpy(messageOfTheDay,"Hello World\n");
+          printf("GREETING MESSAGE 1 to CLIENT: %d\n",epollEvent.data.fd);
+          strcpy(messageOfTheDay,"Hello World ...");
           send(epollEvent.data.fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
           
        }
        /******************* SERVER'S STDIN IS ACTIVE ***************/
        else if(allEpollEvents[i].data.fd==0){
          printf("STDIN has something to say\n");
+         int bytes=0;
+         char stdinBuffer[1024];
+         memset(&stdinBuffer,0,1024);
+         while( (bytes=read(0,&stdinBuffer,1024))>0){
+            printf("reading from server's STDIN...\n");
+            
+            /************* SEND TO CLIENT 
+            send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
+            printf("sent string :%s from client to server\n",stdinBuffer); */
+
+            printf("outputting from server's STDIN %s",stdinBuffer);
+            memset(&stdinBuffer,0,strlen(stdinBuffer));
+         }
 
        }
        /*********************** CONNECTED CLIENT SENT MESSAGE *********/
@@ -208,6 +222,12 @@ void* acceptThread(void* args){
             if(writeStatus<0){
               fprintf(stderr,"Error writing client message %d\n",allEpollEvents[i].data.fd);
             }
+            /**************************************/
+            /* SEND RESPONSE MESSAGE TO CLIENT   */
+            /************************************/
+            printf("RESPONSE MESSAGE 1 to CLIENT: %d\n",epollEvent.data.fd);
+            strcpy(messageOfTheDay,"Dear Client ... from server\n");
+            send(epollEvent.data.fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
          }
          /*******************************/
          /*   EXIT READING FROM CLIENT */

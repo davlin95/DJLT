@@ -117,9 +117,6 @@ int main(){
             printf("Data received: %s\n",message);
             memset(&message,0,1024);   
          }
-         if(serverBytes<0){
-            printf("Error reading from server, serverBytes = %d\n",serverBytes);
-         }
        /************** WHEN CLIENT STDIN IS ACTIVE ********************/
        }else if(allEpollEvents[i].data.fd==0){
          printf("STDIN has something to say\n");
