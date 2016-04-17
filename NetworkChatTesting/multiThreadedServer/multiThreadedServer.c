@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <sys/epoll.h>
 #include <sys/fcntl.h>
+#include "../../hw5/serverHeader.h"
 
 
 /* Create file defining WOLFIE PROTOCOL */
@@ -23,89 +24,12 @@
 /*****************************/
 void* acceptThread(void* args){
   char messageOfTheDay[1024];
-  int serverFd, connfd, status=0;
-
-  /****************************/
-  /* Build addrinfo structs   */
-  /***************************/
-  struct addrinfo settings, *results;
-  memset(&settings,0,sizeof(settings));
-  settings.ai_family=AF_INET;
-  settings.ai_socktype=SOCK_STREAM;
-
-  /*****************************************/
-  /* Create linked list of socketaddresses */
-  /*****************************************/
-  status = getaddrinfo(NULL,"1234",&settings,&results);
-  if(status!=0){
-    fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
-    exit(1);
-  }
-  
-  /***********************************/
-  /*  BUILD THE SOCKET              */
-  /*********************************/
-  serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol);
-  if(serverFd==-1){
-    fprintf(stderr,"socket(): %s\n", strerror(errno)); 
-    exit(1);
-  }
-
-
-  /***********************************/
-  /*  Make socket address reuseable */
-  /*********************************/
-  int val=1;
-  status=setsockopt(serverFd, SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val));
-  if (status < 0)
-  {
-      fprintf(stderr,"setsockopt(): %s\n",strerror(errno)); 
-      freeaddrinfo(results);
-      close(serverFd);
-      exit(-1);
-  }
-  fcntl(serverFd,F_SETFL,O_NONBLOCK); 
-
-  /******************** COMMENT OUT: OLD WAY OF GETTING ADDRESS *************/
-  /*struct sockaddr serverAddr;
-  struct sockaddr_storage serverStorage;
-  socklen_t addr_size;*/
-
-  /* Build an address 
-  serverAddr.sin_family = AF_UNIX;
-  serverAddr.sin_port = htons(1234);
-  serverAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-  memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  */
-  /********************************************************************/
-
-  /***************************/
-  /* Bind socket to address */
-  /*************************/
-  status = bind(serverFd, results->ai_addr, results->ai_addrlen);
-  if(status==-1){
-    if(close(serverFd)<0){
-      fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
-    }
-    fprintf(stderr,"bind(): %s\n",strerror(errno));
-    freeaddrinfo(results);
-    exit(1);
-  }
-
-  /***************************/
-  /* Listen in on the socket */
-  /*************************/
-  if(listen(serverFd,1024)<0){
-    if(close(serverFd)<0){
-      fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
-    }
-
-    fprintf(stderr,"listen(): %s\n",strerror(errno)); // @todo: print errno
-    freeaddrinfo(results);
-    exit(1);
-  }
-  else{
+  int serverFd, connfd;
+  char *portNumber = "1234";
+  if ((serverFd = createBindListen(portNumber, serverFd))<0){
+    printf("error createBindListen\n");
+  } else
     printf("Listening\n");
-  }
 
 
     /******************************************/
@@ -253,7 +177,6 @@ void* acceptThread(void* args){
   /************************/
   /* FINAL EXIT CLEANUP  */
   /**********************/
-  freeaddrinfo(results);
   if(serverFd>0){
     close(serverFd);
     printf("closed serverFd\n");
