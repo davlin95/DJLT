@@ -224,6 +224,7 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 	send(fd,buffer,strlen(buffer),0);
                 } // MACRO NULL TERMINATED BY DEFAULT
                 break;
+
     case MOTD:   
                 if(optionalString!=NULL){
                  	buildProtocolString(buffer, PROTOCOL_MOTD, optionalString);
