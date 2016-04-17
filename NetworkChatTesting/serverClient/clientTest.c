@@ -10,6 +10,7 @@
 #include <sys/epoll.h>
 #include <sys/poll.h>
 #include "../../hw5/clientHeader.h"
+#include "../multiThreadedServer/WolfieProtocolVerbs.h"
 
 
 int main(){

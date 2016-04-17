@@ -233,35 +233,6 @@ char messageOfTheDay[1024];
 
 }
 
-void protocolMethod(int fd, int wolfieVerb, char* optionalString){
-  char userName[1032];
-  switch(wolfieVerb){
-
-    case WOLFIE: 
-                send(fd,PROTOCOL_WOLFIE,strlen(PROTOCOL_WOLFIE),0); // MACRO NULL TERMINATED BY DEFAULT
-                
-                break;
-    case EIFLOW:
-                send(fd,PROTOCOL_EIFLOW,strlen(PROTOCOL_EIFLOW),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-    case BYE:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-    case IAM:   
-                memset(&userName,0,1032);
-                if(optionalString!=NULL){
-                  strcpy(userName,PROTOCOL_IAM);
-                  strcpy(userName," ");
-                  strcpy(userName,optionalString);
-                  strcpy(userName," ");
-                  strcpy(userName,"\r\n\r\n");
-                }
-                send(fd,userName,strlen(userName),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-
-  }
-
-}
 
 
 char* protocol_IAM_Helper(char* string,int stringLength){
@@ -286,12 +257,13 @@ char* protocol_IAM_Helper(char* string,int stringLength){
 
 }
 
-/*
-bool buildProtocolString(char* buffer,char* protocol, char* middle){
+
+bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) return 0;
-  strcpy(buffer,protocol);
-  strcpy(buffer,middle);
-  strcpy(buffer,"\r\n\r\n");
+  strcat(buffer,protocol);
+  strcat(string," ");
+  strcat(buffer,middle);
+  strcpy(buffer," \r\n\r\n");
   return 1;
 }
 
@@ -324,5 +296,5 @@ bool performProtocolProcedure(int fd,char* userBuffer){
 void loginThread(void* args, int fd){
 
 
-}*/
+}
 

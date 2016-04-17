@@ -15,8 +15,8 @@ char **initFlagArray(int argc, char **argv, char **flagArray);
 int main(int argc, char ** argv){
     char * argArray[1024];
     char * flagArray[1024];
-    memset(argArray, 0, sizeof(argArray));
-    memset(flagArray, 0, sizeof(flagArray));
+    memset(&argArray, 0, sizeof(argArray));
+    memset(&flagArray, 0, sizeof(flagArray));
     initArgArray(argc, argv, argArray);
     initFlagArray(argc, argv, flagArray);
     return 0;
