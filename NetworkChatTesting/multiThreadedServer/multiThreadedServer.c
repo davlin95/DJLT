@@ -14,7 +14,6 @@
 #include "../../hw5/serverHeader.h"
 #include "WolfieProtocolVerbs.h"
 
-
 /*******************************/
 /*      ACCEPT THREAD         */
 /*****************************/
@@ -26,7 +25,6 @@ void* acceptThread(void* args){
     printf("error createBindListen\n");
   } else
     printf("Listening\n");
-
 
     /******************************************/
     /*        IMPLEMENT POLL                 */
