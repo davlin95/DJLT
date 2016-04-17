@@ -67,7 +67,11 @@ void* acceptThread(void* args){
   /* Bind socket to address */
   status = bind(serverFd, results->ai_addr, results->ai_addrlen);
   if(status==-1){
+    if(close(serverFd)<0){
+      fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
+    }
     fprintf(stderr,"bind(): %s\n",strerror(errno));
+    freeaddrinfo(results);
     exit(1);
   }
 
@@ -76,7 +80,12 @@ void* acceptThread(void* args){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
+<<<<<<< Updated upstream
     fprintf(stderr,"listen(): %s\n",strerror(errno)); 
+=======
+    fprintf(stderr,"listen(): %s\n",strerror(errno)); // @todo: print errno
+    freeaddrinfo(results);
+>>>>>>> Stashed changes
     exit(1);
   }
   else{
@@ -206,7 +215,7 @@ int main(){
   int threadStatus;
   pthread_t tid[1026];
 
-  threadStatus = pthread_create(&(tid[0]), NULL, &acceptThread, NULL);
+  threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
 
   /**************
   printf("main thread");
