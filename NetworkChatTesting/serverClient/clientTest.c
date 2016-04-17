@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <sys/epoll.h>
+#include <sys/poll.h>
 #include "../../hw5/clientHeader.h"
 
 
@@ -38,7 +39,7 @@ int main(){
     /* Set poll for stdin */
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
-    fcntl(serverFd,F_SETFL,O_NONBLOCK); 
+    fcntl(0,F_SETFL,O_NONBLOCK); 
 
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
@@ -54,37 +55,17 @@ int main(){
           break;
         }
         /***********************************/
-        /*   POLLIN FROM SERVERFD         */
+        /*   POLLIN FROM CLIENTFD         */
         /*********************************/
-        if(pollFds[i].fd == serverFd){
+        if(pollFds[i].fd == clientFd){
           printf("\n/***********************************/\n");
-          printf("/*   Server is taking in clients   */\n");
+          printf("/*   SERVER TALKING TO THIS CLIENT   */\n");
           printf("/***********************************/\n");
-          while(1){
-
-            /************* STORING ALL INCOMING CONNECTS ****/
-            struct sockaddr_storage newClientStorage;
-            socklen_t addr_size = sizeof(newClientStorage);
-
-            connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
-            if(connfd<0){
-              if(errno!=EWOULDBLOCK){
-                fprintf(stderr,"accept(): %s\n",strerror(errno));
-                close(connfd); 
-              }
-              break;
-            }
-            printf("Accepted new client! %d\n", connfd);
-            fcntl(connfd,F_SETFL,O_NONBLOCK); 
-            pollFds[pollNum].fd = connfd;
-            pollFds[pollNum].events = POLLIN;
-            pollNum++;
-            /***** SEND MESSAGE TO CLIENT ****/
-            printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
-            printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
-            strcpy(messageOfTheDay,"Hello World ...");
-            send(pollFds[pollNum].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-          } 
+          int serverBytes =0;
+          while( (serverBytes = recv(clientFd, message, 1024, 0))>0){
+            printf("Data received: %s\n",message);
+            memset(&message,0,1024);   
+          }
         }
 
         /***********************************/
@@ -95,74 +76,24 @@ int main(){
           printf("\n/***********************************/\n");
           printf("/*   STDIN INPUT :                  */\n");
           printf("/***********************************/\n");
+        
           int bytes=0;
           char stdinBuffer[1024];
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
-            printf("reading from server's STDIN...\n");
-            
-            /************* SEND TO CLIENT 
-            send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
-            printf("sent string :%s from client to server\n",stdinBuffer); */
+            printf("reading from client STDIN...\n");
 
-            printf("outputting from server's STDIN %s",stdinBuffer);
+            /****** @TODO Make logout connected to BYE\r\n\r\n **********/
+            if(strcmp(stdinBuffer,"/logout\n")==0){
+              close(clientFd);
+              exit(EXIT_SUCCESS);
+              break;
+            }
+            send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
+            printf("sent string :%s from client to server\n",stdinBuffer);
             memset(&stdinBuffer,0,strlen(stdinBuffer));
           }
         }
-
-        /**************************************/
-        /*   POLLIN: PREVIOUS CLIENT         */
-        /************************************/
-        else{
-
-          printf("\n/***********************************/\n");
-          printf("/*   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
-          printf("/***********************************/\n");
-          int bytes,doneReading,writeStatus=-1;
-          char clientMessage[1024];
-
-          /***********************/
-          /* READ FROM CLIENT   */
-          /*********************/
-          while(1){ 
-            memset(&clientMessage,0,strlen(clientMessage));
-            bytes = read(pollFds[i].fd,clientMessage,sizeof(clientMessage));
-            if(bytes<0){
-              if(errno!=EAGAIN){
-                doneReading=1;
-                fprintf(stderr,"Error reading from client %d\n",pollFds[i].fd);
-              }
-              break;
-            }else if(bytes==0){
-              break;
-            }  
-            /*********************************/
-            /* OUTPUT MESSAGE FROM CLIENT   */
-            /*******************************/
-            writeStatus = write(1,clientMessage,bytes);
-            if(writeStatus<0){
-              fprintf(stderr,"Error writing client message %d\n",pollFds[i].fd);
-            }
-            /**************************************/
-            /* SEND RESPONSE MESSAGE TO CLIENT   */
-            /************************************/
-            printf("RESPONSE MESSAGE 1 to CLIENT: %d\n",pollFds[i].fd);
-            strcpy(messageOfTheDay,"Dear Client ... from server\n");
-            send(pollFds[i].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-
-            if(strcmp(clientMessage,"close\n")==0){
-              doneReading=1;
-            }
-         }
-         /*******************************/
-         /*   EXIT READING FROM CLIENT */
-         /******************************/
-         if(doneReading){
-           printf("closing client descriptor %d\n",pollFds[i].fd);
-           close(pollFds[i].fd);
-         }
-        }
-
 
         /* MOVE ON TO NEXT POLL FD */
       }
