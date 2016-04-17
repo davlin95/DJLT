@@ -231,7 +231,17 @@ char messageOfTheDay[1024];
 
 
 
-char* protocol_IAM_Helper(char* string,int stringLength){
+char* protocol_IAM_Helper(char* string){
+    char * protocolVerb;
+    char * username;
+    char * protocolTerminator;
+    protocolVerb = strtok(string, " ");
+    username = strtok(NULL, " ");
+    protocolTerminator = strtok(NULL, " ");
+    if (strcmp(protocolVerb, PROTOCOL_IAM) !=0){
+      return NULL;
+    }
+    return username;
 
     /****************** ABANDONED CODE *********************/
     /*char* anchor;
@@ -264,7 +274,7 @@ bool buildProtocolString(char* buffer, char* protocol, char* middle){
 }
 
 
-bool performProtocolProcedure(int fd,char* userBuffer){
+bool performLoginProcedure(int fd,char* userBuffer){
   char protocolBuffer[1024];
   memset(&protocolBuffer,0,1024);
 
@@ -273,7 +283,7 @@ bool performProtocolProcedure(int fd,char* userBuffer){
   if(strcmp(protocolBuffer,PROTOCOL_WOLFIE)!=0){
     return 0;
   }else{
-    protocolMethod(fd,PROTOCOL_EIFLOW,NULL);
+    protocolMethod(fd,EIFLOW,NULL);
   }
   memset(&protocolBuffer,0,1024);
   bytes =-1;
@@ -281,10 +291,8 @@ bool performProtocolProcedure(int fd,char* userBuffer){
   char* result = protocol_IAM_Helper(protocolBuffer);
   if(result==NULL) return 0;
   else{
-    char welcomeProtocol[1024];
-    memset(&welcomeProtocol,0,1024);
-    buildProtocolString(welcomeProtocol,"HI ",result);
-    send(fd,welcomeProtocol,strlen(welcomeProtocol),0); 
+    protocolMethod(fd, HI, result);
+    protocolMethod(fd, MOTD, "hello");
     return 1;
   }
 }*/

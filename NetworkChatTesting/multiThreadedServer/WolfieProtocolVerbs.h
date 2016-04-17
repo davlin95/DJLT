@@ -196,19 +196,19 @@
 
 
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
-  if(buffer==NULL) return 0;
+  if(buffer==NULL) {printf("buffer is null\n"); return 0;}
   strcat(buffer,protocol);
   strcat(buffer," ");
-  strcat(buffer,middle);
-  strcpy(buffer," \r\n\r\n");
+  strcat(buffer, middle);
+  strcat(buffer," \r\n\r\n");
+
   return 1;
 }
 
 void protocolMethod(int fd, int wolfieVerb, char* optionalString){
-  char buffer[1032];
-  memset(&buffer,0,1032);
+	char buffer[1032];
+  	memset(&buffer,0,1032);
   switch(wolfieVerb){
-
     case WOLFIE: 
                 send(fd,PROTOCOL_WOLFIE,strlen(PROTOCOL_WOLFIE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
@@ -220,21 +220,21 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 break;
     case IAM:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
-                }
+                  	buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
+                	send(fd,buffer,strlen(buffer),0);
+                } // MACRO NULL TERMINATED BY DEFAULT
                 break;
 
     case MOTD:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_MOTD, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                 	buildProtocolString(buffer, PROTOCOL_MOTD, optionalString);
+                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
     case HI:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_HI, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  	buildProtocolString(buffer, PROTOCOL_HI, optionalString);
+                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
     case LISTU:   
@@ -242,8 +242,8 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 break;
     case UTSIL:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                 	buildProtocolString(buffer, PROTOCOL_UTSIL, optionalString);
+                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
     case TIME:   
@@ -251,8 +251,8 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 break;
     case EMIT:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  	buildProtocolString(buffer, PROTOCOL_EMIT, optionalString);
+                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
     /*case MSG:   
