@@ -1,4 +1,3 @@
-/****************** SERVER CODE ****************/
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,7 +9,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/epoll.h>
-
+#include <sys/fcntl.h>
 
 
 /* Create file defining WOLFIE PROTOCOL */
@@ -18,30 +17,44 @@
 #define PROTOCOL_WOLFIE "WOLFIE"
 #endif 
 
+
+/*******************************/
+/*      ACCEPT THREAD         */
+/*****************************/
 void* acceptThread(void* args){
   char messageOfTheDay[1024];
   int serverFd, connfd, status=0;
 
-  /*Build addrinfo structs*/
+  /****************************/
+  /* Build addrinfo structs   */
+  /***************************/
   struct addrinfo settings, *results;
   memset(&settings,0,sizeof(settings));
   settings.ai_family=AF_INET;
   settings.ai_socktype=SOCK_STREAM;
 
-  /*Create linked list of socketaddresses */
+  /*****************************************/
+  /* Create linked list of socketaddresses */
+  /*****************************************/
   status = getaddrinfo(NULL,"1234",&settings,&results);
   if(status!=0){
     fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
     exit(1);
   }
-
-  /*Build a socket */
+  
+  /***********************************/
+  /*  BUILD THE SOCKET              */
+  /*********************************/
   serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol);
   if(serverFd==-1){
     fprintf(stderr,"socket(): %s\n", strerror(errno)); 
     exit(1);
   }
-   /* Make the socket address reuseable immediatley on closeure. */
+
+
+  /***********************************/
+  /*  Make socket address reuseable */
+  /*********************************/
   int val=1;
   status=setsockopt(serverFd, SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val));
   if (status < 0)
@@ -51,8 +64,9 @@ void* acceptThread(void* args){
       close(serverFd);
       exit(-1);
   }
+  fcntl(serverFd,F_SETFL,O_NONBLOCK); 
 
-  /******************** OLD WAY OF GETTING ADDRESS *************/
+  /******************** COMMENT OUT: OLD WAY OF GETTING ADDRESS *************/
   /*struct sockaddr serverAddr;
   struct sockaddr_storage serverStorage;
   socklen_t addr_size;*/
@@ -64,7 +78,9 @@ void* acceptThread(void* args){
   memset(serverAddr.sin_zero, '\0', sizeof(serverAddr.sin_zero));  */
   /********************************************************************/
 
+  /***************************/
   /* Bind socket to address */
+  /*************************/
   status = bind(serverFd, results->ai_addr, results->ai_addrlen);
   if(status==-1){
     if(close(serverFd)<0){
@@ -75,7 +91,9 @@ void* acceptThread(void* args){
     exit(1);
   }
 
+  /***************************/
   /* Listen in on the socket */
+  /*************************/
   if(listen(serverFd,1024)<0){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
@@ -93,26 +111,28 @@ void* acceptThread(void* args){
   }
 
 
-    /******************* IMPLEMENT EPOLLS ***************/
+    /******************************************/
+    /*        IMPLEMENT EPOLLS               */
+    /****************************************/
 
   /* Initialize Epolls Interface*/
   struct epoll_event epollEvent, * allEpollEvents;
   allEpollEvents = calloc(1024,sizeof(epollEvent));
-
   int epollFd,eStatus,numEpollFds;
-  epollFd = epoll_create(1);
+  epollFd = epoll_create(1024);
 
   /* Set epollEvent for serverFd */
   epollEvent.data.fd = serverFd;
-  epollEvent.events = EPOLLIN;
+  epollEvent.events = EPOLLIN|EPOLLET;
   eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,serverFd,&epollEvent);
   if(eStatus<0){
     fprintf(stderr,"epoll_ctl() serverFd :%s",strerror(errno));
   }
 
   /* Set epollEvent for server stdin */
+  fcntl(0,F_SETFL,O_NONBLOCK); 
   epollEvent.data.fd = 0;
-  epollEvent.events = EPOLLIN;
+  epollEvent.events = EPOLLIN|EPOLLET;
   eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,0,&epollEvent);
   if(eStatus<0){
     fprintf(stderr,"epoll_ctl() stdin :%s",strerror(errno));
@@ -127,17 +147,19 @@ void* acceptThread(void* args){
        fprintf(stderr,"epoll_wait():%s",strerror(errno));
      }
 
+     /********************* AN EVENT WAS DETECTED:  **********/
      int i;
      for(i=0;i<numEpollFds;i++){
        printf("numEpollFds = %d\n",numEpollFds);
 
+       /************** ERROR EVENT ***************/
        if(allEpollEvents[i].events &epollErrors){
-         /* Check for erros */
-         fprintf(stderr,"epollErrors after waiting:%s",strerror(errno));
+         fprintf(stderr,"epollErrors after waiting:%s\n",strerror(errno));
 
-       }else if(allEpollEvents[i].data.fd==serverFd){
-         /*Server has incoming new client */
-
+       }
+       /***************  Server has incoming new client ************/
+       else if(allEpollEvents[i].data.fd==serverFd){
+          printf("Server is taking in a client\n");
           struct sockaddr_storage newClientStorage;
           socklen_t addr_size = sizeof(newClientStorage);
           connfd = accept(serverFd, (struct sockaddr *) &newClientStorage, &addr_size);
@@ -148,8 +170,9 @@ void* acceptThread(void* args){
           }             
           printf("Accepted new client! %d\n", connfd);
           /* Add the connfd into the listening set */
+          fcntl(connfd,F_SETFL,O_NONBLOCK); 
           epollEvent.data.fd = connfd;
-          epollEvent.events = EPOLLIN;
+          epollEvent.events = EPOLLIN|EPOLLET;
           eStatus = epoll_ctl(epollFd,EPOLL_CTL_ADD,connfd,&epollEvent);
           if(eStatus<0){
              fprintf(stderr,"epoll_ct() on new client: %s\n",strerror(errno));
@@ -159,34 +182,45 @@ void* acceptThread(void* args){
           strcpy(messageOfTheDay,"Hello World\n");
           send(epollEvent.data.fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
           
-       }else if(allEpollEvents[i].data.fd==0){
-         /*Server has incoming commands*/
+       }
+       /******************* SERVER'S STDIN IS ACTIVE ***************/
+       else if(allEpollEvents[i].data.fd==0){
          printf("STDIN has something to say\n");
 
-       }else{
-         /* Connected client has something to say */
+       }
+       /*********************** CONNECTED CLIENT SENT MESSAGE *********/
+       else{
          printf("One client has something to say %d\n",allEpollEvents[i].data.fd);
          int bytes,doneReading,writeStatus=-1;
          char clientMessage[1024];
-         while(1){
-            /*Read from client */
+
+         /***********************/
+         /* READ FROM CLIENT   */
+         /*********************/
+         while(1){ 
             memset(&clientMessage,0,strlen(clientMessage));
             bytes = read(allEpollEvents[i].data.fd,clientMessage,sizeof(clientMessage));
             if(bytes<0){
-              doneReading=1;
-              if(errno!=EAGAIN)
+              if(errno!=EAGAIN){
+                doneReading=1;
                 fprintf(stderr,"Error reading from client %d\n",allEpollEvents[i].data.fd);
+              }
               break;
             }else if(bytes==0){
-              doneReading=1;
               break;
             }
-            //Output client message
+            
+            /*********************************/
+            /* OUTPUT MESSAGE FROM CLIENT   */
+            /*******************************/
             writeStatus = write(1,clientMessage,bytes);
             if(writeStatus<0){
               fprintf(stderr,"Error writing client message %d\n",allEpollEvents[i].data.fd);
             }
          }
+         /*******************************/
+         /*   EXIT READING FROM CLIENT */
+         /******************************/
          if(doneReading){
            printf("closing client descriptor %d\n",allEpollEvents[i].data.fd);
            close(allEpollEvents[i].data.fd);
@@ -197,7 +231,9 @@ void* acceptThread(void* args){
      }
   }
 
-  //Cleanup
+  /************************/
+  /* FINAL EXIT CLEANUP  */
+  /**********************/
   freeaddrinfo(results);
   if(serverFd>0){
     close(serverFd);
