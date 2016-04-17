@@ -167,12 +167,12 @@ void* acceptThread(void* args){
             memset(&clientMessage,0,strlen(clientMessage));
             bytes = read(allEpollEvents[i].data.fd,clientMessage,sizeof(clientMessage));
             if(bytes<0){
-              doneReading=1;
-              if(errno!=EAGAIN)
+              if(errno!=EAGAIN){
+                doneReading=1;
                 fprintf(stderr,"Error reading from client %d\n",allEpollEvents[i].data.fd);
+              }
               break;
             }else if(bytes==0){
-              doneReading=1;
               break;
             }
             //Output client message
