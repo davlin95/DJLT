@@ -310,19 +310,22 @@ void killServerHandler(){
     session->end = time(0);
  }
 
- int sessionLength(Session* session){
+ int sessionLength(Client* client, char* sessionLengthBuffer){
+    if (sessionLengthBuffer == NULL)
+      return -1;
+    int length;
     time_t currentTime;
     currentTime = time(0);
-    return ((int)(currentTime - session->start));
+    length = ((int)(currentTime - client->session->start));
+    sprintf(sessionLengthBuffer, "%d", length);
+    return length;
  }
-
-
 /*
  * Finds the client struct associated with the clientID 
  * @param clientID: ID of the client whose info to be searched for 
  * @return: clientData struct
  */
- Client* returnClientData(char* username){
+ Client* getClientByUsername(char* username){
     Client* clientPtr;
     for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
       printf("returnClientData: username is %s\n", username);
@@ -331,6 +334,19 @@ void killServerHandler(){
     }
     return NULL;
   }
+
+  Client* getClientByFd(int fd){
+    Client* clientPtr;
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      printf("returnClientData: id is %d\n", fd);
+      if (clientPtr->session->commSocket == fd)
+        return clientPtr;
+    }
+    return NULL;
+  }
+
+
+
 
 
 

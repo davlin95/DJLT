@@ -193,7 +193,31 @@
 #define ERR100 23
 #endif
 
+bool checkVerb(char *protocolVerb, char* string){
+  if (strncmp(string, protocolVerb, strlen(protocolVerb)) == 0)
+    return true;
+  return false;
+}
 
+bool extractArgAndTest(char *string, char *buffer){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char tempString[1024];
+    char * protocolArray[1024];
+    memset(&tempString, 0, 1024);
+    memset(&protocolArray, 0, 1024);
+    strcpy(tempString, string);
+    token = strtok_r(tempString, " ", &savePtr);
+    while (token != NULL){
+      protocolArray[arrayIndex++] = token;
+      token = strtok_r(NULL," ",&savePtr);
+    }
+    if (arrayIndex > 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0)
+      return false;
+    strcpy(buffer, protocolArray[1]);
+    return true;
+}
 
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) {printf("buffer is null\n"); return 0;}

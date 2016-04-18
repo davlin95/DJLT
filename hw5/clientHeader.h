@@ -35,7 +35,8 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
  * @param time: time conneted on the server
  * @return: void
  */
-  void displayClientConnectedTime(int time){
+  void displayClientConnectedTime(char* sessionLength){
+    int time = atoi(sessionLength);
     int hour;
     int minute;
     int second;
@@ -161,25 +162,17 @@ int makeNonBlocking(int fd){
 
 
 bool protocol_HI_Helper(char* string, char *username){
-    char * savePtr;
-    char *token;
-    int arrayIndex = 0;
-    char tempString[1024];
-    char * protocolArray[1024];
-    memset(&tempString, 0, 1024);
-    memset(&protocolArray, 0, 1024);
-    strcpy(tempString, string);
-    token = strtok_r(tempString, " ", &savePtr);
-    while (token != NULL){
-      protocolArray[arrayIndex++] = token;
-      token = strtok_r(NULL," ",&savePtr);
+    char usernameBuffer[1024];
+    memset(&usernameBuffer, 0, 1024);
+    if (checkVerb(PROTOCOL_HI, string)){
+      if (extractArgAndTest(string, usernameBuffer)){
+        if(strcmp(usernameBuffer, username) == 0)
+          return true;
+      }
     }
-    if (arrayIndex > 3 || strcmp(protocolArray[0], PROTOCOL_HI)!=0 
-        || strcmp(protocolArray[1], username) !=0 
-        || strcmp(protocolArray[2], "\r\n\r\n")!=0)
-      return false;
-    return true;
+    return false;
 }
+
 
 bool performLoginProcedure(int fd,char* username){
   char protocolBuffer[1024];
@@ -187,7 +180,6 @@ bool performLoginProcedure(int fd,char* username){
   int bytes=-1;
   protocolMethod(fd, WOLFIE, NULL);
   bytes = read(fd,&protocolBuffer,1024);
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
     return false;
   }else{

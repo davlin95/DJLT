@@ -10,7 +10,7 @@
 #include <sys/epoll.h>
 #include <sys/poll.h>
 #include <signal.h>
-#include "../../hw5/clientHeader.h"
+#include "../../hw5/clientHeader.h" 
 
 int clientFd=-1; 
 void killClientProgramHandler(int fd){  
@@ -87,6 +87,13 @@ int main(int argc, char* argv[]){
           printf("/***********************************/\n");
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){
+            if (checkVerb(PROTOCOL_EMIT, message)){
+              char sessionLength[1024];
+              memset(&sessionLength, 0, 1024);
+              if (extractArgAndTest(message, sessionLength)){
+                displayClientConnectedTime(sessionLength);
+              }
+            }
             printf("Data received: %s\n",message);
             memset(&message,0,1024);   
           }
@@ -112,6 +119,10 @@ int main(int argc, char* argv[]){
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             printf("reading from client STDIN...\n");
+            /*send time verb to server*/
+            if(strcmp(stdinBuffer,"/time\n")==0){
+              protocolMethod(clientFd, TIME, NULL);
+            } 
 
             /****** @TODO Make logout connected to BYE\r\n\r\n **********/
             if(strcmp(stdinBuffer,"/logout\n")==0){
