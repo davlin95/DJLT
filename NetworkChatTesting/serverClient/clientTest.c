@@ -87,18 +87,18 @@ int main(int argc, char* argv[]){
             exit(0);
           }
           while (t<1){    
-          protocolMethod(clientFd, WOLFIE, NULL);
-          protocolMethod(clientFd, EIFLOW, NULL);
-          protocolMethod(clientFd, BYE, NULL);
-          protocolMethod(clientFd, IAM, "Wilson");
-          protocolMethod(clientFd, MOTD, "Hello World");
-          protocolMethod(clientFd, HI, "David");
-          protocolMethod(clientFd, LISTU, NULL);
-          protocolMethod(clientFd, UTSIL, "Wilson\r\nDavid");
-          protocolMethod(clientFd, TIME, NULL);
-          protocolMethod(clientFd, EMIT, "25");
-          t++;
-        }
+            protocolMethod(clientFd, WOLFIE, NULL);
+            protocolMethod(clientFd, EIFLOW, NULL);
+            protocolMethod(clientFd, BYE, NULL);
+            protocolMethod(clientFd, IAM, "Wilson");
+            protocolMethod(clientFd, MOTD, "Hello World");
+            protocolMethod(clientFd, HI, "David");
+            protocolMethod(clientFd, LISTU, NULL);
+            protocolMethod(clientFd, UTSIL, "Wilson\r\nDavid");
+            protocolMethod(clientFd, TIME, NULL);
+            protocolMethod(clientFd, EMIT, "25");
+            t++;
+          }
         }
 
 

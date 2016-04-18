@@ -15,16 +15,12 @@
 #include "../../hw5/serverHeader.h"
 #include "WolfieProtocolVerbs.h"
 
-void* loginThread(void* args);
+
 void killServerHandler(){
     disconnectAllUsers();
     printf("disconnected All users\n");
     exit(EXIT_SUCCESS);
 }
-
-struct pollfd pollFds[1024];
-int pollNum=0;
-
 
 int main(int argc, char* argv[]){
   int threadStatus,threadNum=0;
@@ -91,9 +87,11 @@ char messageOfTheDay[1024];
           printf("/***********************************/\n");
 
           while(1){
-            /************* STORING ALL INCOMING CONNECTS ****/
+            /************* STORE INCOMING CONNECTS ****/
             struct sockaddr_storage newClientStorage;
             socklen_t addr_size = sizeof(newClientStorage);
+            //MALLOC AND STORE THE CONNFD, IF VALID CONNFD
+            int* connfdPtr = malloc(sizeof(int));
             connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
             if(connfd<0){
               if(errno!=EWOULDBLOCK){
@@ -102,7 +100,10 @@ char messageOfTheDay[1024];
               }
               break;
             }
-            threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, connfd);
+            *connfdPtr=connfd;
+
+            /************** LOGIN THREAD FOR EVERY CONNFD *******/
+            threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, connfdPtr);
             if(threadStatus<0){
               printf("Error spawning login thread for descriptor %d\n",connfd);
             }
@@ -114,7 +115,6 @@ char messageOfTheDay[1024];
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(pollFds[i].fd == 0){
-
           printf("\n/***********************************/\n");
           printf("/*   STDIN INPUT :                  */\n");
           printf("/***********************************/\n");
@@ -194,24 +194,10 @@ char messageOfTheDay[1024];
       if (compactDescriptors)
       {
         compactDescriptors=0;
-        int i,j;
-        for (i=0; i<pollNum; i++)
-        {
-          // IF ENCOUNTER A CLOSED FD
-          if (pollFds[i].fd == -1)
-          {
-            // SHIFT ALL SUBSEQUENT ELEMENTS LEFT BY ONE SLOT
-            for(j = i; j < pollNum; j++)
-            {
-              pollFds[j].fd = pollFds[j+1].fd;
-            }
-             pollNum--;
-          }
-        }
+        compactPollDescriptors();
       }
     /* FOREVER RUNNING LOOP */ 
     }
-
    
   /************************/
   /* FINAL EXIT CLEANUP  */
@@ -226,7 +212,6 @@ char messageOfTheDay[1024];
   }
 
   return 0;
-
 }
 
 
@@ -239,6 +224,9 @@ char* protocol_IAM_Helper(char* string){
     username = strtok(NULL, " ");
     protocolTerminator = strtok(NULL, " ");
     if (strcmp(protocolVerb, PROTOCOL_IAM) !=0){
+      return NULL;
+    }
+    if (strcmp(protocolTerminator, "\r\n\r\n") !=0){
       return NULL;
     }
     return username;
@@ -260,7 +248,6 @@ char* protocol_IAM_Helper(char* string){
     anchor++; // MOVE TO NEXT BYTE
     while(*anchor==" ") anchor++; //FIRST BYTE OF USERNAME */
     /********************************************************/
-
 }
 
 /*
@@ -297,11 +284,19 @@ bool performLoginProcedure(int fd,char* userBuffer){
   }
 }*/
 
+
+/**********************/
+/*     LOGIN THREAD  */
+/********************/
+
 void* loginThread(void* args){
-  int connfd = (int)args;
+  int connfd = *(int *)args;
   char messageOfTheDay[1024];
 
-  printf("Accepted new client in loginThread! %d\n", connfd);
+  printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
+
+
+  /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   fcntl(connfd,F_SETFL,O_NONBLOCK); 
   pollFds[pollNum].fd = connfd;
   pollFds[pollNum].events = POLLIN;
@@ -316,10 +311,11 @@ void* loginThread(void* args){
   /***** SEND MESSAGE TO CLIENT ****/
   printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
   printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
-
   memset(&messageOfTheDay,0,strlen(messageOfTheDay));
   strcpy(messageOfTheDay,"Hello World ...");
   send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
+
+
   return NULL;
 }
 

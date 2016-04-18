@@ -21,6 +21,8 @@
 						/**********************************************************************/
 
 #define MAX_INPUT 1024
+struct pollfd pollFds[1024];
+int pollNum=0;
 
 typedef struct sessionData{
   struct in_addr *ipAddress;
@@ -103,8 +105,22 @@ Account* getAccount(int accountId);
 void setAccount(Account* newAccount);
 
             /************ STDIN READING ***********/
-
-
+void compactPollDescriptors(){
+  int i,j;
+  for (i=0; i<pollNum; i++)
+  {
+    // IF ENCOUNTER A CLOSED FD
+    if (pollFds[i].fd == -1)
+    {
+      // SHIFT ALL SUBSEQUENT ELEMENTS LEFT BY ONE SLOT
+      for(j = i; j < pollNum; j++)
+      {
+        pollFds[j].fd = pollFds[j+1].fd;
+      }
+      pollNum--;
+    }
+  }
+}
 
 
 
@@ -118,7 +134,7 @@ void spawnAcceptThread();
 /*
  * Spawns a login thread for the client
  */
-void spawnLoginThread();
+void* loginThread(void* args);
 
 /*
  * Spawns a communication thread for the client
