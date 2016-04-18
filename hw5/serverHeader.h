@@ -493,16 +493,17 @@ int makeReusable(int fd){
  *@return: serverFD, -1 otherwise
  */
 int findSocketandBind(struct addrinfo *results, int serverFd){
-  struct addrinfo *resultsPtr;
-  for (resultsPtr = results; resultsPtr; resultsPtr->ai_next){
-    if ((serverFd = socket(resultsPtr->ai_family, resultsPtr->ai_socktype, resultsPtr->ai_protocol)) < 0)
-      continue;
-    if ((makeReusable(serverFd)) < 0){
-      close(serverFd);
+  if ((serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
+    fprintf(stderr,"socket(): %s\n",strerror(errno));
+    return -1;
+  }
+  if ((makeReusable(serverFd)) < 0){
+    if (close(serverFd) < 0){
+      fprintf(stderr,"close(): %s\n",strerror(errno));
       return -1;
     }
-    if (bind(serverFd, resultsPtr->ai_addr, resultsPtr->ai_addrlen)==0)
-      break;
+  }
+  if (bind(serverFd, results->ai_addr, results->ai_addrlen)<0){
     if (close(serverFd) < 0){
       fprintf(stderr,"close(): %s\n",strerror(errno));
       return -1;
@@ -535,23 +536,57 @@ int makeNonBlocking(int fd){
  *@return: serverFd, -1 otherwise
  */
 int createBindListen(char* portNumber, int serverFd){
-  bool error = false;
   struct addrinfo *results;
   if ((results = buildAddrInfoStructs(results, portNumber)) == NULL)
-    error = true;
-  if ((serverFd = findSocketandBind(results, serverFd)) < 0)
-    error = true;
-  if ((makeNonBlocking(serverFd))<0)
-    error = true;
+    return -1;
+  if ((serverFd = findSocketandBind(results, serverFd)) < 0){
+    freeaddrinfo(results);
+    return -1;
+  }
+  if ((makeNonBlocking(serverFd))<0){
+    freeaddrinfo(results);
+    return -1;
+  }
   if(listen(serverFd,1024)<0){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
     fprintf(stderr,"listen(): %s\n",strerror(errno));
-    error = true;
+    freeaddrinfo(results);
+    return -1;
   }
   freeaddrinfo(results);
-  if (error)
-    return -1;
   return serverFd;
+}
+
+
+
+            /***********************************************************************/
+            /*                    CREATE ARG AND FLAG ARRAY                         */
+            /**********************************************************************/
+
+
+int initArgArray(int argc, char **argv, char **argArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")!=0 && strcmp(argv[i], "-v")!=0){
+            argArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    argArray[argCount] = NULL;
+    return argCount;
+}
+int initFlagArray(int argc, char **argv, char **flagArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")==0 || strcmp(argv[i], "-v")==0 || strcmp(argv[i], "-c")==0){
+            flagArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    flagArray[argCount] = NULL;
+    return argCount;
 }
