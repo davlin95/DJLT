@@ -21,6 +21,7 @@
 #define MAX_INPUT 1024
 struct pollfd pollFds[1024];
 int pollNum=0;
+
 char messageOfTheDay[1024];
 
 typedef struct sessionData{
@@ -82,6 +83,7 @@ Account* getAccount(int accountId);
 void setAccount(Account* newAccount);
 
 
+
 						/***********************************************************************/
 						/*                    SERVER PROGRAM FUNCTIONS                         */
 						/**********************************************************************/
@@ -118,14 +120,7 @@ void compactPollDescriptors(){
   }
 }
 
-
-
-						/******** THREAD PROGRAMMING ********/
-
-/*
- * Spawns a communication thread for the client
- */
-void spawnAcceptThread();
+			     /******** THREAD PROGRAMMING ********/
 
 /*
  * Spawns a login thread for the client
@@ -149,11 +144,6 @@ bool verifyUser(int clientFd);
  * A function that verifies a userPassword
  */
 bool verifyPassword(char* password);
-
-/*
- * A function that adds a user to the maintained list of active users 
- */
-void addUser(int clientFd);
 
 /*
  * A function that disconnects users
@@ -233,48 +223,13 @@ void processUsersRequest(){
  */
  void closeAllSockets();
 
- 					/*********** STDIN FUNCTIONS ***********/
- 
-void recognizeAndExecuteStdin(char* userTypedIn){
-  if(strcmp(userTypedIn,"/users\n")){
-    //PRINT OUT USERS
-    processUsersRequest();
-  }if(strcmp(userTypedIn,"/help\n")){
-    //PRINT OUT HELP
-    processHelp();
-  }if(strcmp(userTypedIn,"/shutdown\n")){
-    //SHUTDOWN
-    processShutDown();
-}
-
-
- /* 
-  * A function that parses the commandline 
-  */
- void parseCommandLine();
- 
- /*
-  * A function that builds an argument array 
-  */
- void buildArguments();
-
-  /*
-  * A function that builds executes the arguments
-  */
- void executeArguments();
-
 
  					/********* BUILTIN COMMANDS ********/
  /* 
-  * A function that returns the connected users on the server
-  */
-void processUsers();
-
-  /* 
   * A help menu function for server
   */ 
  void processHelp(){
-    fprintf(1,                                                                                
+    printf(                                                                              
             "[-h|-v] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                                          
             "-h             Displays help menu & returns EXIT_SUCCESS.\n"                              
             "-v             Verbose print all incoming and outgoing protocol verbs & content.\n"       
@@ -285,6 +240,11 @@ void processUsers();
     ); 
  }
 
+ /* 
+  * A function that returns the connected users on the server
+  */
+void processUsers();
+  
   /* 
   * A function that shuts down the server
   */ 
@@ -382,6 +342,36 @@ void killServerHandler(){
       str++;
     }
  }
+
+  /*********** STDIN FUNCTIONS ***********/
+void recognizeAndExecuteStdin(char* userTypedIn){
+  if(strcmp(userTypedIn,"/users\n")==0){
+    //PRINT OUT USERS
+    processUsersRequest();
+  }else if(strcmp(userTypedIn,"/help\n")==0){
+    //PRINT OUT HELP
+    displayHelpMenu(serverHelpMenuStrings);
+  }else if(strcmp(userTypedIn,"/shutdown\n")==0){
+    //SHUTDOWN
+    processShutdown();
+  }
+}
+
+
+ /* 
+  * A function that parses the commandline 
+  */
+ void parseCommandLine();
+ 
+ /*
+  * A function that builds an argument array 
+  */
+ void buildArguments();
+
+  /*
+  * A function that builds executes the arguments
+  */
+ void executeArguments();
 
 
 					/***** USER SECURITY **********/

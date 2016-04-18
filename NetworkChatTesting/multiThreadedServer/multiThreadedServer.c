@@ -159,8 +159,7 @@ int main(int argc, char* argv[]){
             /**************************************/
             /* SEND RESPONSE MESSAGE TO CLIENT   */
             /************************************/
-            sendMessageOfTheDay(pollFds[i].fd,"Welcome client!");
-            
+            sendMessageOfTheDay(pollFds[i].fd,"Dear Client, from server!");
             if(strcmp(clientMessage,"close\n")==0){
               doneReading=1;
             }
@@ -176,15 +175,16 @@ int main(int argc, char* argv[]){
          }
         }
 
-      /* MOVE ON TO NEXT POLL FD EVENT */
-      }
+      }// MOVE ON TO NEXT POLL FD EVENT
+
       /* COMPACT POLLS ARRAY */
       if (compactDescriptors){
         compactDescriptors=0;
         compactPollDescriptors();
       }
-    /* FOREVER RUNNING LOOP */ 
-    }
+
+    }/* FOREVER RUNNING LOOP */ 
+
    
   /************************/
   /* FINAL EXIT CLEANUP  */
@@ -245,6 +245,7 @@ void processValidClient(char* clientUserName){
   addClientToList(newClient);
 }
 
+/*
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) return 0;
   strcat(buffer,protocol);
@@ -294,7 +295,7 @@ void* loginThread(void* args){
   pollNum++;
 
   /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
-  processValidClient();
+  processValidClient("El Chapo");
 
   /***** SEND MESSAGE TO CLIENT ****/
   printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
