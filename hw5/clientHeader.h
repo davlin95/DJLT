@@ -205,9 +205,10 @@ bool performLoginProcedure(int fd,char* username){
     printf("%s\n", protocolBuffer);
     return false;
   }
-  if (protocol_HI_Helper(protocolBuffer, username) == 0)
+  if (protocol_HI_Helper(protocolBuffer, username) == 0){
     return false;
-  }else if(strcmp(protocolBuffer,PROTOCOL_BYE)){
+  }
+  else if(strcmp(protocolBuffer,PROTOCOL_BYE)==0){
     printf("RECEIVED FROM SERVER BYE\n");
     close(fd);
     exit(0);

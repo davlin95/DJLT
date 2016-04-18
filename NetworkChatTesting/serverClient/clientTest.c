@@ -31,27 +31,16 @@ int main(int argc, char* argv[]){
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
-<<<<<<< HEAD
-  } 
-
-=======
   }
  
->>>>>>> 61dd44739c3968d1bd135c7498a6e834b00b377b
   /*********** NOTIFY SERVER OF CONNECTION *****/
   if (performLoginProcedure(clientFd, username) == 0){
       printf("Failed to login properly\n");
       close(clientFd);
       exit(0);
-<<<<<<< HEAD
-   } 
-   
-  if (makeNonBlocking(clientFd)<0){
-=======
    }
 
   if (makeNonBlocking(clientFd)<0){   
->>>>>>> 61dd44739c3968d1bd135c7498a6e834b00b377b
     fprintf(stderr, "Error making socket nonblocking.\n");
   }
 
@@ -69,12 +58,8 @@ int main(int argc, char* argv[]){
 
     /* Set poll for stdin */ 
     pollFds[1].fd = 0;
-<<<<<<< HEAD
-    pollFds[1].events = POLLIN;
-    
-=======
     pollFds[1].events = POLLIN; 
->>>>>>> 61dd44739c3968d1bd135c7498a6e834b00b377b
+    
     if (makeNonBlocking(0)<0){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
