@@ -11,7 +11,6 @@
 #include <sys/poll.h>
 #include <signal.h>
 #include "../../hw5/clientHeader.h"
-#include "../multiThreadedServer/WolfieProtocolVerbs.h"
 
 int clientFd=-1; 
 void killClientProgramHandler(int fd){
@@ -23,9 +22,9 @@ void killClientProgramHandler(int fd){
 }
 
 int main(int argc, char* argv[]){
+  char* username = "EL CHAPO";
   char *portNumber = "1234";
   char message[1024];
-  int t;
   signal(SIGINT,killClientProgramHandler);
 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
@@ -34,11 +33,17 @@ int main(int argc, char* argv[]){
   }
 
   /*********** NOTIFY SERVER OF CONNECTION *****/
+  strcpy(message,"Hi, I am client and I've connected\n");
+  send(clientFd,message,(strlen(message)),0);
+  if (performLoginProcedure(clientFd, username) == 0){
+      printf("Failed to login properly\n");
+      close(clientFd);
+      exit(0);
+   }
+   
   if (makeNonBlocking(clientFd)<0){
     fprintf(stderr, "Error making socket nonblocking.\n");
   }
-  strcpy(message,"Hi, I am client and I've connected\n");
-  send(clientFd,message,(strlen(message)),0);
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -90,19 +95,6 @@ int main(int argc, char* argv[]){
             printf("CLOSING CLIENTFD\n");
             close(clientFd);
             exit(0);
-          }
-          while (t<1){    
-            protocolMethod(clientFd, WOLFIE, NULL);
-            protocolMethod(clientFd, EIFLOW, NULL);
-            protocolMethod(clientFd, BYE, NULL);
-            protocolMethod(clientFd, IAM, "Wilson");
-            protocolMethod(clientFd, MOTD, "Hello World");
-            protocolMethod(clientFd, HI, "David");
-            protocolMethod(clientFd, LISTU, NULL);
-            protocolMethod(clientFd, UTSIL, "Wilson\r\nDavid");
-            protocolMethod(clientFd, TIME, NULL);
-            protocolMethod(clientFd, EMIT, "25");
-            t++;
           }
         }
 

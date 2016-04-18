@@ -18,6 +18,7 @@
 
 
 int main(int argc, char* argv[]){
+  strcpy(messageOfTheDay, "MOTD: hello");
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];
   signal(SIGINT,killServerHandler);

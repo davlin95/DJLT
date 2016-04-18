@@ -9,6 +9,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
+#include "WolfieProtocolVerbs.h"
 
 #define USAGE(name) do {                                                                  \
         fprintf(stderr,                                                                         \
@@ -158,6 +159,51 @@ int makeNonBlocking(int fd){
   return 0;
 }
 
+
+bool protocol_HI_Helper(char* string, char *username){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char tempString[1024];
+    char * protocolArray[1024];
+    memset(&tempString, 0, 1024);
+    memset(&protocolArray, 0, 1024);
+    strcpy(tempString, string);
+    token = strtok_r(tempString, " ", &savePtr);
+    while (token != NULL){
+      protocolArray[arrayIndex++] = token;
+      token = strtok_r(NULL," ",&savePtr);
+    }
+    if (arrayIndex < 4 && strcmp(protocolArray[0], PROTOCOL_HI)!=0 
+        && strcmp(protocolArray[1], username) !=0 
+        && strcmp(protocolArray[2], "\r\n\r\n")!=0)
+      return false;
+    return true;
+}
+
+bool performLoginProcedure(int fd,char* username){
+  char protocolBuffer[1024];
+  memset(&protocolBuffer,0,1024);
+  int bytes=-1;
+  protocolMethod(fd, WOLFIE, NULL);
+  bytes = read(fd,&protocolBuffer,1024);
+  if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
+    return false;
+  }else{
+    protocolMethod(fd, IAM, username);
+  }
+  /*memset the protocol buffer so it can be reused for second verb*/
+  memset(&protocolBuffer,0,1024);
+  bytes =-1;
+  bytes = read(fd,&protocolMethod,1024);
+  if (protocol_HI_Helper(protocolBuffer, username) == 0)
+    return false;
+  memset(&protocolBuffer, 0, 1024);
+  bytes = -1;
+  bytes = read(fd,&protocolBuffer,1024);
+  printf("Printing message of the day: %s\n", protocolBuffer);
+  return true;
+}
 
 
 

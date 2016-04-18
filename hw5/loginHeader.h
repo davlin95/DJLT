@@ -47,7 +47,7 @@ char* performLoginProcedure(int fd,char* userBuffer){
   int bytes=-1;
   bytes = read(fd,&protocolBuffer,1024);
   if(strcmp(protocolBuffer,PROTOCOL_WOLFIE)!=0){
-    return 0;
+    return NULL;
   }else{
     protocolMethod(fd,EIFLOW,NULL);
   }
@@ -63,5 +63,6 @@ char* performLoginProcedure(int fd,char* userBuffer){
     return userBuffer;
   }
   protocolMethod(fd, ERR0, NULL);
+  protocolMethod(fd, BYE, NULL);
   return NULL;
 }
