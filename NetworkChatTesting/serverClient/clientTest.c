@@ -25,15 +25,18 @@ void killClientProgramHandler(int fd){
 int main(int argc, char* argv[]){
   char *portNumber = "1234";
   char message[1024];
+  int t;
   signal(SIGINT,killClientProgramHandler);
 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
-    printf("error createandconnect\n");
+    fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
   }
 
   /*********** NOTIFY SERVER OF CONNECTION *****/
-  fcntl(clientFd,F_SETFL,O_NONBLOCK); 
+  if (makeNonBlocking(clientFd)<0){
+    fprintf(stderr, "Error making socket nonblocking.\n");
+  }
   strcpy(message,"Hi, I am client and I've connected\n");
   send(clientFd,message,(strlen(message)),0);
 
@@ -52,7 +55,9 @@ int main(int argc, char* argv[]){
     /* Set poll for stdin */
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
-    fcntl(0,F_SETFL,O_NONBLOCK); 
+    if (makeNonBlocking(0)<0){
+      fprintf(stderr, "Error making stdin nonblocking.\n");
+    }
     int t=0;
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);

@@ -13,7 +13,9 @@
 #include <sys/fcntl.h>
 #include <signal.h>
 #include "../../hw5/serverHeader.h"
-#include "WolfieProtocolVerbs.h"
+#include "../../hw5/loginHeader.h"
+
+
 
 int main(int argc, char* argv[]){
   int threadStatus,threadNum=0;
@@ -40,7 +42,7 @@ int main(int argc, char* argv[]){
     /****************************************/
     /* Initialize Polls Interface*/
     memset(pollFds, 0 , sizeof(pollFds));
-    pollNum=2;
+    pollNum = 2;
     int pollStatus,compactDescriptors=0;
 
     /* Set poll for serverFd */
@@ -158,10 +160,6 @@ int main(int argc, char* argv[]){
             /**************************************/
             /* SEND RESPONSE MESSAGE TO CLIENT   */
             /************************************/
-            sendMessageOfTheDay(pollFds[i].fd,"Dear Client, from server!");
-            if(strcmp(clientMessage,"close\n")==0){
-              doneReading=1;
-            }
          }
          /********************************/
          /* IF CLIENT LOGGED OFF */
@@ -201,81 +199,6 @@ int main(int argc, char* argv[]){
 
 
 
-char* protocol_IAM_Helper(char* string){
-    char * protocolVerb;
-    char * username;
-    char * protocolTerminator;
-    protocolVerb = strtok(string, " ");
-    username = strtok(NULL, " ");
-    protocolTerminator = strtok(NULL, " ");
-    if (strcmp(protocolVerb, PROTOCOL_IAM) !=0){
-      return NULL;
-    }
-    if (strcmp(protocolTerminator, "\r\n\r\n") !=0){
-      return NULL;
-    }
-    return username;
-
-    /****************** ABANDONED CODE *********************/
-    /*char* anchor;
-    char user[1024];
-    memset(&user,0,1024);
-
-    anchor = strstr(string,PROTOCOL_IAM);
-    if(anchor==NULL){ //PROTOCOL DOESN'T EXIST IN STRING
-        return NULL;
-    } 
-    else if(anchor!=string){ //PROTOCOL IS NOT STARTING AS THE VERY FIRST BYTE
-        return NULL;
-    } 
-    anchor+=strlen(PROTOCOL_IAM)); // MOVE TO BYTE AFTER PROTOCOL
-    if(*anchor!=" ")return NULL; // MISSING SPACE
-    anchor++; // MOVE TO NEXT BYTE
-    while(*anchor==" ") anchor++; //FIRST BYTE OF USERNAME */
-    /********************************************************/
-}
-
-
-void processValidClient(char* clientUserName){
-  /*********** CREATE CLIENT STRUCT **********/
-  Client* newClient = createClient();
-  setClientUserName(newClient,clientUserName);
-  startSession(newClient->session);
-  addClientToList(newClient);
-}
-
-/*
-bool buildProtocolString(char* buffer, char* protocol, char* middle){
-  if(buffer==NULL) return 0;
-  strcat(buffer,protocol);
-  strcat(string," ");
-  strcat(buffer,middle);
-  strcpy(buffer," \r\n\r\n");
-  return 1;
-}
-
-bool performLoginProcedure(int fd,char* userBuffer){
-  char protocolBuffer[1024];
-  memset(&protocolBuffer,0,1024);
-
-  int bytes=-1;
-  bytes = read(fd,&protocolBuffer,1024);
-  if(strcmp(protocolBuffer,PROTOCOL_WOLFIE)!=0){
-    return 0;
-  }else{
-    protocolMethod(fd,EIFLOW,NULL);
-  }
-  memset(&protocolBuffer,0,1024);
-  bytes =-1;
-  bytes = read(fd,&protocolMethod,1024);
-  char* result = protocol_IAM_Helper(protocolBuffer);
-  if(result==NULL) return 0;
-  else{
-    protocolMethod(fd, HI, result);
-    protocolMethod(fd, MOTD, "hello");
-    return 1;
-  }
-}*/
 
 
 /**********************/
@@ -284,25 +207,21 @@ bool performLoginProcedure(int fd,char* userBuffer){
 
 void* loginThread(void* args){
   int connfd = *(int *)args;
-  char messageOfTheDay[1024];
-
+  char username[1024];
+  memset(&username, 0, 1024);
   printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
-  fcntl(connfd,F_SETFL,O_NONBLOCK); 
-  pollFds[pollNum].fd = connfd;
-  pollFds[pollNum].events = POLLIN;
-  pollNum++;
+  if (makeNonBlocking(connfd)<0){
+    fprintf(stderr, "Error making connection socket nonblocking.\n");
+  } 
+  if ((performLoginProcedure(connfd, username))!= NULL){
+    pollFds[pollNum].fd = connfd;
+    pollFds[pollNum].events = POLLIN;
+    pollNum++;
 
   /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
-  processValidClient("El Chapo");
-
-  /***** SEND MESSAGE TO CLIENT ****/
-  printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
-  printf("GREETING MESSAGE 1 to CLIENT: %d\n",pollFds[pollNum-1].fd);
-  memset(&messageOfTheDay,0,strlen(messageOfTheDay));
-  strcpy(messageOfTheDay,"Hello World ...");
-  send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-
+    processValidClient(username);
+  }
   return NULL;
 }
 
