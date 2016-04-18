@@ -1,7 +1,6 @@
 						/***********************************************************************/
 						/*                    HEADER DETAILS                                  */
 						/**********************************************************************/
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,7 +12,6 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
-
 #define _GNU_SOURCE
 
 						/***********************************************************************/
@@ -23,6 +21,7 @@
 #define MAX_INPUT 1024
 struct pollfd pollFds[1024];
 int pollNum=0;
+char messageOfTheDay[1024];
 
 typedef struct sessionData{
   struct in_addr *ipAddress;
@@ -44,7 +43,11 @@ typedef struct accountData{
   struct accountData *next;
   struct accountData *prev;
 }Account;
+                      
 
+                      /********************************************/
+                      /*    CLIENT / ACCOUNT STRUCT METHODS       */
+                      /*******************************************/
 Client* clientHead;
 Account* accountHead;
 
@@ -72,6 +75,17 @@ Account *createAccount(){
   Account *account = malloc(sizeof(struct accountData));
   return account;
 }
+void loadAccountFile();
+
+Account* getAccount(int accountId);
+
+void setAccount(Account* newAccount);
+
+
+						/***********************************************************************/
+						/*                    SERVER PROGRAM FUNCTIONS                         */
+						/**********************************************************************/
+char* serverHelpMenuStrings[]={"/users \t List users currently logged in.", "/help \t List available commands.", "/accts \t List all user accounts and information.", "/shutdown \t Shutdown the server", NULL};
 
 #define USAGE(name) do {                                                                         \
         fprintf(stderr,                                                                                \
@@ -85,24 +99,6 @@ Account *createAccount(){
         );                                                                                             \
     } while(0)
 
-
-
-
-
-
-char* serverHelpMenuStrings[]={"/users \t List users currently logged in.", "/help \t List available commands.", "/accts \t List all user accounts and information.", "/shutdown \t Shutdown the server", NULL};
-
-
-						/***********************************************************************/
-						/*                    SERVER PROGRAM FUNCTIONS                         */
-						/**********************************************************************/
-
-						/********** ACCOUNT FUNCTIONS *******/
-void loadAccountFile();
-
-Account* getAccount(int accountId);
-
-void setAccount(Account* newAccount);
 
             /************ STDIN READING ***********/
 void compactPollDescriptors(){
@@ -297,6 +293,13 @@ void processUsers();
    exit(0);
  }
 
+void killServerHandler(){
+    disconnectAllUsers();
+    printf("disconnected All users\n");
+    exit(EXIT_SUCCESS);
+}
+
+
  void processAccounts();
 
 						/****** SERVING CLIENT METHODS **/
@@ -307,11 +310,22 @@ void processUsers();
  */
  Client* returnClientData(int clientID);
 
+  /*  
+   * A function that clears the message of the day
+   */
+  void clearMessageOfTheDay(){
+    memset(messageOfTheDay,0,1024);
+  }
 
  /*
   * A function that tells the client the message of the day 
   */
-  void sendMessageOfTheDay(int clientFd);
+  void sendMessageOfTheDay(int clientFd, char* message){
+    printf("MESSAGE OF THE DAY to CLIENT: %d\n",clientFd);
+    clearMessageOfTheDay();
+    strncpy(messageOfTheDay,message,1023);
+    write(clientFd,messageOfTheDay,strlen(messageOfTheDay));
+  }
 
   /*
    * A function that rejects the client from logging in 

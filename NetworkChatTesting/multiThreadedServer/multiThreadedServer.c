@@ -15,31 +15,20 @@
 #include "../../hw5/serverHeader.h"
 #include "WolfieProtocolVerbs.h"
 
-
-void killServerHandler(){
-    disconnectAllUsers();
-    printf("disconnected All users\n");
-    exit(EXIT_SUCCESS);
-}
-
 int main(int argc, char* argv[]){
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];
   signal(SIGINT,killServerHandler);
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
-  /**************
-  printf("main thread");
-  char str[1024];
-  int readStatus=0;
-  int status = read(0,&str,1024);
-  write(1,str,strlen(str));
-  ***************/
   // pthread_join(tid[0],NULL);
 
-char messageOfTheDay[1024];
   int serverFd, connfd;
   char *portNumber = "1234";
+
+  /*******************/
+  /* Create Socket  */
+  /*****************/
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
     exit(0);
@@ -170,10 +159,8 @@ char messageOfTheDay[1024];
             /**************************************/
             /* SEND RESPONSE MESSAGE TO CLIENT   */
             /************************************/
-            printf("RESPONSE MESSAGE 1 to CLIENT: %d\n",pollFds[i].fd);
-            strcpy(messageOfTheDay,"Dear Client ... from server\n");
-            send(pollFds[i].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-
+            sendMessageOfTheDay(pollFds[i].fd,"Welcome client!");
+            
             if(strcmp(clientMessage,"close\n")==0){
               doneReading=1;
             }
@@ -249,6 +236,15 @@ char* protocol_IAM_Helper(char* string){
     /********************************************************/
 }
 
+
+void processValidClient(char* clientUserName){
+  /*********** CREATE CLIENT STRUCT **********/
+  Client* newClient = createClient();
+  setClientUserName(newClient,clientUserName);
+  startSession(newClient->session);
+  addClientToList(newClient);
+}
+
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) return 0;
   strcat(buffer,protocol);
@@ -257,7 +253,6 @@ bool buildProtocolString(char* buffer, char* protocol, char* middle){
   strcpy(buffer," \r\n\r\n");
   return 1;
 }
-
 
 bool performLoginProcedure(int fd,char* userBuffer){
   char protocolBuffer[1024];
@@ -292,17 +287,14 @@ void* loginThread(void* args){
   char messageOfTheDay[1024];
 
   printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
-
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   fcntl(connfd,F_SETFL,O_NONBLOCK); 
   pollFds[pollNum].fd = connfd;
   pollFds[pollNum].events = POLLIN;
   pollNum++;
 
-  /*********** TEST CREATE CLIENT STRUCT **********/
-  Client* newClient = createClient();
-  setClientUserName(newClient,"SENOR CHAPO");
-  addClientToList(newClient);
+  /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
+  processValidClient();
 
   /***** SEND MESSAGE TO CLIENT ****/
   printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
