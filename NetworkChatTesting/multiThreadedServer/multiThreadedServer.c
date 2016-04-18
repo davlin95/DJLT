@@ -4,37 +4,37 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
-#include <errno.h>
+#include <errno.h> 
 #include <netdb.h>
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/epoll.h>
 #include <sys/poll.h>
-#include <sys/fcntl.h>
+#include <sys/fcntl.h>  
 #include <signal.h>
-#include "../../hw5/serverHeader.h"
-#include "../../hw5/loginHeader.h"
+#include "../../hw5/serverHeader.h" 
+#include "../../hw5/loginHeader.h"    
 
-int main(int argc, char* argv[]){
+int main(int argc, char* argv[]){ 
   strcpy(messageOfTheDay, "MOTD: hello");
   int threadStatus,threadNum=0;
-  pthread_t threadId[1026];
-  signal(SIGINT,killServerHandler);
+  pthread_t threadId[1026];  
+  signal(SIGINT,killServerHandler); 
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
   // pthread_join(tid[0],NULL);
 
   int serverFd, connfd;
-  char *portNumber = "1234";
+  char *portNumber = "1234";   
 
   /*******************/
   /* Create Socket  */
-  /*****************/
+  /*****************/ 
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
-    exit(0);
-  } else
-    printf("Listening\n");
+    exit(0);       
+  } else 
+    printf("Listening\n"); 
 
     /******************************************/
     /*        IMPLEMENT POLL                 */

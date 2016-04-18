@@ -5,7 +5,7 @@ bool validUsername(char *username){
     if (*charPtr < 33 || *charPtr > 126){
       return false;
     }
-    charPtr++;\
+    charPtr++;
   }
   return true;
 }
@@ -25,8 +25,10 @@ char* protocol_IAM_Helper(char* string, char *userBuffer){
       protocolArray[arrayIndex++] = token;
       token = strtok_r(NULL," ",&savePtr);
     }
-    if (arrayIndex > 3 || strcmp(protocolArray[0], PROTOCOL_IAM)!=0 || strcmp(protocolArray[2],"\r\n\r\n")!=0)
+
+    if (arrayIndex > 3 || strcmp(protocolArray[0], PROTOCOL_IAM)!=0 || strcmp(protocolArray[2], "\r\n\r\n")!=0){
       return NULL;
+    }
     strcpy(userBuffer, protocolArray[1]);
     if (validUsername(userBuffer)!=0){
       return userBuffer;
@@ -51,9 +53,9 @@ char* performLoginProcedure(int fd,char* userBuffer){
   printf("waiting for WOLFIE\n");
   int bytes=1;
   bytes = read(fd,&protocolBuffer,1024);
-  printf("read in response\n");
-  if(strcmp(protocolBuffer,PROTOCOL_WOLFIE)!=0){
-    printf("reading invalid protocol response from client: %s ...",protocolBuffer);
+
+  printf("protocolBuffer contains: %s\n", protocolBuffer);
+  if(strcmp(protocolBuffer, PROTOCOL_WOLFIE)!=0){
     return NULL;
   }else{
     protocolMethod(fd,EIFLOW,NULL);
@@ -63,22 +65,18 @@ char* performLoginProcedure(int fd,char* userBuffer){
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
   bytes =-1;
-  printf("reading response to EIFLOW\n");
+
   bytes = read(fd,&protocolBuffer,1024);
-  printf("testing response to IAM:%s\n",(char*)protocolBuffer);
-  if (protocol_IAM_Helper(protocolBuffer,userBuffer)== NULL){
-    printf("protocolIAM failed\n");
-    return NULL;
-  }
-  printf("USER BUFFER IS :%s",userBuffer);
-  if (returnClientData(userBuffer)==NULL){
-    printf("client has available username \n");
-    protocolMethod(fd, HI, userBuffer);
-    printf("sent hi to client %d\n",fd);
-    sendMessageOfTheDay(fd);
-    return userBuffer;
+  printf("protocolBuffer contains: %s\n", protocolBuffer);
+  if (protocol_IAM_Helper(protocolBuffer, userBuffer) != NULL){
+    if (returnClientData(userBuffer)==NULL){
+      protocolMethod(fd, HI, userBuffer);
+      printf("sent hi to client %d\n",fd);
+      sendMessageOfTheDay(fd);
+      return userBuffer;
+    }
   }
   protocolMethod(fd, ERR0, NULL);
   protocolMethod(fd, BYE, NULL);
-  return NULL;
+  return NULL; 
 }

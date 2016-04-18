@@ -345,8 +345,6 @@ void killServerHandler(){
  }
 
 
-
-
  						/******* ACCESSORY METHODS ******/
  /* 
   * A help menu function for client
