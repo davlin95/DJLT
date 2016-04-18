@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 #include "WolfieProtocolVerbs.h"
-
+ 
 #define USAGE(name) do {                                                                  \
         fprintf(stderr,                                                                         \
             "\n%s [-hcv] NAME SERVER_IP SERVER_PORT\n"                                          \
@@ -195,9 +195,17 @@ bool performLoginProcedure(int fd,char* username){
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
   bytes =-1;
-  bytes = read(fd,&protocolMethod,1024);
-  if (protocol_HI_Helper(protocolBuffer, username) == 0)
+  bytes = read(fd,&protocolBuffer,1024);
+  printf("Read in from server: %s",protocolBuffer);
+  if (protocol_HI_Helper(protocolBuffer, username) == 0){
+    printf("protocol HI helper returned 0");
     return false;
+  }else if(strcmp(protocolBuffer,PROTOCOL_BYE)){
+    printf("RECEIVED FROM SERVER BYE\n");
+    close(fd);
+    exit(0);
+  }
+  printf("protocol HI helper succeeded");
   memset(&protocolBuffer, 0, 1024);
   bytes = -1;
   bytes = read(fd,&protocolBuffer,1024);

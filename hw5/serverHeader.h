@@ -62,6 +62,14 @@ Client *createClient(){
   return client;
 }
 
+void destroyClientMemory(Client* user){
+  if(user != NULL){
+    free(user->session->ipAddress);
+    free(user->session);
+    free(user);
+  }
+}
+
 void setClientUserName(Client* client,char* name){
   client->userName = malloc( (strlen(name)+1)*sizeof(char) );
   strcpy(client->userName,name);
@@ -72,6 +80,20 @@ void addClientToList(Client* client){
   client->prev=NULL;
   clientHead=client;
 }
+
+/*
+ * Finds the client struct associated with the clientID 
+ * @param clientID: ID of the client whose info to be searched for 
+ * @return: clientData struct
+ */
+ Client* returnClientData(char* username){
+    Client* clientPtr;
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      if (strcmp(username, clientPtr->userName) == 0)
+        return clientPtr;
+    }
+    return NULL;
+  }
 
 Account *createAccount(){
   Account *account = malloc(sizeof(struct accountData));
@@ -149,7 +171,13 @@ bool verifyPassword(char* password);
 /*
  * A function that disconnects users
  */
- void disconnectUser(int clientFd);
+ void disconnectUser(char* user){
+  Client* loggedOffClient = returnClientData(user);
+  if(loggedOffClient!=NULL){
+    destroyClientMemory(loggedOffClient);
+  }
+  printf("Destroyed Client: %s",loggedOffClient->userName);
+ }
 
 /*
  * A function that disconnects all connected users. 
@@ -317,19 +345,7 @@ void killServerHandler(){
  }
 
 
-/*
- * Finds the client struct associated with the clientID 
- * @param clientID: ID of the client whose info to be searched for 
- * @return: clientData struct
- */
- Client* returnClientData(char* username){
-    Client* clientPtr;
-    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
-      if (strcmp(username, clientPtr->userName) == 0)
-        return clientPtr;
-    }
-    return NULL;
-  }
+
 
  						/******* ACCESSORY METHODS ******/
  /* 

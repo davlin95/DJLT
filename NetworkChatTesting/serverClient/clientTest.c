@@ -11,7 +11,7 @@
 #include <sys/poll.h>
 #include <signal.h>
 #include "../../hw5/clientHeader.h"
-
+  
 int clientFd=-1; 
 void killClientProgramHandler(int fd){
     if(fd >0){
@@ -30,15 +30,14 @@ int main(int argc, char* argv[]){
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
-  }
+  } 
+
   /*********** NOTIFY SERVER OF CONNECTION *****/
-  strcpy(message,"Hi, I am client and I've connected\n");
-  send(clientFd,message,(strlen(message)),0);
   if (performLoginProcedure(clientFd, username) == 0){
       printf("Failed to login properly\n");
       close(clientFd);
       exit(0);
-   }
+   } 
    
   if (makeNonBlocking(clientFd)<0){
     fprintf(stderr, "Error making socket nonblocking.\n");
@@ -131,3 +130,4 @@ int main(int argc, char* argv[]){
     }
   return 0;
 }
+

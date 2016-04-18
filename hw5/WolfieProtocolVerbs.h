@@ -214,7 +214,10 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
     case IAM:   
                 if(optionalString!=NULL){
                   	buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                	send(fd,buffer,strlen(buffer),0);
+                    printf("sending from protocolmethod to server: %s",buffer);
+                	write(fd,buffer,strlen(buffer));
+                    char * str = "finished writing to fd\n";
+                    write(1,str,strlen(str));
                 } // MACRO NULL TERMINATED BY DEFAULT
                 break;
 

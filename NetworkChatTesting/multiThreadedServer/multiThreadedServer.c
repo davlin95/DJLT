@@ -15,7 +15,6 @@
 #include "../../hw5/serverHeader.h"
 #include "../../hw5/loginHeader.h"
 
-
 int main(int argc, char* argv[]){
   strcpy(messageOfTheDay, "MOTD: hello");
   int threadStatus,threadNum=0;
@@ -165,10 +164,10 @@ int main(int argc, char* argv[]){
          /******************************/
          if(doneReading){
            printf("closing client descriptor %d\n",pollFds[i].fd);
-           close(pollFds[i].fd);
+           close(pollFds[i].fd); //IMPLEMENT DISCONNECTUSER();
            pollFds[i].fd=-1;
            compactDescriptors=1;
-         }
+         } 
         }
 
       }// MOVE ON TO NEXT POLL FD EVENT
@@ -194,28 +193,28 @@ int main(int argc, char* argv[]){
     printf("closed connfd\n");
   }
   return 0;
-}
-
+} 
+ 
 /**********************/
 /*     LOGIN THREAD  */
 /********************/
-
 void* loginThread(void* args){
   int connfd = *(int *)args;
   char username[1024];
   memset(&username, 0, 1024);
   printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
-  if (makeNonBlocking(connfd)<0){
-    fprintf(stderr, "Error making connection socket nonblocking.\n");
-  } 
   if ((performLoginProcedure(connfd, username))!= NULL){
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
     pollNum++;
+    if (makeNonBlocking(connfd)<0){
+      fprintf(stderr, "Error making connection socket nonblocking.\n");
+    } 
     /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
     processValidClient(username);
-  }
+  }else 
+    printf("Client %d failed to login",connfd);
   return NULL;
 }
 
