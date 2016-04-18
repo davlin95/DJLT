@@ -197,6 +197,7 @@
 
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) {printf("buffer is null\n"); return 0;}
+  printf("middle is %s\n", middle);
   strcat(buffer,protocol);
   strcat(buffer," ");
   strcat(buffer, middle);
@@ -290,10 +291,10 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 break;
     case PASS:   
                 send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-    case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;*/
+    case ERR0:   
+                send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
 
 
   }

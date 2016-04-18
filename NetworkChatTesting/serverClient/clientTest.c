@@ -13,35 +13,34 @@
 #include "../../hw5/clientHeader.h"
 
 int clientFd=-1; 
-void killClientProgramHandler(int fd){
-    if(fd >0){
+void killClientProgramHandler(int fd){  
+    if(fd >0){ 
       close(fd);
     }
-    printf("Clean exit on clientFd\n");
+    printf("Clean exit on clientFd\n"); 
     exit(0);
 }
 
-int main(int argc, char* argv[]){
-  char* username = "EL CHAPO";
-  char *portNumber = "1234";
-  char message[1024];
+int main(int argc, char* argv[]){ 
+  char* username = "ELCHAPO1";
+  char *portNumber = "1234"; 
+  char message[1024]; 
+  int step = 0;
   signal(SIGINT,killClientProgramHandler);
 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
   }
-
+ 
   /*********** NOTIFY SERVER OF CONNECTION *****/
-  strcpy(message,"Hi, I am client and I've connected\n");
-  send(clientFd,message,(strlen(message)),0);
   if (performLoginProcedure(clientFd, username) == 0){
       printf("Failed to login properly\n");
       close(clientFd);
       exit(0);
    }
-   
-  if (makeNonBlocking(clientFd)<0){
+
+  if (makeNonBlocking(clientFd)<0){   
     fprintf(stderr, "Error making socket nonblocking.\n");
   }
 
@@ -57,9 +56,9 @@ int main(int argc, char* argv[]){
     pollFds[0].fd = clientFd;
     pollFds[0].events = POLLIN;
 
-    /* Set poll for stdin */
+    /* Set poll for stdin */ 
     pollFds[1].fd = 0;
-    pollFds[1].events = POLLIN;
+    pollFds[1].events = POLLIN; 
     if (makeNonBlocking(0)<0){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
@@ -93,7 +92,7 @@ int main(int argc, char* argv[]){
           }
           if((serverBytes=read(clientFd,message,1))==0){
             printf("CLOSING CLIENTFD\n");
-            close(clientFd);
+            close(clientFd); 
             exit(0);
           }
         }

@@ -174,9 +174,9 @@ bool protocol_HI_Helper(char* string, char *username){
       protocolArray[arrayIndex++] = token;
       token = strtok_r(NULL," ",&savePtr);
     }
-    if (arrayIndex < 4 && strcmp(protocolArray[0], PROTOCOL_HI)!=0 
-        && strcmp(protocolArray[1], username) !=0 
-        && strcmp(protocolArray[2], "\r\n\r\n")!=0)
+    if (arrayIndex > 3 || strcmp(protocolArray[0], PROTOCOL_HI)!=0 
+        || strcmp(protocolArray[1], username) !=0 
+        || strcmp(protocolArray[2], "\r\n\r\n")!=0)
       return false;
     return true;
 }
@@ -187,6 +187,7 @@ bool performLoginProcedure(int fd,char* username){
   int bytes=-1;
   protocolMethod(fd, WOLFIE, NULL);
   bytes = read(fd,&protocolBuffer,1024);
+  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
     return false;
   }else{
@@ -195,12 +196,21 @@ bool performLoginProcedure(int fd,char* username){
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
   bytes =-1;
-  bytes = read(fd,&protocolMethod,1024);
+  bytes = read(fd,&protocolBuffer,1024);
+  if (strcmp(protocolBuffer, PROTOCOL_ERR0) == 0){
+    printf("%s\n", protocolBuffer);
+    memset(&protocolBuffer,0,1024);
+    bytes = read(fd,&protocolBuffer,1024);
+    printf("%s\n", protocolBuffer);
+    return false;
+  }
   if (protocol_HI_Helper(protocolBuffer, username) == 0)
     return false;
   memset(&protocolBuffer, 0, 1024);
   bytes = -1;
   bytes = read(fd,&protocolBuffer,1024);
+  printf("protocolBuffer contains: %s\n", protocolBuffer);
+  
   printf("Printing message of the day: %s\n", protocolBuffer);
   return true;
 }

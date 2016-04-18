@@ -325,6 +325,7 @@ void killServerHandler(){
  Client* returnClientData(char* username){
     Client* clientPtr;
     for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      printf("returnClientData: username is %s\n", username);
       if (strcmp(username, clientPtr->userName) == 0)
         return clientPtr;
     }
