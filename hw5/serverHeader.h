@@ -238,6 +238,20 @@ void processUsersRequest(){
  void closeAllSockets();
 
  					/*********** STDIN FUNCTIONS ***********/
+ 
+void recognizeAndExecuteStdin(char* userTypedIn){
+  if(strcmp(userTypedIn,"/users\n")){
+    //PRINT OUT USERS
+    processUsersRequest();
+  }if(strcmp(userTypedIn,"/help\n")){
+    //PRINT OUT HELP
+    processHelp();
+  }if(strcmp(userTypedIn,"/shutdown\n")){
+    //SHUTDOWN
+    processShutDown();
+}
+
+
  /* 
   * A function that parses the commandline 
   */
@@ -264,12 +278,24 @@ void processUsers();
   * A help menu function for server
   */ 
  void processHelp(){
+    fprintf(1,                                                                                
+            "[-h|-v] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                                          
+            "-h             Displays help menu & returns EXIT_SUCCESS.\n"                              
+            "-v             Verbose print all incoming and outgoing protocol verbs & content.\n"       
+            "PORT_NUMBER    Port number to listen on.\n"                                               
+            "MOTD           Message to display to the client when they connect.\n"                     
+            "ACCOUNTS_FILE  File containing username and password data to be loaded upon execution.\n" 
+                                                                                              
+    ); 
  }
 
   /* 
   * A function that shuts down the server
   */ 
- void processShutdown();
+ void processShutdown(){
+   disconnectAllUsers();
+   exit(0);
+ }
 
  void processAccounts();
 

@@ -28,8 +28,6 @@ int main(int argc, char* argv[]){
   signal(SIGINT,killServerHandler);
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
-
-
   /**************
   printf("main thread");
   char str[1024];
@@ -90,6 +88,7 @@ char messageOfTheDay[1024];
             /************* STORE INCOMING CONNECTS ****/
             struct sockaddr_storage newClientStorage;
             socklen_t addr_size = sizeof(newClientStorage);
+
             //MALLOC AND STORE THE CONNFD, IF VALID CONNFD
             int* connfdPtr = malloc(sizeof(int));
             connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
@@ -108,7 +107,6 @@ char messageOfTheDay[1024];
               printf("Error spawning login thread for descriptor %d\n",connfd);
             }
           }
-
         }
 
         /***********************************/
@@ -130,6 +128,9 @@ char messageOfTheDay[1024];
 
             printf("outputting from server's STDIN %s",stdinBuffer);
             memset(&stdinBuffer,0,strlen(stdinBuffer));
+
+            /*************** EXECUTE STDIN COMMANDS ***********/
+            recognizeAndExecuteStdin(stdinBuffer);
           }
         }
 
@@ -137,7 +138,6 @@ char messageOfTheDay[1024];
         /*   POLLIN: PREVIOUS CLIENT         */
         /************************************/
         else{
-
           printf("\n/***********************************/\n");
           printf("/*   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
           printf("/***********************************/\n");
@@ -178,8 +178,8 @@ char messageOfTheDay[1024];
               doneReading=1;
             }
          }
-         /*******************************/
-         /*   EXIT READING FROM CLIENT */
+         /********************************/
+         /* IF CLIENT LOGGED OFF */
          /******************************/
          if(doneReading){
            printf("closing client descriptor %d\n",pollFds[i].fd);
@@ -189,10 +189,10 @@ char messageOfTheDay[1024];
          }
         }
 
-        /* MOVE ON TO NEXT POLL FD */
+      /* MOVE ON TO NEXT POLL FD EVENT */
       }
-      if (compactDescriptors)
-      {
+      /* COMPACT POLLS ARRAY */
+      if (compactDescriptors){
         compactDescriptors=0;
         compactPollDescriptors();
       }
@@ -210,7 +210,6 @@ char messageOfTheDay[1024];
     close(connfd);
     printf("closed connfd\n");
   }
-
   return 0;
 }
 
@@ -250,7 +249,6 @@ char* protocol_IAM_Helper(char* string){
     /********************************************************/
 }
 
-/*
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) return 0;
   strcat(buffer,protocol);
@@ -295,7 +293,6 @@ void* loginThread(void* args){
 
   printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
 
-
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   fcntl(connfd,F_SETFL,O_NONBLOCK); 
   pollFds[pollNum].fd = connfd;
@@ -306,7 +303,6 @@ void* loginThread(void* args){
   Client* newClient = createClient();
   setClientUserName(newClient,"SENOR CHAPO");
   addClientToList(newClient);
-  processUsersRequest();
 
   /***** SEND MESSAGE TO CLIENT ****/
   printf("connfd: %d   pollFds[pollNum]: %d\n",connfd,pollFds[pollNum-1].fd);
@@ -314,7 +310,6 @@ void* loginThread(void* args){
   memset(&messageOfTheDay,0,strlen(messageOfTheDay));
   strcpy(messageOfTheDay,"Hello World ...");
   send(pollFds[pollNum - 1].fd,messageOfTheDay,(strlen(messageOfTheDay)+1),0);
-
 
   return NULL;
 }
