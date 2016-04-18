@@ -14,7 +14,7 @@
 #include <signal.h>
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
-
+ 
 int main(int argc, char* argv[]){ 
   int argCounter; 
   bool verbose;
@@ -117,6 +117,7 @@ int main(int argc, char* argv[]){
 
             /************** LOGIN THREAD FOR EVERY CONNFD *******/
             threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, connfdPtr);
+            pthread_setname_np(threadId[threadNum-1],"LOGIN THREAD");
             if(threadStatus<0){
               printf("Error spawning login thread for descriptor %d\n",connfd);
             }
