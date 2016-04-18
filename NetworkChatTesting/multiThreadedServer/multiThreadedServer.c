@@ -120,8 +120,7 @@ int main(int argc, char* argv[]){
             memset(&stdinBuffer,0,strlen(stdinBuffer));
           }
         }
-
-
+        
         /**************************************/
         /*   POLLIN: PREVIOUS CLIENT         */
         /************************************/

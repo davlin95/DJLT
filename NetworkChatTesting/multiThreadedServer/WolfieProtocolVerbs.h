@@ -94,11 +94,6 @@
 
 
 
-
-
-
-
-
 /* Create file defining WOLFIE PROTOCOL */
 
 #ifndef WOLFIE
@@ -194,14 +189,12 @@
 #endif
 
 
-
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) {printf("buffer is null\n"); return 0;}
   strcat(buffer,protocol);
   strcat(buffer," ");
   strcat(buffer, middle);
   strcat(buffer," \r\n\r\n");
-
   return 1;
 }
 

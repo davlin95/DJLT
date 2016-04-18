@@ -329,8 +329,6 @@ void killServerHandler(){
  */
  Client* returnClientData(int clientID);
 
-
-
  						/******* ACCESSORY METHODS ******/
  /* 
   * A help menu function for client
@@ -343,8 +341,14 @@ void killServerHandler(){
     }
  }
 
- void printStarHeadline(char* headline){
-   printf("\n/***********************************/\n");
+ void printStarHeadline(char* headline,int optionalFd){
+
+  printf("\n/***********************************/\n");
+  printf("/*\t");
+  printf("%s-40",headline);
+  "   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
+  printf("/*\t");
+  printf("/***********************************/\n");
 
  }
 
