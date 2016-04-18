@@ -348,8 +348,7 @@ void killServerHandler(){
   printf("\n/***********************************/\n");
   printf("/*\t");
   printf("%s-40",headline);
-  "   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
-  printf("/*\t");
+  printf("\t*/");
   printf("/***********************************/\n");
 
  }

@@ -16,7 +16,6 @@
 #include "../../hw5/loginHeader.h"
 
 
-
 int main(int argc, char* argv[]){
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];
@@ -196,10 +195,6 @@ int main(int argc, char* argv[]){
   return 0;
 }
 
-
-
-
-
 /**********************/
 /*     LOGIN THREAD  */
 /********************/
@@ -217,8 +212,7 @@ void* loginThread(void* args){
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
     pollNum++;
-
-  /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
+    /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
     processValidClient(username);
   }
   return NULL;

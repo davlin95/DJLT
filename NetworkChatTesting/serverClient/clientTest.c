@@ -32,7 +32,6 @@ int main(int argc, char* argv[]){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
   }
-
   /*********** NOTIFY SERVER OF CONNECTION *****/
   if (makeNonBlocking(clientFd)<0){
     fprintf(stderr, "Error making socket nonblocking.\n");
@@ -55,6 +54,7 @@ int main(int argc, char* argv[]){
     /* Set poll for stdin */
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
+    
     if (makeNonBlocking(0)<0){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
