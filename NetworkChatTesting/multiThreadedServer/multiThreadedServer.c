@@ -115,13 +115,12 @@ int main(int argc, char* argv[]){
             send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
             printf("sent string :%s from client to server\n",stdinBuffer); */
 
-            printf("outputting from server's STDIN %s",stdinBuffer);
-            memset(&stdinBuffer,0,strlen(stdinBuffer));
-
             /*************** EXECUTE STDIN COMMANDS ***********/
             recognizeAndExecuteStdin(stdinBuffer);
+            memset(&stdinBuffer,0,strlen(stdinBuffer));
           }
         }
+
 
         /**************************************/
         /*   POLLIN: PREVIOUS CLIENT         */

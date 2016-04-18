@@ -343,8 +343,14 @@ void killServerHandler(){
     }
  }
 
+ void printStarHeadline(char* headline){
+   printf("\n/***********************************/\n");
+
+ }
+
   /*********** STDIN FUNCTIONS ***********/
 void recognizeAndExecuteStdin(char* userTypedIn){
+  printf("user typed in: %s", userTypedIn);
   if(strcmp(userTypedIn,"/users\n")==0){
     //PRINT OUT USERS
     processUsersRequest();
