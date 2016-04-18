@@ -12,6 +12,7 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
+#include "WolfieProtocolVerbs.h"
 #define _GNU_SOURCE
 
 						/***********************************************************************/
@@ -263,13 +264,6 @@ void killServerHandler(){
  void processAccounts();
 
 						/****** SERVING CLIENT METHODS **/
-/*
- * Finds the client struct associated with the clientID 
- * @param clientID: ID of the client whose info to be searched for 
- * @return: clientData struct
- */
- Client* returnClientData(int clientID);
-
   /*  
    * A function that clears the message of the day
    */
@@ -277,14 +271,15 @@ void killServerHandler(){
     memset(messageOfTheDay,0,1024);
   }
 
+  void sendMessage(int fd, char *message){
+    write(fd,message,strlen(message));
+  }
+
  /*
   * A function that tells the client the message of the day 
   */
-  void sendMessageOfTheDay(int clientFd, char* message){
-    printf("MESSAGE OF THE DAY to CLIENT: %d\n",clientFd);
-    clearMessageOfTheDay();
-    strncpy(messageOfTheDay,message,1023);
-    write(clientFd,messageOfTheDay,strlen(messageOfTheDay));
+  void sendMessageOfTheDay(int clientFd){
+    sendMessage(clientFd, messageOfTheDay);
   }
 
   /*
@@ -327,7 +322,14 @@ void killServerHandler(){
  * @param clientID: ID of the client whose info to be searched for 
  * @return: clientData struct
  */
- Client* returnClientData(int clientID);
+ Client* returnClientData(char* username){
+    Client* clientPtr;
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      if (strcmp(username, clientPtr->userName) == 0)
+        return clientPtr;
+    }
+    return NULL;
+  }
 
  						/******* ACCESSORY METHODS ******/
  /* 
