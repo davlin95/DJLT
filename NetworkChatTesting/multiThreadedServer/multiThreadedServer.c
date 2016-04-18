@@ -18,7 +18,32 @@
 
 
 int main(int argc, char* argv[]){ 
-  strcpy(messageOfTheDay, "MOTD: hello");
+  int argCounter; 
+  bool verbose;
+  char *portNumber;
+  char * argArray[1024];
+  char * flagArray[1024];
+  memset(&argArray, 0, sizeof(argArray));
+  memset(&flagArray, 0, sizeof(flagArray));
+  argCounter = initArgArray(argc, argv, argArray);
+  if (argCounter < 3 || argCounter > 4){
+    USAGE("./server");
+    exit(EXIT_FAILURE);
+  } 
+  initFlagArray(argc, argv, flagArray);
+  argCounter = 0;
+  while (flagArray[argCounter] != NULL){
+    if (strcmp(flagArray[argCounter], "-h")==0){
+      USAGE("./server");
+      exit(EXIT_SUCCESS);
+    }
+    if (strcmp(flagArray[argCounter], "-v")==0){
+      verbose = true;
+    }
+    argCounter++;
+  }
+  portNumber = argArray[1];
+  strcpy(messageOfTheDay, argArray[2]);
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];  
   signal(SIGINT,killServerHandler); 
@@ -26,11 +51,10 @@ int main(int argc, char* argv[]){
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
   // pthread_join(tid[0],NULL);
 
-  int serverFd, connfd;
-  char *portNumber = "1234";   
+  int serverFd, connfd;   
 
   /*******************/
-  /* Create Socket  */
+  /* Create Socket  */ 
   /*****************/ 
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
