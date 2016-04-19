@@ -3,7 +3,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <netdb.h>
-#include <string.h>
+#include <string.h> 
 #include <stdlib.h> 
 #include <errno.h>
 #include <sys/fcntl.h>
@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
   char *portNumber = "1234"; 
   char message[1024]; 
   int step = 0;
-  signal(SIGINT,killClientProgramHandler);
+  signal(SIGINT,killClientProgramHandler); 
 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
@@ -130,7 +130,11 @@ int main(int argc, char* argv[]){
               close(clientFd);
               exit(EXIT_SUCCESS);
               break; 
+            }else if(strstr(stdinBuffer,"/chat")!=NULL){
+              
+
             }
+            /***********TEST COMMUNICATING WITH SERVER ****************/
             send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
             printf("sent string :%s from client to server\n",stdinBuffer);
             memset(&stdinBuffer,0,strlen(stdinBuffer));

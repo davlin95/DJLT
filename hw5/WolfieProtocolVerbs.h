@@ -214,6 +214,41 @@ bool extractArgAndTest(char *string, char *buffer){
     return true;
 }
 
+bool extractArgAndTestMSG(char *string, char *buffer){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char tempString[1024];
+    char * protocolArray[1024];
+
+    //CLEAR BUFFERS
+    memset(&tempString, 0, 1024);
+    memset(&protocolArray, 0, 1024);
+    memset(&string, 0, strlen(string));
+
+    //CHOP UP THE STRING
+    strcpy(tempString, string);
+    token = strtok_r(tempString, " ", &savePtr);
+    while (token != NULL){
+      protocolArray[arrayIndex++] = token;
+      token = strtok_r(NULL," ",&savePtr);
+    }
+
+    //ERROR CHECK THE INPUT, 
+    if ( arrayIndex < 4 ||
+         strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ||
+         strcmp(protocolArray[0], PROTOCOL_MSG)!=0 ){
+      return false;
+    }
+    //COPY ALL ARGS AFTER MSG, UP TO BEFORE THE PROTOCOL FOOTER
+    int i;
+    for(i=1; i<arrayIndex-1 ;i++){
+      strcat(buffer, protocolArray[i]);
+    }
+    return true;
+}
+
+
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) {printf("buffer is null\n"); return 0;}
   printf("middle is %s\n", middle);
@@ -224,9 +259,67 @@ bool buildProtocolString(char* buffer, char* protocol, char* middle){
   return 1;
 }
 
-void protocolMethod(int fd, int wolfieVerb, char* optionalString){
-	char buffer[1032];
-  	memset(&buffer,0,1032);
+bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* message){
+    if(buffer ==NULL)return 0;
+    memset(&buffer,0,strlen(buffer));
+    strcat(buffer,PROTOCOL_MSG);
+    strcat(buffer," ");
+    strcat(buffer,toPerson);
+    strcat(buffer," ");
+    strcat(buffer,fromPerson);
+    strcat(buffer," ");
+    strcat(buffer,message);
+    strcat(buffer," \r\n\r\n");
+    return 1;
+}
+
+/* Process a string containing the "/chat" command */
+bool processChatCommand(int fd, char* string, char* thisUserName){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char tempString[1024];
+    char * protocolArray[1024];
+
+    //CLEAR BUFFERS
+    memset(&tempString, 0, 1024);
+    memset(&protocolArray, 0, 1024);
+
+    //CHOP UP THE STRING
+    strcpy(tempString, string);
+    token = strtok_r(tempString, " ", &savePtr);
+    while (token != NULL){
+      protocolArray[arrayIndex++] = token;
+      token = strtok_r(NULL," ",&savePtr);
+    }
+
+    //ERROR CHECK THE INPUT, 
+    if ( arrayIndex < 2 ||
+         strcmp(protocolArray[0], "/chat")!=0 ){
+      return false;
+    }
+
+    // BUILD THE TRAILING MESSAGE INTO ONE ARGUMENT STRING
+    char messageReplica[1024];
+    memset(&messageReplica,0,1024);
+    int i;
+    for(i=2;i<arrayIndex;i++){
+        strcat(messageReplica,protocolArray[i]);
+        if(i<arrayIndex-1){
+          strcat(messageReplica," ");
+        }
+    }
+    messageReplica[1023]='\0';
+
+    //CALL PROTOCOL METHODS BASED ON PARAMETERS
+    protocolMethod(fd,MSG,protocolArray[1],thisUserName,messageReplica);
+    return true;
+}
+
+
+void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3){
+  char buffer[1032];
+  memset(&buffer,0,1032);
   switch(wolfieVerb){
     case WOLFIE: 
                 send(fd,PROTOCOL_WOLFIE,strlen(PROTOCOL_WOLFIE),0); // MACRO NULL TERMINATED BY DEFAULT
@@ -277,10 +370,11 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
                 	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
-    /*case MSG:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+    case MSG:   
+                buildMSGProtocol(buffer,optionalString,optionalString2, optionalString3);
+                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case UOFF:   
+   /* case UOFF:   
                 send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case IAMNEW:   

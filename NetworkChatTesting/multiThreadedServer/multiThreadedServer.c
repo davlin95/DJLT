@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
+#include <unistd.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <string.h>
@@ -14,7 +14,9 @@
 #include <signal.h>
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
- 
+
+
+
 int main(int argc, char* argv[]){ 
   int argCounter; 
   bool verbose;
@@ -48,7 +50,6 @@ int main(int argc, char* argv[]){
 
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
   // pthread_join(tid[0],NULL);
-
   int serverFd, connfd;    
 
   /*******************/
@@ -75,7 +76,7 @@ int main(int argc, char* argv[]){
     /* Set poll for stdin */
     fcntl(0,F_SETFL,O_NONBLOCK); 
     pollFds[1].fd = 0;
-    pollFds[1].events = POLLIN;
+    pollFds[1].events = POLLIN|POLLPRI;
 
     while(1){
 
@@ -127,7 +128,6 @@ int main(int argc, char* argv[]){
             }
             printf("end of login thread\n");
           }
-          printf("broke out of if\n");
         }
 
         /***********************************/
@@ -185,6 +185,7 @@ int main(int argc, char* argv[]){
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength))
                 protocolMethod(pollFds[i].fd, EMIT, sessionlength);
             }
+            
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -228,12 +229,13 @@ int main(int argc, char* argv[]){
     printf("closed connfd\n");
   }
   return 0;
-} 
+}  
  
 /**********************/
 /*     LOGIN THREAD  */
 /********************/
-void* loginThread(void* args){
+
+void* loginThread(void* args){ 
   int connfd = *(int *)args;
   char username[1024];
   memset(&username, 0, 1024);
@@ -248,7 +250,7 @@ void* loginThread(void* args){
     } 
     /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
     processValidClient(username,connfd);
-    write(pollFds[1].fd, "\n", 1);
+
   }else {
     printf("Client %d failed to login",connfd);
   }

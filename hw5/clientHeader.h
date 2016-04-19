@@ -183,7 +183,7 @@ bool performLoginProcedure(int fd,char* username){
   if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
     return false;
   }else{
-    //protocolMethod(fd, IAM, username);
+    protocolMethod(fd, IAM, username);
   }
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
@@ -214,7 +214,6 @@ bool performLoginProcedure(int fd,char* username){
   printf("Printing message of the day: %s\n", protocolBuffer);
   return true;
 }
-
 
 
 
