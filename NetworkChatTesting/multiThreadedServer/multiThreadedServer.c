@@ -49,7 +49,7 @@ int main(int argc, char* argv[]){
   // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
   // pthread_join(tid[0],NULL);
 
-  int serverFd, connfd;   
+  int serverFd, connfd;    
 
   /*******************/
   /* Create Socket  */ 
@@ -78,6 +78,8 @@ int main(int argc, char* argv[]){
     pollFds[1].events = POLLIN;
 
     while(1){
+
+      printf("poll is waiting\n");
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll():%s",strerror(errno));
@@ -106,7 +108,9 @@ int main(int argc, char* argv[]){
             //MALLOC AND STORE THE CONNFD, IF VALID CONNFD
             int* connfdPtr = malloc(sizeof(int));
             connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
+            
             if(connfd<0){
+              printf("just past accept\n");
               if(errno!=EWOULDBLOCK){
                 fprintf(stderr,"accept(): %s\n",strerror(errno));
                 close(connfd); 
@@ -121,7 +125,9 @@ int main(int argc, char* argv[]){
             if(threadStatus<0){
               printf("Error spawning login thread for descriptor %d\n",connfd);
             }
+            printf("end of login thread\n");
           }
+          printf("broke out of if\n");
         }
 
         /***********************************/
@@ -173,6 +179,12 @@ int main(int argc, char* argv[]){
               doneReading=1;
               break;
             }  
+            if (checkVerb(PROTOCOL_TIME, clientMessage)){
+              char sessionlength[1024];
+              memset(&sessionlength, 0, 1024);
+              if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength))
+                protocolMethod(pollFds[i].fd, EMIT, sessionlength);
+            }
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -196,13 +208,11 @@ int main(int argc, char* argv[]){
         }
 
       }// MOVE ON TO NEXT POLL FD EVENT
-
       /* COMPACT POLLS ARRAY */
       if (compactDescriptors){
         compactDescriptors=0;
         compactPollDescriptors();
       }
-
     }/* FOREVER RUNNING LOOP */ 
 
    
@@ -237,9 +247,11 @@ void* loginThread(void* args){
       fprintf(stderr, "Error making connection socket nonblocking.\n");
     } 
     /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
-    processValidClient(username);
-  }else 
+    processValidClient(username,connfd);
+    write(pollFds[1].fd, "\n", 1);
+  }else {
     printf("Client %d failed to login",connfd);
+  }
   return NULL;
 }
 

@@ -81,19 +81,6 @@ void addClientToList(Client* client){
   clientHead=client;
 }
 
-/*
- * Finds the client struct associated with the clientID 
- * @param clientID: ID of the client whose info to be searched for 
- * @return: clientData struct
- */
- Client* returnClientData(char* username){
-    Client* clientPtr;
-    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
-      if (strcmp(username, clientPtr->userName) == 0)
-        return clientPtr;
-    }
-    return NULL;
-  }
 
 Account *createAccount(){
   Account *account = malloc(sizeof(struct accountData));
@@ -171,8 +158,9 @@ bool verifyPassword(char* password);
 /*
  * A function that disconnects users
  */
+ Client* getClientByUsername(char* user);
  void disconnectUser(char* user){
-  Client* loggedOffClient = returnClientData(user);
+  Client* loggedOffClient = getClientByUsername(user);
   if(loggedOffClient!=NULL){
     destroyClientMemory(loggedOffClient);
   }
@@ -338,11 +326,42 @@ void killServerHandler(){
     session->end = time(0);
  }
 
- int sessionLength(Session* session){
+ int sessionLength(Client* client, char* sessionLengthBuffer){
+    if (sessionLengthBuffer == NULL)
+      return -1;
+    int length;
     time_t currentTime;
     currentTime = time(0);
-    return ((int)(currentTime - session->start));
+    length = ((int)(currentTime - client->session->start));
+    sprintf(sessionLengthBuffer, "%d", length);
+    return length;
  }
+
+
+/*
+ * Finds the client struct associated with the clientID 
+ * @param clientID: ID of the client whose info to be searched for 
+ * @return: clientData struct
+ */
+ Client* getClientByUsername(char* username){
+    Client* clientPtr;
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      printf("returnClientData: username is %s\n", username);
+      if (strcmp(username, clientPtr->userName) == 0)
+        return clientPtr;
+    }
+    return NULL;
+  }
+
+  Client* getClientByFd(int fd){
+    Client* clientPtr;
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      printf("returnClientData: id is %d\n", fd);
+      if (clientPtr->session->commSocket == fd)
+        return clientPtr;
+    }
+    return NULL;
+  }
 
 
  						/******* ACCESSORY METHODS ******/
