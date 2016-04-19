@@ -201,10 +201,22 @@ bool performLoginProcedure(int fd,char* username){
   memset(&protocolBuffer, 0, 1024);
   bytes = -1;
   bytes = read(fd,&protocolBuffer,1024);
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
-  
-  printf("Printing message of the day: %s\n", protocolBuffer);
+  printf("MOTD: %s\n", protocolBuffer);
   return true;
+}
+
+void recognizeAndExecuteStdin(char* userTypedIn){
+  printf("user typed in: %s", userTypedIn);
+  if(strcmp(userTypedIn,"/users\n")==0){ 
+    //PRINT OUT USERS
+    //processUsersRequest();
+  }else if(strcmp(userTypedIn,"/help\n")==0){
+    //PRINT OUT HELP
+    displayHelpMenu(clientHelpMenuStrings);
+  }else if(strcmp(userTypedIn,"/shutdown\n")==0){
+    //SHUTDOWN
+    //processShutdown();
+  }
 }
 
 

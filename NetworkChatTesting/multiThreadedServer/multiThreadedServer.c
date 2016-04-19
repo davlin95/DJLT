@@ -28,7 +28,7 @@ int main(int argc, char* argv[]){
   argCounter = initArgArray(argc, argv, argArray);
   if (argCounter < 3 || argCounter > 4){
     USAGE("./server");
-    exit(EXIT_FAILURE);
+    exit(EXIT_FAILURE); 
   } 
   initFlagArray(argc, argv, flagArray);
   argCounter = 0;
@@ -80,8 +80,6 @@ int main(int argc, char* argv[]){
     pollFds[1].events = POLLIN;
 
     while(1){
-
-      printf("poll is waiting\n");
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll():%s",strerror(errno));
@@ -112,7 +110,6 @@ int main(int argc, char* argv[]){
             connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
             
             if(connfd<0){
-              printf("just past accept\n");
               if(errno!=EWOULDBLOCK){
                 fprintf(stderr,"accept(): %s\n",strerror(errno));
                 close(connfd); 
@@ -126,9 +123,7 @@ int main(int argc, char* argv[]){
             if(threadStatus<0){
               printf("Error spawning login thread for descriptor %d\n",connfd);
             }
-            printf("end of login thread\n");
           }
-          printf("broke out of if\n");
         }
 
         /***********************************/
@@ -187,6 +182,12 @@ int main(int argc, char* argv[]){
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength))
                 protocolMethod(pollFds[i].fd, EMIT, sessionlength);
             }
+            if (checkVerb(PROTOCOL_LISTU, clientMessage)){
+              char usersBuffer[1024];
+              memset(&usersBuffer, 0, 1024);
+              if (buildUtsilArg(usersBuffer))
+                protocolMethod(pollFds[i].fd, UTSIL, usersBuffer);
+            }
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -240,7 +241,7 @@ int main(int argc, char* argv[]){
 /*     LOGIN THREAD  */
 /********************/
 
-void* loginThread(void* args){ 
+void* loginThread(void* args){  
   int connfd = *(int *)args;
   char username[1024];
   memset(&username, 0, 1024);
@@ -258,6 +259,6 @@ void* loginThread(void* args){
     processValidClient(username, connfd);
   }
   write(connfd, "\n", 1);
-  return NULL;
+  return NULL; 
 }
 

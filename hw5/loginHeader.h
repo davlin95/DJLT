@@ -34,7 +34,6 @@ char* performLoginProcedure(int fd,char* userBuffer){
   memset(&protocolBuffer,0,1024);
   int bytes=-1;
   bytes = read(fd,&protocolBuffer,1024);
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if(strcmp(protocolBuffer, PROTOCOL_WOLFIE)!=0){
     return NULL;
   }else{
@@ -44,7 +43,6 @@ char* performLoginProcedure(int fd,char* userBuffer){
   memset(&protocolBuffer,0,1024);
   bytes =-1;
   bytes = read(fd,&protocolBuffer,1024);
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if (protocol_IAM_Helper(protocolBuffer, userBuffer) != NULL){
     if (getClientByUsername(userBuffer)==NULL){
     protocolMethod(fd, HI, userBuffer);

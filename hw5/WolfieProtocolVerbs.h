@@ -221,7 +221,6 @@ bool extractArgAndTest(char *string, char *buffer){
 
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL) {printf("buffer is null\n"); return 0;}
-  printf("middle is %s\n", middle);
   strcat(buffer,protocol);
   strcat(buffer," ");
   strcat(buffer, middle);
@@ -323,4 +322,31 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString){
 
   }
 
+}
+
+
+
+int initArgArray(int argc, char **argv, char **argArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")!=0 && strcmp(argv[i], "-v")!=0){
+            argArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    argArray[argCount] = NULL;
+    return argCount;
+}
+int initFlagArray(int argc, char **argv, char **flagArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")==0 || strcmp(argv[i], "-v")==0 || strcmp(argv[i], "-c")==0){
+            flagArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    flagArray[argCount] = NULL;
+    return argCount;
 }
