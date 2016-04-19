@@ -240,7 +240,7 @@ int main(int argc, char* argv[]){
 /*     LOGIN THREAD  */
 /********************/
 
-void* loginThread(void* args){
+void* loginThread(void* args){ 
   int connfd = *(int *)args;
   char username[1024];
   memset(&username, 0, 1024);

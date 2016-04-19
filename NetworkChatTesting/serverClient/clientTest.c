@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
   char *portNumber = "1234"; 
   char message[1024]; 
   int step = 0;
-  signal(SIGINT,killClientProgramHandler);
+  signal(SIGINT,killClientProgramHandler); 
 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
