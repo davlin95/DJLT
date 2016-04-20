@@ -21,7 +21,6 @@ char* protocol_IAM_Helper(char* string, char *userBuffer){
 }
 
 void processValidClient(char* clientUserName, int fd){
-  /*********** CREATE CLIENT STRUCT **********/
   Client* newClient = createClient();
   setClientUserName(newClient,clientUserName);
   startSession(newClient->session);
@@ -38,12 +37,10 @@ char* performLoginProcedure(int fd,char* userBuffer){
   printf("waiting for WOLFIE\n");
   int bytes=1;
   bytes = read(fd,&protocolBuffer,1024);
-
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if(strcmp(protocolBuffer, PROTOCOL_WOLFIE)!=0){
     return NULL;
   }else{
-    protocolMethod(fd,EIFLOW,NULL);
+    protocolMethod(fd,EIFLOW,NULL,NULL,NULL);
     printf("sent elflow to client\n");
   }
 
@@ -52,15 +49,14 @@ char* performLoginProcedure(int fd,char* userBuffer){
   bytes =-1;
 
   bytes = read(fd,&protocolBuffer,1024);
-  printf("protocolBuffer contains: %s\n", protocolBuffer);
   if (protocol_IAM_Helper(protocolBuffer, userBuffer) != NULL){
     if (getClientByUsername(userBuffer)==NULL){
-      protocolMethod(fd, HI, userBuffer);
+      protocolMethod(fd, HI, userBuffer,NULL,NULL);
       sendMessageOfTheDay(fd);
       return userBuffer;
     }
   }
-  protocolMethod(fd, ERR0, NULL);
-  protocolMethod(fd, BYE, NULL);
+  protocolMethod(fd, ERR0, NULL,NULL,NULL);
+  protocolMethod(fd, BYE, NULL,NULL,NULL);
   return NULL; 
 }

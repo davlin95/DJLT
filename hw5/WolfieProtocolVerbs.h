@@ -188,32 +188,50 @@
 #define ERR100 23
 #endif
 
+/* 
+ * A function that checks if the returned string is the protocol verb to be compared 
+ */
 bool checkVerb(char *protocolVerb, char* string){
   if (strncmp(string, protocolVerb, strlen(protocolVerb)) == 0)
     return true;
   return false;
 }
 
+/*
+ * Takes a string and tests it for the following structure. PROTOCOL_TYPE MIDDLEARGUMENT \r\n\r\n
+ * and fills the buffer with the middle argument, if it returns true (meaning it pass formatting test)
+ */
 bool extractArgAndTest(char *string, char *buffer){
     char * savePtr;
     char *token;
     int arrayIndex = 0;
     char tempString[1024];
     char * protocolArray[1024];
+
+    //CLEAR THE BUFFERS
     memset(&tempString, 0, 1024);
     memset(&protocolArray, 0, 1024);
+
+    //CHOP UP A COPY OF THE TESTED STRING
     strcpy(tempString, string);
     token = strtok_r(tempString, " ", &savePtr);
     while (token != NULL){
       protocolArray[arrayIndex++] = token;
       token = strtok_r(NULL," ",&savePtr);
     }
+
+    //LOOK FOR TEST CASES
     if (arrayIndex > 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0)
       return false;
+    //PASSES TEST
     strcpy(buffer, protocolArray[1]);
     return true;
 }
 
+/*
+ *  A function that takes a string and tests it for the structure of "MSG TOPERSON FROMPERSON MSG \r\n\r\n"
+ *  returns true if passes format test. copies the message into the buffer.
+ */
 bool extractArgAndTestMSG(char *string, char *buffer){
     char * savePtr;
     char *token;
@@ -235,11 +253,17 @@ bool extractArgAndTestMSG(char *string, char *buffer){
     }
 
     //ERROR CHECK THE INPUT, 
-    if ( arrayIndex < 4 ||
-         strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ||
-         strcmp(protocolArray[0], PROTOCOL_MSG)!=0 ){
+    if ( arrayIndex < 5 ){
+      fprintf(stderr,"error: not enough arguments in buildProtocolString()");
+      return false;
+    }else if(strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ){
+      fprintf(stderr,"error: buildProtocolString() not ended with protocol ending");
+      return false;
+    }else if(strcmp(protocolArray[0], PROTOCOL_MSG)!=0){
+      fprintf(stderr,"error: buildProtocolString() not started with protocol string");
       return false;
     }
+
     //COPY ALL ARGS AFTER MSG, UP TO BEFORE THE PROTOCOL FOOTER
     int i;
     for(i=1; i<arrayIndex-1 ;i++){
@@ -248,19 +272,40 @@ bool extractArgAndTestMSG(char *string, char *buffer){
     return true;
 }
 
-
+/*
+ * A function that builds a string in the format "PROTOCOL MIDDLE \R\N\R\N"
+ * returns true unless buffer is NULL
+ */
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
-  if(buffer==NULL) {printf("buffer is null\n"); return 0;}
-  printf("middle is %s\n", middle);
+  if(buffer==NULL||protocol == NULL || middle == NULL) {
+    fprintf(stderr,"error: buildProtocolString() on a NULL or missing parameter");
+    return false;
+  }
+  if( (strcmp(buffer," ")==0 ) || (strcmp(protocol," ")==0 ) || (strcmp(middle," ")==0 )) {
+    fprintf(stderr,"error: buildProtocolString() on a space char");
+    return false;
+  }
+
   strcat(buffer,protocol);
   strcat(buffer," ");
   strcat(buffer, middle);
   strcat(buffer," \r\n\r\n");
-  return 1;
+  return true;
 }
 
+/*
+ * A function that builds a string in the format "MSG TOPERSON FROMPERSON MSG \R\N\R\N"
+ * returns true unless buffer is NULL.
+ */
 bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* message){
-    if(buffer ==NULL)return 0;
+    if(buffer==NULL || toPerson == NULL || fromPerson==NULL || message==NULL){
+        fprintf(stderr,"error: buildMSGPROTOCOL() on a NULL or missing parameter");
+        return 0;
+    }
+    if( (strcmp(buffer," ")==0 ) || (strcmp(toPerson," ")==0 ) || (strcmp(fromPerson," ")==0 ) || (strcmp(message," ")==0 )) {
+    fprintf(stderr,"error: buildProtocolString() on a space char");
+    return false;
+  }
     memset(&buffer,0,strlen(buffer));
     strcat(buffer,PROTOCOL_MSG);
     strcat(buffer," ");
@@ -272,6 +317,8 @@ bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* messag
     strcat(buffer," \r\n\r\n");
     return 1;
 }
+
+void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3);
 
 /* Process a string containing the "/chat" command */
 bool processChatCommand(int fd, char* string, char* thisUserName){
@@ -414,4 +461,31 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
 
   }
 
+}
+
+
+
+int initArgArray(int argc, char **argv, char **argArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")!=0 && strcmp(argv[i], "-v")!=0){
+            argArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    argArray[argCount] = NULL;
+    return argCount;
+}
+int initFlagArray(int argc, char **argv, char **flagArray){
+    int i;
+    int argCount = 0;
+    for (i = 0; i<argc; i++){
+        if (strcmp(argv[i], "-h")==0 || strcmp(argv[i], "-v")==0 || strcmp(argv[i], "-c")==0){
+            flagArray[argCount] = argv[i];
+            argCount++;
+        }
+    }
+    flagArray[argCount] = NULL;
+    return argCount;
 }

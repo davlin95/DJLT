@@ -22,8 +22,37 @@ void killClientProgramHandler(int fd){
 }
 
 int main(int argc, char* argv[]){ 
-  char* username = "ELCHAPO1";
-  char *portNumber = "1234"; 
+  int argCounter; 
+  bool verbose;
+  bool newUser;
+  char *username;
+  char *portNumber;
+  char * argArray[1024];
+  char * flagArray[1024];
+  memset(&argArray, 0, sizeof(argArray));
+  memset(&flagArray, 0, sizeof(flagArray));
+  argCounter = initArgArray(argc, argv, argArray);
+  if (argCounter != 4){
+    USAGE("./client");
+    exit(EXIT_FAILURE);
+  } 
+  initFlagArray(argc, argv, flagArray);
+  argCounter = 0;
+  while (flagArray[argCounter] != NULL){
+    if (strcmp(flagArray[argCounter], "-h")==0){
+      USAGE("./client");
+      exit(EXIT_SUCCESS);
+    }
+    if (strcmp(flagArray[argCounter], "-v")==0){
+      verbose = true;
+    }
+    if (strcmp(flagArray[argCounter], "-c")==0){
+      newUser = true;
+    }
+    argCounter++;
+  }
+  portNumber = argArray[2];
+  username = argArray[1];
   char message[1024]; 
   int step = 0;
   signal(SIGINT,killClientProgramHandler); 
@@ -95,7 +124,16 @@ int main(int argc, char* argv[]){
                 displayClientConnectedTime(sessionLength);
               }
             }
-            printf("Data received: %s\n",message);
+            if (checkVerb(PROTOCOL_UTSIL, message)){
+              int length = strlen(message) - 4;
+              char *protocolTerminator = (void *)message + length;
+              if (strcmp(protocolTerminator, "\r\n\r\n") == 0){
+                  char *messagePtr = (void *)message + 6;
+                  printf("CONNECTED USERS\n");
+                  write(1, messagePtr, length-3);
+              }
+            }
+            //printf("Data received: %s\n",message);
             memset(&message,0,1024);   
           }
           if((serverBytes=read(clientFd,message,1))==0){
@@ -105,7 +143,7 @@ int main(int argc, char* argv[]){
           }
         }
 
-
+ 
         /***********************************/
         /*   POLLIN FROM STDIN            */
         /*********************************/
@@ -116,13 +154,16 @@ int main(int argc, char* argv[]){
           printf("/***********************************/\n");
         
           int bytes=0;
-          char stdinBuffer[1024];
+          char stdinBuffer[1024]; 
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             printf("reading from client STDIN...\n");
             /*send time verb to server*/
             if(strcmp(stdinBuffer,"/time\n")==0){
               protocolMethod(clientFd, TIME, NULL);
+            } 
+            if(strcmp(stdinBuffer,"/listu\n")==0){
+              protocolMethod(clientFd, LISTU, NULL);
             } 
 
             /****** @TODO Make logout connected to BYE\r\n\r\n **********/
