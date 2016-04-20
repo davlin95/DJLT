@@ -67,8 +67,7 @@ int main(int argc, char* argv[]){
       printf("Failed to login properly\n");
       close(clientFd);
       exit(0);
-   }
-
+  }
   if (makeNonBlocking(clientFd)<0){   
     fprintf(stderr, "Error making socket nonblocking.\n");
   }
@@ -96,7 +95,7 @@ int main(int argc, char* argv[]){
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
-        fprintf(stderr,"poll():%s",strerror(errno));
+        fprintf(stderr,"poll():%s\n",strerror(errno));
         break;
       }
       int i;
@@ -105,7 +104,7 @@ int main(int argc, char* argv[]){
           continue; 
         } 
         if(pollFds[i].revents!=POLLIN){
-          fprintf(stderr,"poll.revents:%s",strerror(errno));
+          fprintf(stderr,"poll.revents:%s\n",strerror(errno));
           break;
         }
         /***********************************/
@@ -142,7 +141,6 @@ int main(int argc, char* argv[]){
             exit(0);
           }
         }
-
  
         /***********************************/
         /*   POLLIN FROM STDIN            */
@@ -154,31 +152,31 @@ int main(int argc, char* argv[]){
           printf("/***********************************/\n");
         
           int bytes=0;
-          char stdinBuffer[1024]; 
+          char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             printf("reading from client STDIN...\n");
             /*send time verb to server*/
             if(strcmp(stdinBuffer,"/time\n")==0){
-              protocolMethod(clientFd, TIME, NULL);
-            } 
-            if(strcmp(stdinBuffer,"/listu\n")==0){
-              protocolMethod(clientFd, LISTU, NULL);
-            } 
-
-            /****** @TODO Make logout connected to BYE\r\n\r\n **********/
-            if(strcmp(stdinBuffer,"/logout\n")==0){
-              close(clientFd);
-              exit(EXIT_SUCCESS);
-              break; 
-            }else if(strstr(stdinBuffer,"/chat")!=NULL){
-              
-
+              protocolMethod(clientFd, TIME, NULL, NULL, NULL);
+            }  
+            else if(strcmp(stdinBuffer,"/listu\n")==0){
+              protocolMethod(clientFd, LISTU, NULL, NULL, NULL);
             }
-            /***********TEST COMMUNICATING WITH SERVER ****************/
-            send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
-            printf("sent string :%s from client to server\n",stdinBuffer);
-            memset(&stdinBuffer,0,strlen(stdinBuffer));
+            else if(strcmp(stdinBuffer,"/logout\n")==0){
+              protocolMethod(clientFd, BYE, NULL, NULL, NULL);
+              waitForByeAndClose(clientFd);
+              exit(EXIT_SUCCESS);
+            }
+            else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
+            	processChatCommand(clientFd,stdinBuffer,username);
+            }
+            else{
+            	/***********TEST COMMUNICATING WITH SERVER ****************/
+            	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
+            	printf("sent string :%s from client to server\n",stdinBuffer);
+            	memset(&stdinBuffer,0,strlen(stdinBuffer));
+            }
           }
         }
         /* MOVE ON TO NEXT POLL FD */

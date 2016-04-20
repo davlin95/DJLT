@@ -320,7 +320,9 @@ bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* messag
 
 void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3);
 
-/* Process a string containing the "/chat" command */
+/* 
+ * Process a string containing the "/chat" command, includes testing for errors. 
+ */
 bool processChatCommand(int fd, char* string, char* thisUserName){
     char * savePtr;
     char *token;
@@ -341,14 +343,15 @@ bool processChatCommand(int fd, char* string, char* thisUserName){
     }
 
     //ERROR CHECK THE INPUT, 
-    if ( arrayIndex < 2 ||
-         strcmp(protocolArray[0], "/chat")!=0 ){
+    if ( arrayIndex < 2 ||strcmp(protocolArray[0], "/chat")!=0 ){
+      fprintf(stderr,"processChatCommand(): array missing parameters or not chat string\n");
       return false;
     }
 
     // BUILD THE TRAILING MESSAGE INTO ONE ARGUMENT STRING
     char messageReplica[1024];
     memset(&messageReplica,0,1024);
+
     int i;
     for(i=2;i<arrayIndex;i++){
         strcat(messageReplica,protocolArray[i]);
@@ -362,7 +365,6 @@ bool processChatCommand(int fd, char* string, char* thisUserName){
     protocolMethod(fd,MSG,protocolArray[1],thisUserName,messageReplica);
     return true;
 }
-
 
 void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3){
   char buffer[1032];
@@ -421,6 +423,7 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
                 buildMSGProtocol(buffer,optionalString,optionalString2, optionalString3);
                 send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
+
    /* case UOFF:   
                 send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
@@ -457,14 +460,14 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
     case ERR0:   
                 send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-
-
   }
 
 }
 
 
-
+/*
+ * returns the argc+1, for the null that is attached. 
+ */
 int initArgArray(int argc, char **argv, char **argArray){
     int i;
     int argCount = 0;
@@ -474,9 +477,10 @@ int initArgArray(int argc, char **argv, char **argArray){
             argCount++;
         }
     }
-    argArray[argCount] = NULL;
+    argArray[argCount++] = NULL;
     return argCount;
 }
+
 int initFlagArray(int argc, char **argv, char **flagArray){
     int i;
     int argCount = 0;

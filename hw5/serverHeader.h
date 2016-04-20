@@ -64,6 +64,21 @@ Client *createClient(){
 
 void destroyClientMemory(Client* user){
   if(user != NULL){
+
+    if(user->prev !=NULL){
+      user->prev->next = user->next;
+    }
+    if(user->next !=NULL){
+      user->next->prev = user->prev;
+    }
+    if(user == clientHead && user->prev != NULL){
+      clientHead = user->prev;
+    }else if(user == clientHead && user->next != NULL){
+      clientHead = user->next;
+    }else if(user== clientHead){
+      clientHead = NULL;
+    }
+
     free(user->session->ipAddress);
     free(user->session);
     free(user);
@@ -162,9 +177,18 @@ bool verifyPassword(char* password);
  void disconnectUser(char* user){
   Client* loggedOffClient = getClientByUsername(user);
   if(loggedOffClient!=NULL){
+    //SEND BYE BACK TO USER
+    printf("sending bye to client's descriptor %d\n",loggedOffClient->session->commSocket);
+    protocolMethod( (loggedOffClient->session->commSocket),BYE,NULL,NULL,NULL); 
+
+    //CLOSING USER SOCKET
+    printf("closing client's descriptor %d\n",loggedOffClient->session->commSocket);
+    close(loggedOffClient->session->commSocket); 
+
+    //MUST BE LAST STEP 
+    printf("Destroying Client: %s",loggedOffClient->userName);
     destroyClientMemory(loggedOffClient);
   }
-  printf("Destroyed Client: %s",loggedOffClient->userName);
  }
 
 /*
@@ -547,6 +571,12 @@ int makeNonBlocking(int fd){
     return -1;
   }
   return 0;
+}
+
+int makeBlocking(int fd){
+  int flags = fcntl(fd, F_GETFL);
+  fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+  return 1;
 }
 /*
  *A function that creates and binds the server socket, and sets it to listening

@@ -26,7 +26,7 @@ int main(int argc, char* argv[]){
   memset(&argArray, 0, sizeof(argArray));
   memset(&flagArray, 0, sizeof(flagArray));
   argCounter = initArgArray(argc, argv, argArray);
-  if (argCounter < 3 || argCounter > 4){
+  if (argCounter < 4 || argCounter > 5){
     USAGE("./server");
     exit(EXIT_FAILURE); 
   } 
@@ -146,7 +146,7 @@ int main(int argc, char* argv[]){
             /*************** EXECUTE STDIN COMMANDS ***********/
             recognizeAndExecuteStdin(stdinBuffer);
             memset(&stdinBuffer,0,strlen(stdinBuffer));
-          }
+          } 
         }
         
         /**************************************/
@@ -163,6 +163,8 @@ int main(int argc, char* argv[]){
           /* READ FROM CLIENT   */
           /*********************/
           while(1){ 
+
+            /*** STORE CLIENT BYTES INTO BUFFER ****/
             memset(&clientMessage,0,strlen(clientMessage));
             bytes = read(pollFds[i].fd,clientMessage,sizeof(clientMessage));
             if(bytes<0){
@@ -175,18 +177,25 @@ int main(int argc, char* argv[]){
               doneReading=1;
               break;
             }  
+
+            /**** TEST CLIENT BYTES *****/
             if (checkVerb(PROTOCOL_TIME, clientMessage)){
               char sessionlength[1024];
               memset(&sessionlength, 0, 1024);
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength))
                 protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL);
             }
-            if (checkVerb(PROTOCOL_LISTU, clientMessage)){
+            else if (checkVerb(PROTOCOL_LISTU, clientMessage)){
               char usersBuffer[1024];
               memset(&usersBuffer, 0, 1024);
               if (buildUtsilArg(usersBuffer))
                 protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL);
             }
+            else if (checkVerb(PROTOCOL_BYE, clientMessage)){
+              doneReading=1;
+              printf("Client said: %s", clientMessage);
+              break;
+            }  
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -202,8 +211,8 @@ int main(int argc, char* argv[]){
          /* IF CLIENT LOGGED OFF */
          /******************************/
          if(doneReading){
-           printf("closing client descriptor %d\n",pollFds[i].fd);
-           close(pollFds[i].fd); //IMPLEMENT DISCONNECTUSER();
+           printf("Closing session with client: %d\n",pollFds[i].fd);
+           disconnectUser(getClientByFd(pollFds[i].fd)->userName);
            pollFds[i].fd=-1;
            compactDescriptors=1;
          } 

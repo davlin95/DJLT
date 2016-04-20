@@ -160,6 +160,28 @@ int makeNonBlocking(int fd){
   return 0;
 }
 
+int makeBlocking(int fd){
+  int flags = fcntl(fd, F_GETFL);
+  fcntl(fd, F_SETFL, flags & ~O_NONBLOCK);
+  return 1;
+}
+
+void waitForByeAndClose(int clientFd){
+  //WAITING FOR BYE FROM SERVER
+  char byeBuffer[1024];
+  memset(&byeBuffer,0,1024);
+  makeBlocking(clientFd);
+              
+  int byeBytes=-1;  
+  byeBytes = read(clientFd,&byeBuffer,1024);
+  if(byeBuffer > 0){
+    if(checkVerb(PROTOCOL_BYE,byeBuffer)){
+      printf("Valid BYE FROM SERVER\n");
+    }
+  }
+  printf("CLOSING SERVER\n");
+  close(clientFd);
+}
 
 bool protocol_HI_Helper(char* string, char *username){
     char usernameBuffer[1024];
@@ -178,12 +200,12 @@ bool performLoginProcedure(int fd,char* username){
   char protocolBuffer[1024];
   memset(&protocolBuffer,0,1024);
   int bytes=-1;
-  protocolMethod(fd, WOLFIE, NULL);
+  protocolMethod(fd, WOLFIE, NULL, NULL, NULL);
   bytes = read(fd,&protocolBuffer,1024);
   if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
     return false;
   }else{
-    protocolMethod(fd, IAM, username);
+    protocolMethod(fd, IAM, username, NULL,NULL);
   }
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
