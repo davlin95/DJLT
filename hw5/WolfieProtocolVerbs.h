@@ -232,7 +232,7 @@ bool extractArgAndTest(char *string, char *buffer){
  *  A function that takes a string and tests it for the structure of "MSG TOPERSON FROMPERSON MSG \r\n\r\n"
  *  returns true if passes format test. copies the message into the buffer.
  */
-bool extractArgAndTestMSG(char *string, char *buffer){
+bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *messageBuffer){
     char * savePtr;
     char *token;
     int arrayIndex = 0;
@@ -242,7 +242,6 @@ bool extractArgAndTestMSG(char *string, char *buffer){
     //CLEAR BUFFERS
     memset(&tempString, 0, 1024);
     memset(&protocolArray, 0, 1024);
-    memset(&string, 0, strlen(string));
 
     //CHOP UP THE STRING
     strcpy(tempString, string);
@@ -254,20 +253,52 @@ bool extractArgAndTestMSG(char *string, char *buffer){
 
     //ERROR CHECK THE INPUT, 
     if ( arrayIndex < 5 ){
-      fprintf(stderr,"error: not enough arguments in buildProtocolString()");
+      fprintf(stderr,"extractArgAndTestMSG() error: not enough arguments in buildProtocolMSGString");
       return false;
     }else if(strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ){
-      fprintf(stderr,"error: buildProtocolString() not ended with protocol ending");
+      fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not ended with protocol ending");
       return false;
     }else if(strcmp(protocolArray[0], PROTOCOL_MSG)!=0){
-      fprintf(stderr,"error: buildProtocolString() not started with protocol string");
+      fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not started with protocol string");
       return false;
     }
 
-    //COPY ALL ARGS AFTER MSG, UP TO BEFORE THE PROTOCOL FOOTER
+    printf("copying to\n");
+    //COPY THE TO PERSON IF POSSIBLE
+    if(toBuffer!=NULL){
+      strcpy(toBuffer,protocolArray[1]);
+      printf("extractArgAndTestMSG() copied TO:%s\n",toBuffer);
+
+      /*
+      memset(toBuffer,'y',strlen(toBuffer));
+      printf("toBuffer is: %s\n",toBuffer);
+      memset(&toBuffer,'x',strlen(toBuffer));
+      printf("toBuffer is: %s\n",toBuffer); */
+
+    }
+
+    printf("copying from\n");
+    //COPY THE FROM PERSON IF POSSIBLE 
+    if(fromBuffer!=NULL){
+      printf("copying from protocol: %s\n",protocolArray[2]);
+      printf("copying to fromBuffer: %s\n",fromBuffer);
+      strcpy(fromBuffer,protocolArray[2]);
+      printf("extractArgAndTestMSG() copied FROM:%s\n",fromBuffer);
+    }
+    //COPY ALL ARGS AFTER FROM PERSON, UP TO BEFORE THE PROTOCOL FOOTER
+    printf("copying message\n");
     int i;
-    for(i=1; i<arrayIndex-1 ;i++){
-      strcat(buffer, protocolArray[i]);
+    for(i=3; i<arrayIndex-1 ;i++){
+      if(messageBuffer!=NULL){
+          strcat(messageBuffer, protocolArray[i]);
+          //DON"T ADD SPACE AFTER LAST MESSAGE WORD
+          if(i!=arrayIndex-2){
+            strcat(messageBuffer," ");
+          }
+      }
+    }
+    if(messageBuffer!=NULL){
+      printf("extractArgAndTestMSG() copied MESSAGE:%s",messageBuffer);
     }
     return true;
 }
@@ -285,7 +316,7 @@ bool buildProtocolString(char* buffer, char* protocol, char* middle){
     fprintf(stderr,"error: buildProtocolString() on a space char");
     return false;
   }
-
+  //BUILD STRING 
   strcat(buffer,protocol);
   strcat(buffer," ");
   strcat(buffer, middle);
@@ -317,6 +348,7 @@ bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* messag
     strcat(buffer," \r\n\r\n");
     return 1;
 }
+
 
 void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3);
 

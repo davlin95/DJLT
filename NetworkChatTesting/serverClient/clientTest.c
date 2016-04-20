@@ -13,6 +13,8 @@
 #include "../../hw5/clientHeader.h" 
 
 int clientFd=-1; 
+bool existsChat=false;
+
 void killClientProgramHandler(int fd){  
     if(fd >0){ 
       close(fd);
@@ -21,7 +23,13 @@ void killClientProgramHandler(int fd){
     exit(0);
 }
 
+void handleKilledChat(){
+	existsChat = false;
+	printf("chat died\n");
+}
+
 int main(int argc, char* argv[]){ 
+  signal(SIGCHLD,handleKilledChat);
   int argCounter; 
   bool verbose;
   bool newUser;
@@ -97,8 +105,8 @@ int main(int argc, char* argv[]){
       if(pollStatus<0){
         fprintf(stderr,"poll():%s\n",strerror(errno));
         break;
-      }
-      int i;
+      } 
+      int i; 
       for(i=0;i<pollNum;i++){
         if(pollFds[i].revents==0){
           continue; 
@@ -111,18 +119,18 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
         if(pollFds[i].fd == clientFd){
-          printf("\n/***********************************/\n");
+          printf("\n/***********************************/\n"); 
           printf("/*   SERVER TALKING TO THIS CLIENT   */\n");
           printf("/***********************************/\n");
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){
             if (checkVerb(PROTOCOL_EMIT, message)){
-              char sessionLength[1024];
+              char sessionLength[1024]; 
               memset(&sessionLength, 0, 1024);
               if (extractArgAndTest(message, sessionLength)){
                 displayClientConnectedTime(sessionLength);
-              }
-            }
+              }   
+            } 
             else if (checkVerb(PROTOCOL_UTSIL, message)){
               int length = strlen(message) - 4;
               char *protocolTerminator = (void *)message + length;
@@ -130,7 +138,7 @@ int main(int argc, char* argv[]){
                   char *messagePtr = (void *)message + 6;
                   printf("CONNECTED USERS\n");
                   write(1, messagePtr, length-3);
-              }
+              } 
             }
             else if (checkVerb(PROTOCOL_BYE, message)){
               printf("RECEIVED BYE FROM SERVER\n");
@@ -138,8 +146,20 @@ int main(int argc, char* argv[]){
               exit(EXIT_SUCCESS);
             }
             //IF RECEIVED MSG BACK FROM SERVER
-            else if (  ){
-            	printf("Received MSG from server\nCreating Xterm\n");
+            else if ( extractArgAndTestMSG(message,NULL,NULL,NULL) ){
+            	printf("TESTING RESULTS OF MSG PROTOCOL FROM SERVER");
+            	char toUser[1024];
+            	char fromUser[1024]; 
+            	char messageFromUser[1024];
+ 
+            	memset(&toUser,0,strlen(toUser));
+            	memset(&fromUser,0,strlen(fromUser));
+            	memset(&messageFromUser,0,strlen(messageFromUser));
+
+            	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
+            		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
+            	}
+            	printf("Creating Xterm\n");
             	createXterm();
             }
 

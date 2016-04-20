@@ -187,7 +187,7 @@ int main(int argc, char* argv[]){
               memset(&sessionlength, 0, 1024);
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength))
                 protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL);
-            }
+            } 
             else if (checkVerb(PROTOCOL_LISTU, clientMessage)){
               char usersBuffer[1024];
               memset(&usersBuffer, 0, 1024);
@@ -198,7 +198,29 @@ int main(int argc, char* argv[]){
               doneReading=1;
               printf("BYE PROTOCOL, Client said: %s", clientMessage);
               break; 
-            }   
+            }else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
+              printf("GOT MSG!\n");
+              char msgToBuffer[1024];
+              char msgFromBuffer[1024];
+              char msgBuffer[1024];
+
+              memset(&msgToBuffer,0,strlen(msgToBuffer));
+              memset(&msgFromBuffer,0,strlen(msgFromBuffer));
+              memset(&msgBuffer,0,strlen(msgBuffer));
+               
+              extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
+              printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
+              Client* toUser= getClientByUsername(msgToBuffer);
+              if( toUser!=NULL){
+                char messageResponse[1024];
+                memset(&messageResponse,0,1024);
+                buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
+                printf("Sending the response MSG to both clients:%s and %s\n", toUser->userName, getClientByFd(pollFds[i].fd)->userName);
+                send(toUser->session->commSocket,messageResponse,strlen(messageResponse),0);
+                send(pollFds[i].fd,messageResponse,strlen(messageResponse),0);
+                printf("Finished sending to clients\n");
+              }
+            }
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -229,12 +251,13 @@ int main(int argc, char* argv[]){
         compactDescriptors=0;
         compactPollDescriptors();
       }
+
     }/* FOREVER RUNNING LOOP */ 
 
    
   /************************/
   /* FINAL EXIT CLEANUP  */
-  /**********************/
+  /**********************/ 
   if(serverFd>0){
     close(serverFd);
     printf("closed serverFd\n");
