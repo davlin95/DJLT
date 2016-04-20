@@ -174,12 +174,13 @@ bool verifyPassword(char* password);
  * A function that disconnects users
  */
  Client* getClientByUsername(char* user);
+
  void disconnectUser(char* user){
   Client* loggedOffClient = getClientByUsername(user);
   if(loggedOffClient!=NULL){
     //SEND BYE BACK TO USER
     printf("sending bye to client's descriptor %d\n",loggedOffClient->session->commSocket);
-    protocolMethod( (loggedOffClient->session->commSocket),BYE,NULL,NULL,NULL); 
+    protocolMethod((loggedOffClient->session->commSocket),BYE,NULL,NULL,NULL); 
 
     //CLOSING USER SOCKET
     printf("closing client's descriptor %d\n",loggedOffClient->session->commSocket);
@@ -195,6 +196,13 @@ bool verifyPassword(char* password);
  * A function that disconnects all connected users. 
  */
  void disconnectAllUsers(){
+   Client* clientPtr = clientHead;
+   Client* logginOffUser;
+   while(clientPtr!=NULL){
+     logginOffUser= clientPtr;
+     clientPtr= clientPtr->next;
+     disconnectUser(logginOffUser->userName);
+   }
 
  }
 /*
@@ -254,17 +262,6 @@ void processUsersRequest(){
  */
  void controlC();
 
-/*
- * A function that closes the connection socket
- */
- void closeSocket();
-
-/*
- * A function that closes all the available socket connections
- */
- void closeAllSockets();
-
-
  					/********* BUILTIN COMMANDS ********/
  /* 
   * A help menu function for server
@@ -290,7 +287,9 @@ void processUsers();
   * A function that shuts down the server
   */ 
  void processShutdown(){
+   printf("SHUTTING DOWN()\n");
    disconnectAllUsers();
+   printf("\nEXITING\n");
    exit(0);
  }
 
@@ -615,12 +614,20 @@ int createBindListen(char* portNumber, int serverFd){
             /**********************************************************************/
 
 bool buildUtsilArg(char *argBuffer){
-    if(argBuffer==NULL) {printf("argBuffer is null\n"); return 0;} 
+  // CHECK FOR ERRORS
+    if(argBuffer==NULL) {
+      fprintf(stderr,"buildUtsilArg(): argBuffer is null\n");
+      return 0;
+    } 
+
+  // LOOP THRU USERS
     char clientUsername[1024];
     Client* clientPtr;
     for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
         memset(&clientUsername, 0, 1024);
         strcpy(clientUsername, clientPtr->userName);
+
+        //SHOULD WE 
         if (clientPtr->next != NULL)
             strcat(clientUsername, "\r\n");
         strcat(argBuffer, clientUsername);

@@ -123,7 +123,7 @@ int main(int argc, char* argv[]){
                 displayClientConnectedTime(sessionLength);
               }
             }
-            if (checkVerb(PROTOCOL_UTSIL, message)){
+            else if (checkVerb(PROTOCOL_UTSIL, message)){
               int length = strlen(message) - 4;
               char *protocolTerminator = (void *)message + length;
               if (strcmp(protocolTerminator, "\r\n\r\n") == 0){
@@ -132,11 +132,22 @@ int main(int argc, char* argv[]){
                   write(1, messagePtr, length-3);
               }
             }
+            else if (checkVerb(PROTOCOL_BYE, message)){
+              printf("RECEIVED BYE FROM SERVER\n");
+              close(clientFd);
+              exit(EXIT_SUCCESS);
+            }
+            //IF RECEIVED MSG BACK FROM SERVER
+            else if (  ){
+            	printf("Received MSG from server\nCreating Xterm\n");
+            	createXterm();
+            }
+
             //printf("Data received: %s\n",message);
             memset(&message,0,1024);   
           }
           if((serverBytes=read(clientFd,message,1))==0){
-            printf("CLOSING CLIENTFD\n");
+            printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
             close(clientFd); 
             exit(0);
           }
@@ -150,7 +161,7 @@ int main(int argc, char* argv[]){
           printf("\n/***********************************/\n");
           printf("/*   STDIN INPUT :                  */\n");
           printf("/***********************************/\n");
-        
+         
           int bytes=0;
           char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);

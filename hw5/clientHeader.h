@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 #include "WolfieProtocolVerbs.h"
+#include "xtermHeader.h"
  
 #define USAGE(name) do {                                                                  \
         fprintf(stderr,                                                                         \

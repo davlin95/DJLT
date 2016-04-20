@@ -272,6 +272,7 @@ int statExists(char* dir){
   }
   return 0;
 }
+
 char *checkQuote(char *cmd){
   char *firstQuote;
   char *nextQuote;

@@ -178,7 +178,10 @@ int main(int argc, char* argv[]){
               break;
             }  
 
-            /**** TEST CLIENT BYTES *****/
+            /****************************/
+            /* CLIENT BUILT IN REQUESTS */
+            /***************************/
+
             if (checkVerb(PROTOCOL_TIME, clientMessage)){
               char sessionlength[1024];
               memset(&sessionlength, 0, 1024);
@@ -193,9 +196,9 @@ int main(int argc, char* argv[]){
             }
             else if (checkVerb(PROTOCOL_BYE, clientMessage)){
               doneReading=1;
-              printf("Client said: %s", clientMessage);
-              break;
-            }  
+              printf("BYE PROTOCOL, Client said: %s", clientMessage);
+              break; 
+            }   
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
             /*******************************/
@@ -206,6 +209,7 @@ int main(int argc, char* argv[]){
             /**************************************/
             /* SEND RESPONSE MESSAGE TO CLIENT   */
             /************************************/
+
          }
          /********************************/
          /* IF CLIENT LOGGED OFF */
@@ -215,7 +219,8 @@ int main(int argc, char* argv[]){
            disconnectUser(getClientByFd(pollFds[i].fd)->userName);
            pollFds[i].fd=-1;
            compactDescriptors=1;
-         } 
+         }
+
         }
 
       }// MOVE ON TO NEXT POLL FD EVENT
