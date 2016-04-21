@@ -125,7 +125,7 @@ int makeReusable(int fd){
  */
 int createAndConnect(char* portNumber, int clientFd){
   struct addrinfo resultsStruct;
-  struct addrinfo* results = &resultsStruct;
+  struct addrinfo* results=&resultsStruct;
   if((results = buildAddrInfoStructs(results, portNumber)) == NULL){
     return -1;
   }

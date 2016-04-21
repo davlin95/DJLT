@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h> 
 #include <sys/socket.h>
-#include <netinet/in.h>
+#include <netinet/in.h> 
 #include <string.h>
 #include <errno.h> 
 #include <netdb.h>
@@ -15,7 +15,7 @@
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
 
-
+ 
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
@@ -40,10 +40,10 @@ int main(int argc, char* argv[]){
     if (strcmp(flagArray[argCounter], "-v")==0){
       verbose = true;
     }
-    argCounter++;
+    argCounter++; 
   }
-  portNumber = argArray[1];
-  strcpy(messageOfTheDay, argArray[2]);
+  portNumber = argArray[1];  
+  strcpy(messageOfTheDay, argArray[2]); 
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];  
   signal(SIGINT,killServerHandler); 

@@ -550,7 +550,7 @@ int findSocketandBind(struct addrinfo *results, int serverFd){
       fprintf(stderr,"close(): %s\n",strerror(errno));
       return -1;
     }
-  }
+  } 
   return serverFd;
 }
 /*
@@ -584,14 +584,17 @@ int makeBlocking(int fd){
  *@return: serverFd, -1 otherwise
  */
 int createBindListen(char* portNumber, int serverFd){
-  struct addrinfo *results;
-  if ((results = buildAddrInfoStructs(results, portNumber)) == NULL)
+  struct addrinfo resultsStruct;
+  struct addrinfo *results=&resultsStruct;
+  if ((results = buildAddrInfoStructs(results, portNumber)) == NULL){
     return -1;
+  }
   if ((serverFd = findSocketandBind(results, serverFd)) < 0){
     freeaddrinfo(results);
     return -1;
   }
   if ((makeNonBlocking(serverFd))<0){
+    fprintf(stderr,"createBindListen(): error makeNonBlocking\n");
     freeaddrinfo(results);
     return -1;
   }
