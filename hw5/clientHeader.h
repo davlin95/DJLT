@@ -7,10 +7,20 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <time.h>
+#include <sys/poll.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 #include "WolfieProtocolVerbs.h"
 #include "xtermHeader.h"
+
+
+                /************************************/
+                /*  Global Structures               */
+                /************************************/
+struct pollfd pollFds[1024];
+int pollNum =0;
+
+
  
 #define USAGE(name) do {                                                                  \
         fprintf(stderr,                                                                         \

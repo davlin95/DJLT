@@ -7,8 +7,6 @@
 #include <stdlib.h> 
 #include <errno.h>
 #include <sys/fcntl.h>
-#include <sys/epoll.h>
-#include <sys/poll.h>
 #include <signal.h>
 #include "clientHeader.h" 
 
@@ -83,7 +81,6 @@ int main(int argc, char* argv[]){
    /*        IMPLEMENT POLL                 */
    /****************************************/
     /* Initialize Polls Interface*/
-    struct pollfd pollFds[1024];
     memset(pollFds, 0 , sizeof(pollFds));
     int pollStatus,pollNum=2;
 

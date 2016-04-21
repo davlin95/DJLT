@@ -2,7 +2,86 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
+int allChatFds[1024];
+char* allChatUsers[1024];
+int chatIndex =0;
 
+void setChatUser(char* username, int fd){
+	char* newUser = malloc((strlen(username)+1)*sizeof(int));
+	strcpy(newUser,username);
+
+	allChatFds[chatIndex]=fd;
+	allChatUsers[chatIndex]=newUser;
+	chatIndex++;
+}
+
+int getIndexFromFd(int fd){
+	int i;
+	for(i=0; i< 1024;i++){
+		if(allChatFds[i]==fd){
+			return i;
+		}
+	}
+	return -1;
+}
+
+bool deleteChatUserByUsername(char* username){
+	int fd = getFdFromusername(username);
+	if(fd<0){
+		fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
+		return false;
+	}
+	int index = getIndexFromFd(fd);
+	if(index<0){
+		fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
+		return false;
+	}
+	if(allChatUsers[index]!=NULL){
+		free(allChatUsers[index]);
+		allChatUsers[index]=NULL;
+	}else{
+		fprintf(stderr,"deleteChatUserByUsername(): no strings associated with this index\n");
+		return false;
+	}
+}
+
+
+void initializeChatGlobals(){
+	memset(allChatUsers,'\0',sizeof(allChatUsers));
+	memset(allChatFds,0,1024);
+}
+
+
+int getFdFromUsername(char* username){
+	if(username==NULL){
+		fprintf("getFdFromUsername(): input username is NULL\n");
+	}
+	int i;
+	for(i=0;i<1024;i++){
+		if(allChatUsers[i]!=NULL && (strcmp(username,allChatUsers[i])==0) ){
+		  if(allChatFds[i]>0)
+		  	return allChatFds[i];
+		}
+	}
+	//fprintf("getFdFromUsername(): username not found in list.\n");
+	return -1;
+}
+
+
+char* getUsernameFromFd(int fd){
+	if(fd <0){
+		fprintf("getUsernameFromFd(): input fd is erroneous\n");
+	}
+	int i;
+	for(i=0;i<1024;i++){
+		if(allChatFds[i]>0 && allChatFds[i]==fd ){
+		  if(allChatUsers[i]!=NULL)
+		  	return allChatUsers[i];
+		}
+	}
+	//fprintf("getFdFromUsername(): fd not found in list.\n");
+	return NULL;
+}
 
 void createSocketPair(int socketsArray[], int size){
 	if(size <2){
@@ -118,5 +197,7 @@ void createXterm(char * sendToUser){
 		execStatus = execvp( statFind("xterm",xtermString) ,xtermArgs);
 		if(execStatus<0)
 			fprintf(stderr,"createXterm():Failed to execute");
+	}else if(pid<0){
+		fprintf(stderr,"createXterm(): error forking\n");
 	}
 }
