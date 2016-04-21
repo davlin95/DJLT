@@ -27,7 +27,7 @@ void handleKilledChat(){
 	existsChat = false;
 	printf("chat died\n");
 }
-
+ 
 int main(int argc, char* argv[]){ 
   signal(SIGCHLD,handleKilledChat);
   int argCounter; 
@@ -99,10 +99,11 @@ int main(int argc, char* argv[]){
     if (makeNonBlocking(0)<0){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
-    int t=0;
+    int t=0;  
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
+      	printf("enountered poll error");
         fprintf(stderr,"poll():%s\n",strerror(errno));
         break;
       } 
@@ -158,9 +159,9 @@ int main(int argc, char* argv[]){
 
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
             		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
-            	}
+            	} 
             	printf("Creating Xterm\n");
-            	createXterm();
+            	createXterm(toUser); 
             }
 
             //printf("Data received: %s\n",message);
@@ -198,7 +199,7 @@ int main(int argc, char* argv[]){
               protocolMethod(clientFd, BYE, NULL, NULL, NULL);
               waitForByeAndClose(clientFd);
               exit(EXIT_SUCCESS);
-            }
+            } 
             else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
             	processChatCommand(clientFd,stdinBuffer,username);
             }

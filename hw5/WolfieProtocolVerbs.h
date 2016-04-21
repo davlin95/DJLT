@@ -270,10 +270,10 @@ bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *
       printf("extractArgAndTestMSG() copied TO:%s\n",toBuffer);
 
       /*
-      memset(toBuffer,'y',strlen(toBuffer));
-      printf("toBuffer is: %s\n",toBuffer);
-      memset(&toBuffer,'x',strlen(toBuffer));
-      printf("toBuffer is: %s\n",toBuffer); */
+      memset(toBuffer,'y',1024);
+      printf("toBuffer1 is: %s\n",toBuffer);
+      memset(&toBuffer,'x',1024);
+      printf("toBuffer2 is: %s\n",toBuffer); */
 
     }
 

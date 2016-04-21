@@ -124,7 +124,8 @@ int makeReusable(int fd){
  *@return: clientFD, -1 otherwise
  */
 int createAndConnect(char* portNumber, int clientFd){
-  struct addrinfo *results, *resultsPtr;
+  struct addrinfo resultsStruct;
+  struct addrinfo* results = &resultsStruct;
   if((results = buildAddrInfoStructs(results, portNumber)) == NULL){
     return -1;
   }
@@ -175,7 +176,7 @@ void waitForByeAndClose(int clientFd){
               
   int byeBytes=-1;  
   byeBytes = read(clientFd,&byeBuffer,1024);
-  if(byeBuffer > 0){
+  if(byeBytes > 0){
     if(checkVerb(PROTOCOL_BYE,byeBuffer)){
       printf("Valid BYE FROM SERVER\n");
     }
@@ -200,9 +201,9 @@ bool protocol_HI_Helper(char* string, char *username){
 bool performLoginProcedure(int fd,char* username){
   char protocolBuffer[1024];
   memset(&protocolBuffer,0,1024);
-  int bytes=-1;
   protocolMethod(fd, WOLFIE, NULL, NULL, NULL);
-  bytes = read(fd,&protocolBuffer,1024);
+  //int bytes=-1;
+  read(fd,&protocolBuffer,1024);
   if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
     return false;
   }else{
@@ -210,8 +211,11 @@ bool performLoginProcedure(int fd,char* username){
   }
   /*memset the protocol buffer so it can be reused for second verb*/
   memset(&protocolBuffer,0,1024);
-  bytes =-1;
+  int bytes =-1;
   bytes = read(fd,&protocolBuffer,1024);
+  if(bytes<0){
+    fprintf(stderr,"performLoginProcedure(): bytes read negative\n");
+  }
 
   if (strcmp(protocolBuffer, PROTOCOL_ERR0) == 0){
     printf("%s\n", protocolBuffer);

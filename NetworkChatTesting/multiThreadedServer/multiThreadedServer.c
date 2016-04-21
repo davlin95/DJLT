@@ -9,7 +9,7 @@
 #include <sys/types.h>
 #include <pthread.h>
 #include <sys/epoll.h>
-#include <sys/poll.h>
+#include <sys/poll.h> 
 #include <sys/fcntl.h>  
 #include <signal.h>
 #include "../../hw5/serverHeader.h" 
@@ -165,7 +165,7 @@ int main(int argc, char* argv[]){
           while(1){ 
 
             /*** STORE CLIENT BYTES INTO BUFFER ****/
-            memset(&clientMessage,0,strlen(clientMessage));
+            memset(&clientMessage,0, 1024);
             bytes = read(pollFds[i].fd,clientMessage,sizeof(clientMessage));
             if(bytes<0){
               if(errno!=EAGAIN){
@@ -199,15 +199,15 @@ int main(int argc, char* argv[]){
               printf("BYE PROTOCOL, Client said: %s", clientMessage);
               break; 
             }else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
-              printf("GOT MSG!\n");
+              printf("/---------GOT MSG!---------\\\n");
               char msgToBuffer[1024];
               char msgFromBuffer[1024];
               char msgBuffer[1024];
 
-              memset(&msgToBuffer,0,strlen(msgToBuffer));
-              memset(&msgFromBuffer,0,strlen(msgFromBuffer));
-              memset(&msgBuffer,0,strlen(msgBuffer));
-               
+              memset(&msgToBuffer,0,1024);
+              memset(&msgFromBuffer,0,1024);
+              memset(&msgBuffer,0,1024);
+
               extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
               printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
               Client* toUser= getClientByUsername(msgToBuffer);
@@ -241,11 +241,11 @@ int main(int argc, char* argv[]){
            disconnectUser(getClientByFd(pollFds[i].fd)->userName);
            pollFds[i].fd=-1;
            compactDescriptors=1;
+
          }
-
         }
-
       }// MOVE ON TO NEXT POLL FD EVENT
+      
       /* COMPACT POLLS ARRAY */
       if (compactDescriptors){
         compactDescriptors=0;
