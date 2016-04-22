@@ -22,10 +22,9 @@ void killClientProgramHandler(int fd){
 }
 
 void handleKilledChat(){
-	existsChat = false;
-	printf("chat died\n");
+  
 }
- 
+
 int main(int argc, char* argv[]){ 
   signal(SIGCHLD,handleKilledChat);
   initializeChatGlobals();

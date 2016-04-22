@@ -8,94 +8,24 @@
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include "chatHeader.h"
 
-
- void printStarHeadline(char* headline,int optionalFd){
-  printf("\n/***********************************/\n");
-  printf("/*\t");
-  if(optionalFd>=0){
-    printf("%-60s : %d",headline,optionalFd);
-  }
-  else {
-    printf("%-60s",headline);
-  }
-  printf("\t*/\n");
-  printf("/***********************************/\n");
-
- }
-
-void printUserIn(char* user){
-  if(user!=NULL){
-  	char promptArrow[1024];
-  	memset(&promptArrow,0,1024);
-  	strcpy(promptArrow,user);
-  	strcat(promptArrow," > ");
-  	printf("%s",promptArrow);
-  }
-}
-
-void printUserOut(char* user){
-  if(user!=NULL){
-  	char promptArrow[1024];
-  	memset(&promptArrow,0,1024);
-  	strcat(promptArrow," < ");
-  	strcpy(promptArrow,user);
-  	printf("%s",promptArrow);
-  }
-}
-
-                /************************************/
-                /*  Global Structures               */
-                /************************************/
-
-struct pollfd chatPollFds[1024];
-int chatPollNum=0;
-
-/*
- *A function that makes the socket non-blocking
- *@param fd: file descriptor of the socket
- *@return: 0 if success, -1 otherwise
- */
-int makeNonBlocking(int fd){
-  int flags;
-  if ((flags = fcntl(fd, F_GETFL, 0)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
-    return -1;
-  }
-  flags |= O_NONBLOCK;
-  if ((fcntl(fd, F_SETFL, flags)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
-    return -1;
-  }
-  return 0;
-}
-
-
-bool isAllDigits(char* string){
-  int i;
-  char* checkPtr=string;
-  for(i=0;i<strlen(string);i++){
-    if(*checkPtr>'9' || *checkPtr < '0' ){
-    	return false;
-    }
-  }
-  return true;
-}
-
+               
 
 int main(int argc, char ** argv) {
+  signal(SIGKILL, endProcessHandler);
+  signal(SIGINT,endProcessHandler);
 	//INITIALIZE THE PASSED SOCKET PAIR
-	int chatFd=0;
+	  chatFd=0;
     if(argv[1]!=NULL && isAllDigits(argv[1]) ){
     	chatFd = atoi(argv[1]);
-    	printf("chatFd is %d",chatFd);
     }else{
     	fprintf(stderr,"chat main(): error with argv 1\n");
     }
 
     //INITIALIZE COMMUNICATION USER
-	char otherUser[1024];
-	memset(otherUser,0,1024);
+	  char otherUser[1024];
+	  memset(otherUser,0,1024);
     if(argc>=2 && argv[2]!=NULL){
     	strcpy(otherUser,argv[2]);
     }else{
@@ -103,8 +33,8 @@ int main(int argc, char ** argv) {
     }
 
     //INITIALIZE ORIGINAL USER
-	char originalUser[1024];
-	memset(originalUser,0,1024);
+	  char originalUser[1024];
+	  memset(originalUser,0,1024);
     if(argc>=3 && argv[3]!=NULL){
     	strcpy(originalUser,argv[3]);
     }else{
@@ -116,7 +46,6 @@ int main(int argc, char ** argv) {
     	fprintf(stderr,"chat.c: error with makeNonBlockingForChat\n");
     }
 
-    printUserIn(otherUser); 
 
 	 /****************************************/
     /*        IMPLEMENT POLL                */
@@ -177,7 +106,7 @@ int main(int argc, char ** argv) {
             exit(0);
           }
         }
- 
+        
         /***********************************/
         /*   POLLIN FROM STDIN            */
         /*********************************/
