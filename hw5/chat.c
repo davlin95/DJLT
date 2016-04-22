@@ -86,7 +86,7 @@ int main(int argc, char ** argv) {
         } 
         if(chatPollFds[i].revents!=POLLIN){
           fprintf(stderr,"poll.revents:%s\n",strerror(errno));
-          break;
+          break; 
         } 
         /***********************************/
         /*   POLLIN FROM CHATFD           */

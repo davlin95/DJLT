@@ -1,5 +1,14 @@
 #include "clientHeader.h"
 
+
+					/*************************/
+					/*     GLOBALS CHAT     */
+					/***********************/
+int allChatFds[1024];
+pid_t xtermArray[1024];
+char* allChatUsers[1024];
+int chatIndex =0;
+
  					/************************************************/
                     /*           XTERM CHAT PROGRAM                */
                     /***********************************************/
@@ -23,31 +32,28 @@ int makeNonBlockingForChat(int fd){
   return 1;
 }
 
-int allChatFds[1024];
-char* allChatUsers[1024];
-int chatIndex =0;
-
-
-void setChatUser(char* username, int fd){
+void setChatUser(char* username, int fd, pid_t xtermProcess){
   char* newUser = malloc((strlen(username)+1)*sizeof(int));
   strcpy(newUser,username);
 
+  //ADD TO GLOBAL DATA STRUCTURES
   allChatFds[chatIndex]=fd;
   allChatUsers[chatIndex]=newUser;
+  xtermArray[chatIndex]=xtermProcess;
   chatIndex++;
-
 
   if (makeNonBlockingForChat(fd)<0){ 
     fprintf(stderr, "Error making fd nonblocking.\n");
   }
 
-  //ADD TO GLOBAL STRUCT 
+  //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
   clientPollFds[clientPollNum].fd = fd;
   clientPollFds[clientPollNum].events = POLLIN;
   clientPollNum++;
   printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
 
 }
+
 
 int getChatFdFromUsername(char* username){
   if(username==NULL){
@@ -60,7 +66,6 @@ int getChatFdFromUsername(char* username){
         return allChatFds[i];
     }
   }
-  //fprintf("getFdFromUsername(): username not found in list.\n");
   return -1;
 }
 
@@ -76,8 +81,20 @@ char* getChatUsernameFromChatFd(int fd){
         return allChatUsers[i];
     }
   }
-  //fprintf("getFdFromUsername(): fd not found in list.\n");
   return NULL;
+}
+
+/*
+ * A function that gets the chat index associated with the pid, if not found returns -1;
+ */ 
+int getChatIndexOfPid(pid_t pid){
+	int i;
+	for(i=0;i<1024;i++){
+		if(xtermArray[i]==pid){
+			return i;
+		}
+	}
+	return -1;
 }
 
 /*
@@ -94,6 +111,9 @@ int getChatIndexFromFd(int fd){
   return -1;
 }
 
+/*
+ * A function that searches for the corresponding index in the poll structure that contains this FD. 
+ */
 int getPollIndexFromFd(int fd){
   int i;
   for(i=0; i< 1024;i++){
@@ -104,32 +124,56 @@ int getPollIndexFromFd(int fd){
   return -1;
 }
 
+/*
+ * Send SIGINT to process 
+ */
+void killXterm(pid_t xtermProcess){
+	if(xtermProcess>=0){
+	  kill(xtermProcess,SIGINT);
+	}
+}
+
+/*
+ * A function that cleans up relevant global information by username. 
+ */
 bool deleteChatUserByUsername(char* username){
+  //GET FD ASSOCIATED WITH THE USERNAME
   int fd = getChatFdFromUsername(username);
   if(fd<0){
     fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
     return false;
   }
+
+  // GET THE CHAT INDEX ASSOCIATED WITH THE FD 
   int index = getChatIndexFromFd(fd);
   if(index<0){
     fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
     return false;
   }
+
+  //CLEANS UP DATA AT THE INDEX SAFELY, FOR THE USERNAME STRING AND PID PROCESS
   if(allChatUsers[index]!=NULL){
     free(allChatUsers[index]);
     allChatUsers[index]=NULL;
+    killXterm(xtermArray[index]);
+    xtermArray[index]=-1;
   }else{
     fprintf(stderr,"deleteChatUserByUsername(): no strings associated with this index\n");
     return false;
   }
+
+  //GET THE INDEX OF THE USER'S FD IN THE POLL STRUCTURE
   int pollIndex = getPollIndexFromFd(fd);
   if(pollIndex<0){
     fprintf(stderr,"deleteChatUserByUsername(): error finding pollindex for the fd\n");
     return false;
   }
+
+  //CLEAN UP THE USER FD IN THE POLL STRUCTURE AND THE ALLCHAT STRUCTURE
   close(clientPollFds[pollIndex].fd);
   clientPollFds[pollIndex].fd=-1;
   allChatFds[index]=-1;
+
   return true;
 }
 
@@ -137,8 +181,8 @@ bool deleteChatUserByUsername(char* username){
 void initializeChatGlobals(){
   memset(allChatUsers,'\0',sizeof(allChatUsers));
   memset(allChatFds,0,1024);
+  memset(xtermArray,-1,1024);
 }
-
 
 
 void createSocketPair(int socketsArray[], int size){
@@ -253,7 +297,6 @@ int createXterm(char * sendToUser, char* originalUser){
 
   //BUILD SOCKET PAIR AND SET IN PARENT 
   createSocketPair(socketArr,10);
-  setChatUser(sendToUser,socketArr[0]);
 
   pid=fork();
   if(pid==0){ // CHILD
@@ -277,5 +320,9 @@ int createXterm(char * sendToUser, char* originalUser){
     fprintf(stderr,"createXterm(): error forking\n");
     exit(EXIT_FAILURE);
   }
+
+  //UPDATE DATA STRUCTURES
+  setChatUser(sendToUser,socketArr[0], pid);
+
   return socketArr[0];
 }

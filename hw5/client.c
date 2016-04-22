@@ -28,7 +28,7 @@ void handleKilledChat(){
 int main(int argc, char* argv[]){ 
   signal(SIGCHLD,handleKilledChat);
   initializeChatGlobals();
-  int argCounter; 
+  int argCounter;  
   //bool verbose;
   //bool newUser;
   char *username;
