@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
         if(clientPollFds[i].revents!=POLLIN){
           fprintf(stderr,"poll.revents:%s\n",strerror(errno));
           break;
-        } 
+        }  
         /***********************************/
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
@@ -147,9 +147,9 @@ int main(int argc, char* argv[]){
             	char messageFromUser[1024];
  
               //CLEAR BUFFERS BEFORE FILLING MESSAGE CONTACT INFO
-            	memset(&toUser,0,strlen(toUser));
-            	memset(&fromUser,0,strlen(fromUser));
-            	memset(&messageFromUser,0,strlen(messageFromUser));
+            	memset(&toUser,0,strnlen(toUser,1024));
+            	memset(&fromUser,0,strnlen(fromUser,1024));
+            	memset(&messageFromUser,0,strnlen(messageFromUser,1023));
  
               // EXTRACT THE ARGS AND SEE IF IT'S VALID
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
@@ -158,14 +158,20 @@ int main(int argc, char* argv[]){
 
                 //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 if(getChatFdFromUsername(fromUser)<0 && strcmp(toUser,username)==0){
+                    //CREATE CHAT BOX
                     printf("Creating Xterm for user: %s\n",fromUser);
-                    createXterm(fromUser); 
-
-                }else{ //A CHAT ALREADY EXISTS
+                    createXterm(fromUser,username);
+                    //SEND CHAT  
                     int chatBox = getChatFdFromUsername(fromUser);
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
 
+
+                }else{ //A CHAT ALREADY EXISTS
+                    //SEND CHAT 
+                    int chatBox = getChatFdFromUsername(fromUser);
+                    send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
+
             	} 
             }
 
@@ -208,7 +214,7 @@ int main(int argc, char* argv[]){
             	/***********TEST COMMUNICATING WITH SERVER ****************/
             	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
             	printf("sent string :%s from client to server\n",stdinBuffer);
-            	memset(&stdinBuffer,0,strlen(stdinBuffer));
+            	memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
             }
 
           } 

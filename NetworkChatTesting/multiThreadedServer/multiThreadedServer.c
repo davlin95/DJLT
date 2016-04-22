@@ -145,7 +145,7 @@ int main(int argc, char* argv[]){
 
             /*************** EXECUTE STDIN COMMANDS ***********/
             recognizeAndExecuteStdin(stdinBuffer);
-            memset(&stdinBuffer,0,strlen(stdinBuffer));
+            memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
           } 
         }
         

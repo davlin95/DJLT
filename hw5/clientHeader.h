@@ -168,7 +168,6 @@ int createAndConnect(char* portNumber, int clientFd){
   }
   printf("\t*/\n");
   printf("/***********************************/\n");
-
  }
 
 /*

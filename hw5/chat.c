@@ -11,7 +11,6 @@
 
 
  void printStarHeadline(char* headline,int optionalFd){
-
   printf("\n/***********************************/\n");
   printf("/*\t");
   if(optionalFd>=0){
@@ -24,6 +23,26 @@
   printf("/***********************************/\n");
 
  }
+
+void printUserIn(char* user){
+  if(user!=NULL){
+  	char promptArrow[1024];
+  	memset(&promptArrow,0,1024);
+  	strcpy(promptArrow,user);
+  	strcat(promptArrow," > ");
+  	printf("%s",promptArrow);
+  }
+}
+
+void printUserOut(char* user){
+  if(user!=NULL){
+  	char promptArrow[1024];
+  	memset(&promptArrow,0,1024);
+  	strcat(promptArrow," < ");
+  	strcpy(promptArrow,user);
+  	printf("%s",promptArrow);
+  }
+}
 
                 /************************************/
                 /*  Global Structures               */
@@ -65,7 +84,6 @@ bool isAllDigits(char* string){
 
 
 int main(int argc, char ** argv) {
-
 	//INITIALIZE THE PASSED SOCKET PAIR
 	int chatFd=0;
     if(argv[1]!=NULL && isAllDigits(argv[1]) ){
@@ -74,10 +92,31 @@ int main(int argc, char ** argv) {
     }else{
     	fprintf(stderr,"chat main(): error with argv 1\n");
     }
+
+    //INITIALIZE COMMUNICATION USER
+	char otherUser[1024];
+	memset(otherUser,0,1024);
+    if(argc>=2 && argv[2]!=NULL){
+    	strcpy(otherUser,argv[2]);
+    }else{
+    	fprintf(stderr,"chat main(): error loading other User's name\n");
+    }
+
+    //INITIALIZE ORIGINAL USER
+	char originalUser[1024];
+	memset(originalUser,0,1024);
+    if(argc>=3 && argv[3]!=NULL){
+    	strcpy(originalUser,argv[3]);
+    }else{
+    	fprintf(stderr,"chat main(): error loading original User's name\n");
+    }
+
+
     if(makeNonBlocking(chatFd)<0){
     	fprintf(stderr,"chat.c: error with makeNonBlockingForChat\n");
     }
 
+    printUserIn(otherUser); 
 
 	 /****************************************/
     /*        IMPLEMENT POLL                */
@@ -102,7 +141,6 @@ int main(int argc, char ** argv) {
 
     /**** ETERNAL POLL LOOP ***/
     while(1){
-      printf("waiting at chatPoll, chatPollNum = %d\n", chatPollNum);
       pollStatus = poll(chatPollFds, chatPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll():%s\n",strerror(errno));
@@ -125,51 +163,12 @@ int main(int argc, char ** argv) {
         /*   POLLIN FROM CHATFD           */
         /*********************************/
         if(chatPollFds[i].fd == chatFd){
-          printStarHeadline("CLIENT TALKING TO THIS CHAT",-1);
+          //printStarHeadline("CLIENT TALKING TO THIS CHAT",-1);
           int clientBytes =0;
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
-
- /*           if (checkVerb(PROTOCOL_EMIT, message)){
-              char sessionLength[1024]; 
-              memset(&sessionLength, 0, 1024);
-              if (extractArgAndTest(message, sessionLength)){
-                displayClientConnectedTime(sessionLength);
-              }   
-            } 
-            else if (checkVerb(PROTOCOL_UTSIL, message)){
-              int length = strlen(message) - 4;
-              char *protocolTerminator = (void *)message + length;
-              if (strcmp(protocolTerminator, "\r\n\r\n") == 0){
-                  char *messagePtr = (void *)message + 6;
-                  printf("CONNECTED USERS\n");
-                  write(1, messagePtr, length-3);
-              } 
-            }
-            else if (checkVerb(PROTOCOL_BYE, message)){
-              printf("RECEIVED BYE FROM client\n");
-              close(chatFd);
-              exit(EXIT_SUCCESS);
-            }*/
-
-            //IF RECEIVED MSG BACK FROM CLIENT
-          /*  else if ( extractArgAndTestMSG(message,NULL,NULL,NULL) ){
-            	printf("TESTING RESULTS OF MSG PROTOCOL FROM client");
-            	char toUser[1024];
-            	char fromUser[1024]; 
-            	char messageFromUser[1024];
- 
-            	memset(&toUser,0,strlen(toUser));
-            	memset(&fromUser,0,strlen(fromUser));
-            	memset(&messageFromUser,0,strlen(messageFromUser));
- 
-            	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
-            		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
-            	} 
-            	printf("Creating Xterm, pollNum is %d\n", chatPollNum);
-            	createXterm(toUser); 
-            }  */
-
+            printUserIn(otherUser);
             printf("%s\n",message);
+            printUserOut(originalUser);
             memset(&message,0,1024);   
           }
           if((clientBytes=read(chatFd,message,1))==0){
@@ -189,49 +188,12 @@ int main(int argc, char ** argv) {
           char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
-            printf("reading from CHAT STDIN...\n"); 
-            /*send time verb to client*/
-
-            /*
-            if(strcmp(stdinBuffer,"/time\n")==0){
-              protocolMethod(chatFd, TIME, NULL, NULL, NULL);
-            }  
-            else if(strcmp(stdinBuffer,"/listu\n")==0){
-              protocolMethod(chatFd, LISTU, NULL, NULL, NULL);
-            }
-            else if(strcmp(stdinBuffer,"/logout\n")==0){
-              protocolMethod(chatFd, BYE, NULL, NULL, NULL);
-              waitForByeAndClose(chatFd);
-              exit(EXIT_SUCCESS);
-            } 
-            else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
-            	processChatCommand(chatFd,stdinBuffer,username);
-            }
-            else{  */
-
-            	/***********TEST COMMUNICATING WITH client ****************/
-            	send(chatFd,stdinBuffer,(strnlen(stdinBuffer,1023)),0);
-            	printf("sent string :%s from client to client\n",stdinBuffer);
-            	memset(&stdinBuffer,0,strlen(stdinBuffer));
-           // }
-
+            send(chatFd,stdinBuffer,(strnlen(stdinBuffer,1023)),0);
+            printUserOut(originalUser);
+            memset(&stdinBuffer,0,1024);
           } 
         }
-        else{
-          /*************** USER TYPED INTO CHAT XTERM **********/
-        /*  printf("Just received write from chat xterm window fd at i= %d: %d\n",chatPollFds[i].fd,i);
-          char chatBuffer[1024];
-          memset(chatBuffer,0,1024);
 
-          int chatBytes =-1;
-          chatBytes = read(chatPollFds[i].fd,chatBuffer,1024);
-          if(chatBytes>0){
-            printf("Read: %s",chatBuffer);
-          }
-          char * helloChatBox = "Hello chatbox\n\0";
-          chatBytes = send(chatPollFds[i].fd,helloChatBox,strlen(helloChatBox),0);
-          printf("Just wrote into chat xterm window %d\n", chatBytes);*/
-        }
         /* MOVE ON TO NEXT POLL FD */
       }
     /* FOREVER RUNNING LOOP */ 

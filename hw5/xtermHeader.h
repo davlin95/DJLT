@@ -153,7 +153,7 @@ void createSocketPair(int socketsArray[], int size){
 
 }
 
-char** buildXtermArgs(char* xtermArgs[],int xOffset, char* userName, int socketCopy){
+char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* originalUser, int socketCopy){
   if(xOffset<0){
     fprintf(stderr,"buildXtermArgs error(): defaulting to xOffset of 0\n");
     xOffset=0;
@@ -165,18 +165,28 @@ char** buildXtermArgs(char* xtermArgs[],int xOffset, char* userName, int socketC
   xtermArgs[2]=offsetBuffer;
   xtermArgs[3]="-T\0";
 
-  char user[1024];
-  memset(user,0,1024);
-  if(userName!=NULL){
-    strncpy(user,userName,1024);
+  char user1[1024];
+  memset(user1,0,1024);
+  if(otherUser!=NULL){
+    strncpy(user1,otherUser,1024);
   }
-  xtermArgs[4]=user;
+  xtermArgs[4]=user1;
   xtermArgs[5]="-e\0";
   xtermArgs[6]="./chat\0";
 
+
+  //ARGS FOR THE CHAT PROGRAM 
   char socket[1024];
   sprintf(socket,"%d",socketCopy);
   xtermArgs[7]=socket;
+  xtermArgs[8]=user1;
+
+  char user2[1024];
+  memset(user2,0,1024);
+  if(originalUser!=NULL){
+	strcpy(user2,originalUser);
+  }
+  xtermArgs[9]=user2;
 
   return xtermArgs;
 }
@@ -236,7 +246,7 @@ char* statFind(char* findDir, char* buffer){
   return NULL;
 }
 
-int createXterm(char * sendToUser){
+int createXterm(char * sendToUser, char* originalUser){
   printf("before setChatUser clientPollNum = %d\n",clientPollNum);
   pid_t pid;
   int socketArr[10];
@@ -251,7 +261,7 @@ int createXterm(char * sendToUser){
     char xtermString[1024];
     memset(&xtermString,0,1024);
     char* xtermArgs[1024];
-    buildXtermArgs(xtermArgs, 320 ,sendToUser,socketArr[1]);
+    buildXtermArgs(xtermArgs, 320 ,sendToUser, originalUser, socketArr[1]);
 
     //EXECUTE XTERM
     int execStatus =-1;
