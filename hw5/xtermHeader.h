@@ -1,125 +1,184 @@
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include "clientHeader.h"
+
+ 					/************************************************/
+                    /*           XTERM CHAT PROGRAM                */
+                    /***********************************************/
+
+/*
+ *A function that makes the socket non-blocking
+ *@param fd: file descriptor of the socket
+ *@return: 0 if success, -1 otherwise
+ */
+int makeNonBlockingForChat(int fd){
+  int flags;
+  if ((flags = fcntl(fd, F_GETFL, 0)) < 0){
+    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    return -1;
+  }
+  flags |= O_NONBLOCK;
+  if ((fcntl(fd, F_SETFL, flags)) < 0){
+    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    return -1;
+  }
+  return 1;
+}
 
 int allChatFds[1024];
 char* allChatUsers[1024];
 int chatIndex =0;
 
+
 void setChatUser(char* username, int fd){
-	char* newUser = malloc((strlen(username)+1)*sizeof(int));
-	strcpy(newUser,username);
+  char* newUser = malloc((strlen(username)+1)*sizeof(int));
+  strcpy(newUser,username);
 
-	allChatFds[chatIndex]=fd;
-	allChatUsers[chatIndex]=newUser;
-	chatIndex++;
+  allChatFds[chatIndex]=fd;
+  allChatUsers[chatIndex]=newUser;
+  chatIndex++;
+
+
+  if (makeNonBlockingForChat(fd)<0){ 
+    fprintf(stderr, "Error making fd nonblocking.\n");
+  }
+
+  //ADD TO GLOBAL STRUCT 
+  clientPollFds[clientPollNum].fd = fd;
+  clientPollFds[clientPollNum].events = POLLIN;
+  clientPollNum++;
+  printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+
 }
-
-int getIndexFromFd(int fd){
-	int i;
-	for(i=0; i< 1024;i++){
-		if(allChatFds[i]==fd){
-			return i;
-		}
-	}
-	return -1;
-}
-
-bool deleteChatUserByUsername(char* username){
-	int fd = getFdFromusername(username);
-	if(fd<0){
-		fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
-		return false;
-	}
-	int index = getIndexFromFd(fd);
-	if(index<0){
-		fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
-		return false;
-	}
-	if(allChatUsers[index]!=NULL){
-		free(allChatUsers[index]);
-		allChatUsers[index]=NULL;
-	}else{
-		fprintf(stderr,"deleteChatUserByUsername(): no strings associated with this index\n");
-		return false;
-	}
-}
-
-
-void initializeChatGlobals(){
-	memset(allChatUsers,'\0',sizeof(allChatUsers));
-	memset(allChatFds,0,1024);
-}
-
 
 int getFdFromUsername(char* username){
-	if(username==NULL){
-		fprintf("getFdFromUsername(): input username is NULL\n");
-	}
-	int i;
-	for(i=0;i<1024;i++){
-		if(allChatUsers[i]!=NULL && (strcmp(username,allChatUsers[i])==0) ){
-		  if(allChatFds[i]>0)
-		  	return allChatFds[i];
-		}
-	}
-	//fprintf("getFdFromUsername(): username not found in list.\n");
-	return -1;
+  if(username==NULL){
+    fprintf(stderr,"getFdFromUsername(): input username is NULL\n");
+  }
+  int i;
+  for(i=0;i<1024;i++){
+    if(allChatUsers[i]!=NULL && (strcmp(username,allChatUsers[i])==0) ){
+      if(allChatFds[i]>0)
+        return allChatFds[i];
+    }
+  }
+  //fprintf("getFdFromUsername(): username not found in list.\n");
+  return -1;
 }
 
 
 char* getUsernameFromFd(int fd){
-	if(fd <0){
-		fprintf("getUsernameFromFd(): input fd is erroneous\n");
-	}
-	int i;
-	for(i=0;i<1024;i++){
-		if(allChatFds[i]>0 && allChatFds[i]==fd ){
-		  if(allChatUsers[i]!=NULL)
-		  	return allChatUsers[i];
-		}
-	}
-	//fprintf("getFdFromUsername(): fd not found in list.\n");
-	return NULL;
+  if(fd <0){
+    fprintf(stderr,"getUsernameFromFd(): input fd is erroneous\n");
+  }
+  int i;
+  for(i=0;i<1024;i++){
+    if(allChatFds[i]>0 && allChatFds[i]==fd ){
+      if(allChatUsers[i]!=NULL)
+        return allChatUsers[i];
+    }
+  }
+  //fprintf("getFdFromUsername(): fd not found in list.\n");
+  return NULL;
 }
 
+/*
+ * A function that gets the index of fd in the allChatsFds array 
+ */
+int getIndexFromFd(int fd){
+  int i;
+  for(i=0; i< 1024;i++){
+    if(allChatFds[i]==fd){
+      printf("getIndexFromFd(): found index for this fd %d at index %d\n",fd,i);
+      return i;
+    }
+  }
+  return -1;
+}
+
+int getPollIndexFromFd(int fd){
+  int i;
+  for(i=0; i< 1024;i++){
+    if(clientPollFds[i].fd==fd){
+      return i;
+    }
+  }
+  return -1;
+}
+
+bool deleteChatUserByUsername(char* username){
+  int fd = getFdFromUsername(username);
+  if(fd<0){
+    fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
+    return false;
+  }
+  int index = getIndexFromFd(fd);
+  if(index<0){
+    fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
+    return false;
+  }
+  if(allChatUsers[index]!=NULL){
+    free(allChatUsers[index]);
+    allChatUsers[index]=NULL;
+  }else{
+    fprintf(stderr,"deleteChatUserByUsername(): no strings associated with this index\n");
+    return false;
+  }
+  int pollIndex = getPollIndexFromFd(fd);
+  if(pollIndex<0){
+    fprintf(stderr,"deleteChatUserByUsername(): error finding pollindex for the fd\n");
+    return false;
+  }
+  close(clientPollFds[pollIndex].fd);
+  clientPollFds[pollIndex].fd=-1;
+  allChatFds[index]=-1;
+  return true;
+}
+
+
+void initializeChatGlobals(){
+  memset(allChatUsers,'\0',sizeof(allChatUsers));
+  memset(allChatFds,0,1024);
+}
+
+
+
 void createSocketPair(int socketsArray[], int size){
-	if(size <2){
-		fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
-	}
-	int status=-1;
-	status = socketpair(AF_UNIX,SOCK_STREAM,0,socketsArray);
-	if(status<0){
-		fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
-	}
+  if(size <2){
+    fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
+  }
+  int status=-1;
+  status = socketpair(AF_UNIX,SOCK_STREAM,0,socketsArray);
+  if(status<0){
+    fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
+  }
 
 }
 
 char** buildXtermArgs(char* xtermArgs[],int xOffset, char* userName, int socketCopy){
-	if(xOffset<0){
-		fprintf(stderr,"buildXtermArgs error(): defaulting to xOffset of 0\n");
-		xOffset=0;
-	}
-	xtermArgs[1]="-geometry\0";
-	char offsetBuffer[100];
-	sprintf(offsetBuffer,"45x35+%d",xOffset);
-	xtermArgs[2]=offsetBuffer;
-	xtermArgs[3]="-T\0";
+  if(xOffset<0){
+    fprintf(stderr,"buildXtermArgs error(): defaulting to xOffset of 0\n");
+    xOffset=0;
+  }
 
-	char user[1024];
-	memset(user,0,1024);
-	if(userName!=NULL){
-		strncpy(user,userName,1024);
-	}
-	xtermArgs[4]=user;
-	xtermArgs[5]="-e\0";
-	xtermArgs[6]="./chat\0";
+  xtermArgs[1]="-geometry\0";
+  char offsetBuffer[100];
+  sprintf(offsetBuffer,"45x35+%d",xOffset);
+  xtermArgs[2]=offsetBuffer;
+  xtermArgs[3]="-T\0";
 
-	char socket[1024];
-	sprintf(socket,"%d",socketCopy);
-	xtermArgs[7]=socket;
+  char user[1024];
+  memset(user,0,1024);
+  if(userName!=NULL){
+    strncpy(user,userName,1024);
+  }
+  xtermArgs[4]=user;
+  xtermArgs[5]="-e\0";
+  xtermArgs[6]="./chat\0";
 
-	return xtermArgs;
+  char socket[1024];
+  sprintf(socket,"%d",socketCopy);
+  xtermArgs[7]=socket;
+
+  return xtermArgs;
 }
 
 bool statFile(char* file){
@@ -127,7 +186,7 @@ bool statFile(char* file){
   if (stat(file, &statFile) >= 0){
     return true;
   }else {
-  	//fprintf(stderr,"statFile(): file does not exist");
+    //fprintf(stderr,"statFile(): file does not exist");
   }
   return false;
 }
@@ -161,15 +220,15 @@ char* statFind(char* findDir, char* buffer){
   //TEST DIRS
   int i;
   for (i = 0; i < paths; i++){
-	strcpy(sourceDir, pathArray[i]);
+  strcpy(sourceDir, pathArray[i]);
     strcat(sourceDir, "/");
     strcat(sourceDir, findDir);
 
     //IF FOUND, RETURN IN BUFFER
     if(statFile(sourceDir)){
-    	memset(&buffer,0,strlen(buffer));
-    	strcpy(buffer,sourceDir);
-    	return buffer;
+      memset(&buffer,0,strlen(buffer));
+      strcpy(buffer,sourceDir);
+      return buffer;
     }
     memset(&sourceDir,0,sourceSize);
   }
@@ -177,27 +236,36 @@ char* statFind(char* findDir, char* buffer){
   return NULL;
 }
 
-void createXterm(char * sendToUser){
-	pid_t pid;
-	pid=fork();
-	if(pid==0){
-		//BUILD ARGS
-		char xtermString[1024];
-		memset(&xtermString,0,1024);
-		char* xtermArgs[1024];
+int createXterm(char * sendToUser){
+  printf("before setChatUser clientPollNum = %d\n",clientPollNum);
+  pid_t pid;
+  int socketArr[10];
 
-		//BUILD SOCKET PAIR 
-		int socketArr[10];
-		createSocketPair(socketArr,10);
+  //BUILD SOCKET PAIR AND SET IN PARENT 
+  createSocketPair(socketArr,10);
+  setChatUser(sendToUser,socketArr[0]);
 
-		buildXtermArgs(xtermArgs, 320 ,sendToUser,socketArr[1]);
+  pid=fork();
+  if(pid==0){ // CHILD
+    //BUILD ARGS FOR XTERM 
+    char xtermString[1024];
+    memset(&xtermString,0,1024);
+    char* xtermArgs[1024];
+    buildXtermArgs(xtermArgs, 320 ,sendToUser,socketArr[1]);
 
-		//EXECUTE XTERM
-		int execStatus =-1;
-		execStatus = execvp( statFind("xterm",xtermString) ,xtermArgs);
-		if(execStatus<0)
-			fprintf(stderr,"createXterm():Failed to execute");
-	}else if(pid<0){
-		fprintf(stderr,"createXterm(): error forking\n");
-	}
+    //EXECUTE XTERM
+    int execStatus =-1;
+    execStatus = execvp( statFind("xterm",xtermString) ,xtermArgs);
+
+    // FAILED XTERM, CLEAN UP GLOBAL RESOURCES
+    if(execStatus<0){
+      fprintf(stderr,"createXterm():Failed to execute\n");
+      deleteChatUserByUsername(sendToUser);
+      exit(EXIT_FAILURE); 
+    }
+  }else if(pid<0){
+    fprintf(stderr,"createXterm(): error forking\n");
+    exit(EXIT_FAILURE);
+  }
+  return socketArr[0];
 }

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <errno.h> 
 #include <netdb.h>
-#include <sys/types.h>
+#include <sys/types.h> 
 #include <pthread.h>
 #include <sys/epoll.h>
 #include <sys/poll.h> 
@@ -15,7 +15,7 @@
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
 
- 
+
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]){
           int bytes,doneReading=0,writeStatus=-1;
           char clientMessage[1024];
 
-          /***********************/
+          /***********************/ 
           /* READ FROM CLIENT   */
           /*********************/
           while(1){ 

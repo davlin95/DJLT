@@ -8,11 +8,11 @@
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <signal.h>
-#include "clientHeader.h" 
+#include "xtermHeader.h"    
 
 int clientFd=-1; 
 bool existsChat=false;
-
+ 
 void killClientProgramHandler(int fd){  
     if(fd >0){ 
       close(fd);
@@ -28,6 +28,7 @@ void handleKilledChat(){
  
 int main(int argc, char* argv[]){ 
   signal(SIGCHLD,handleKilledChat);
+  initializeChatGlobals();
   int argCounter; 
   //bool verbose;
   //bool newUser;
@@ -48,7 +49,7 @@ int main(int argc, char* argv[]){
     if (strcmp(flagArray[argCounter], "-h")==0){
       USAGE("./client");
       exit(EXIT_SUCCESS);
-    }
+    } 
     if (strcmp(flagArray[argCounter], "-v")==0){
       //verbose = true;
     }
@@ -71,7 +72,7 @@ int main(int argc, char* argv[]){
   if (performLoginProcedure(clientFd, username) == 0){
       printf("Failed to login properly\n");
       close(clientFd);
-      exit(0);
+      exit(0); 
   }
   if (makeNonBlocking(clientFd)<0){   
     fprintf(stderr, "Error making socket nonblocking.\n");
@@ -81,40 +82,43 @@ int main(int argc, char* argv[]){
    /*        IMPLEMENT POLL                 */
    /****************************************/
     /* Initialize Polls Interface*/
-    memset(pollFds, 0 , sizeof(pollFds));
-    int pollStatus,pollNum=2;
+    memset(clientPollFds, 0 , sizeof(clientPollFds));
+    int pollStatus;
+    clientPollNum=2;
 
     /* Set poll for clientFd */
-    pollFds[0].fd = clientFd;
-    pollFds[0].events = POLLIN;
+    clientPollFds[0].fd = clientFd;
+    clientPollFds[0].events = POLLIN;
 
     /* Set poll for stdin */ 
-    pollFds[1].fd = 0;
-    pollFds[1].events = POLLIN; 
-
-    if (makeNonBlocking(0)<0){
+    clientPollFds[1].fd = 0;
+    clientPollFds[1].events = POLLIN; 
+ 
+    if (makeNonBlocking(0)<0){ 
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
     while(1){
-      pollStatus = poll(pollFds, pollNum, -1);
+      printf("waiting at clientPoll, clientPollNum = %d\n", clientPollNum);
+      pollStatus = poll(clientPollFds, clientPollNum, -1);
+      printf("past poll\n");
       if(pollStatus<0){
       	printf("enountered poll error");
         fprintf(stderr,"poll():%s\n",strerror(errno));
         break;
       } 
       int i; 
-      for(i=0;i<pollNum;i++){
-        if(pollFds[i].revents==0){
+      for(i=0;i<clientPollNum;i++){
+        if(clientPollFds[i].revents==0){
           continue; 
         } 
-        if(pollFds[i].revents!=POLLIN){
+        if(clientPollFds[i].revents!=POLLIN){
           fprintf(stderr,"poll.revents:%s\n",strerror(errno));
           break;
-        }
+        } 
         /***********************************/
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
-        if(pollFds[i].fd == clientFd){
+        if(clientPollFds[i].fd == clientFd){
           printf("\n/***********************************/\n"); 
           printf("/*   SERVER TALKING TO THIS CLIENT   */\n");
           printf("/***********************************/\n");
@@ -151,12 +155,13 @@ int main(int argc, char* argv[]){
             	memset(&toUser,0,strlen(toUser));
             	memset(&fromUser,0,strlen(fromUser));
             	memset(&messageFromUser,0,strlen(messageFromUser));
-
+ 
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
             		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
             	} 
-            	printf("Creating Xterm\n");
+            	printf("Creating Xterm, pollNum is %d\n", clientPollNum);
             	createXterm(toUser); 
+
             }
 
             //printf("Data received: %s\n",message);
@@ -172,7 +177,7 @@ int main(int argc, char* argv[]){
         /***********************************/
         /*   POLLIN FROM STDIN            */
         /*********************************/
-        else if(pollFds[i].fd == 0){
+        else if(clientPollFds[i].fd == 0){
 
           printf("\n/***********************************/\n");
           printf("/*   STDIN INPUT :                  */\n");
@@ -182,7 +187,7 @@ int main(int argc, char* argv[]){
           char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
-            printf("reading from client STDIN...\n");
+            printf("reading from client STDIN...\n"); 
             /*send time verb to server*/
             if(strcmp(stdinBuffer,"/time\n")==0){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL);
@@ -204,7 +209,25 @@ int main(int argc, char* argv[]){
             	printf("sent string :%s from client to server\n",stdinBuffer);
             	memset(&stdinBuffer,0,strlen(stdinBuffer));
             }
+
+          } 
+        }
+        else{
+          /*************** USER TYPED INTO CHAT XTERM **********/
+          printf("Just received write from chat xterm window fd at i= %d: %d\n",clientPollFds[i].fd,i);
+          char chatBuffer[1024];
+          memset(chatBuffer,0,1024);
+
+          int chatBytes =-1;
+          chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
+          if(chatBytes>0){
+            printf("Read: %s",chatBuffer);
           }
+
+          char * helloChatBox = "Hello chatbox\n\0";
+          chatBytes = send(clientPollFds[i].fd,helloChatBox,strlen(helloChatBox),0);
+          printf("Just wrote into chat xterm window %d\n", chatBytes);
+
         }
         /* MOVE ON TO NEXT POLL FD */
       }

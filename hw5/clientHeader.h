@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdbool.h>
-#include <fcntl.h>
 #include <netinet/in.h>
 #include <pthread.h>
 #include <time.h>
@@ -11,14 +10,16 @@
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 #include "WolfieProtocolVerbs.h"
-#include "xtermHeader.h"
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 
                 /************************************/
                 /*  Global Structures               */
                 /************************************/
-struct pollfd pollFds[1024];
-int pollNum =0;
+struct pollfd clientPollFds[1024];
+int clientPollNum;
 
 
  
@@ -267,3 +268,4 @@ void recognizeAndExecuteStdin(char* userTypedIn){
 
 
 
+                  
