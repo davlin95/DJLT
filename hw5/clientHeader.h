@@ -20,8 +20,6 @@
                 /************************************/
 struct pollfd clientPollFds[1024];
 int clientPollNum;
-
-
  
 #define USAGE(name) do {                                                                  \
         fprintf(stderr,                                                                         \

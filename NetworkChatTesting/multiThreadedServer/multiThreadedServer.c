@@ -15,7 +15,7 @@
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
 
-
+int globalSocket=-1;
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]){
   /*****************/ 
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
-    exit(0);       
+    exit(EXIT_FAILURE);       
   } else 
     printf("Listening\n"); 
 
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
     /****************************************/
     /* Initialize Polls Interface*/
     memset(pollFds, 0 , sizeof(pollFds));
-    pollNum = 2;
+    pollNum = 3;
     int pollStatus,compactDescriptors=0;
 
     /* Set poll for serverFd */
@@ -74,9 +74,20 @@ int main(int argc, char* argv[]){
     pollFds[0].events = POLLIN;
 
     /* Set poll for stdin */
-    fcntl(0,F_SETFL,O_NONBLOCK); 
+    makeNonBlocking(0);
     pollFds[1].fd = 0;
-    pollFds[1].events = POLLIN|POLLPRI;
+    pollFds[1].events = POLLIN;
+
+    int socketPair[2]={0,0};
+    createSocketPair(socketPair,2);
+    if(socketPair[0]>0 && socketPair[1]>0){
+      makeNonBlocking(socketPair[0]);
+
+      pollFds[2].fd= socketPair[0];
+      pollFds[2].events = POLLIN;
+      globalSocket = socketPair[1];
+      printf("twin socket pairs are %d , %d",socketPair[0],socketPair[1]);
+    }
 
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
@@ -95,9 +106,7 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM SERVERFD         */
         /*********************************/
         if(pollFds[i].fd == serverFd){
-          printf("\n/***********************************/\n");
-          printf("/*   Server is taking in clients   */\n");
-          printf("/***********************************/\n");
+          printStarHeadline("SERVER IS TAKING IN CLIENTS",-1);
 
           while(1){
             /************* STORE INCOMING CONNECTS ****/
@@ -130,32 +139,28 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(pollFds[i].fd == 0){
-          printf("\n/***********************************/\n");
-          printf("/*   STDIN INPUT :                  */\n");
-          printf("/***********************************/\n");
+          printStarHeadline("STDIN INPUT",-1);
           int bytes=0;
           char stdinBuffer[1024];
           memset(&stdinBuffer,0,1024);
-          while( (bytes=read(0,&stdinBuffer,1024))>0){
-            printf("reading from server's STDIN...\n");
-            
-            /************* SEND TO CLIENT 
-            send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
-            printf("sent string :%s from client to server\n",stdinBuffer); */
+          while( (bytes=read(0,&stdinBuffer,1024))>0){  
 
-            /*************** EXECUTE STDIN COMMANDS ***********/
+            /*******************************/
+            /* EXECUTE STDIN COMMANDS     */
+            /*****************************/
             recognizeAndExecuteStdin(stdinBuffer);
             memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
           } 
+        }else if(pollFds[i].fd == pollFds[2].fd ){
+          printf("global socket triggered poll\n");
+          char blank[1024];
+          read(pollFds[2].fd,&blank,1024);
         }
-        
         /**************************************/
         /*   POLLIN: PREVIOUS CLIENT         */
         /************************************/
         else{
-          printf("\n/***********************************/\n");
-          printf("/*   CLIENT NUMBER %d SAYS:        */\n",pollFds[i].fd);
-          printf("/***********************************/\n");
+          printStarHeadline("COMMUNICATION FROM CLIENT",pollFds[i].fd);
           int bytes,doneReading=0,writeStatus=-1;
           char clientMessage[1024];
 
@@ -199,7 +204,7 @@ int main(int argc, char* argv[]){
               printf("BYE PROTOCOL, Client said: %s", clientMessage);
               break; 
             }else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
-              printf("/---------GOT MSG!---------\\\n");
+              printStarHeadline("GOT MSG!!!",-1);
               char msgToBuffer[1024];
               char msgFromBuffer[1024];
               char msgBuffer[1024];
@@ -211,14 +216,20 @@ int main(int argc, char* argv[]){
               extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
               printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
               Client* toUser= getClientByUsername(msgToBuffer);
-              if( toUser!=NULL){
+              printf("DONE SEARCHING FOR USER\n"); 
+              //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
+              if( toUser!=NULL && strcmp(msgToBuffer, msgFromBuffer)!=0 ){
+                //SEND MESSAGE BACK
                 char messageResponse[1024];
                 memset(&messageResponse,0,1024);
                 buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
                 send(toUser->session->commSocket,messageResponse,strlen(messageResponse),0);
                 send(pollFds[i].fd,messageResponse,strlen(messageResponse),0);
-                printf("Finished Sending response MSG to both clients:%s and %s\n", toUser->userName, getClientByFd(pollFds[i].fd)->userName);
+              }else{ 
+                //ERROR BACK TO USER
+                protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL);
               }
+
             }
             /*********************************/
             /* OUTPUT MESSAGE FROM CLIENT   */
@@ -227,9 +238,6 @@ int main(int argc, char* argv[]){
             if(writeStatus<0){
               fprintf(stderr,"Error writing client message %d\n",pollFds[i].fd);
             }
-            /**************************************/
-            /* SEND RESPONSE MESSAGE TO CLIENT   */
-            /************************************/
 
          }
          /********************************/
@@ -287,6 +295,10 @@ void* loginThread(void* args){
     } 
     /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
     processValidClient(username,connfd);
+    if(globalSocket>0){
+      write(globalSocket," ",1);
+      printf("\nwrote to globalSocket\n");
+    }
 
   }else {
     printf("Client %d failed to login",connfd);

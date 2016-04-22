@@ -251,6 +251,16 @@ void processUsersRequest(){
 
 						
 						/******** PROGRAM I/O AND LOGISTIC FUNCTIONS ****/
+void createSocketPair(int socketsArray[], int size){
+  if(size <2){
+    fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
+  }
+  int status=-1;
+  status = socketpair(AF_UNIX,SOCK_STREAM,0,socketsArray);
+  if(status<0){
+    fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
+  }
+}
 
 /* 
  * A function that creates a socketFd for the port currently listened on. 
@@ -368,10 +378,11 @@ void killServerHandler(){
  */
  Client* getClientByUsername(char* username){
     Client* clientPtr;
-    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
-      printf("returnClientData: username is %s\n", username);
-      if (strcmp(username, clientPtr->userName) == 0)
+    for(clientPtr = clientHead; clientPtr!=NULL; clientPtr = clientPtr->next){
+      if (strcmp(username, clientPtr->userName) == 0){
+        printf("getClientByUsername FOUND USER: %s", username);
         return clientPtr;
+      }
     }
     return NULL;
   }

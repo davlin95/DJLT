@@ -194,7 +194,6 @@ void createSocketPair(int socketsArray[], int size){
   if(status<0){
     fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
   }
-
 }
 
 char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* originalUser, int socketCopy){

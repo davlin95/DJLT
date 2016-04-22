@@ -92,7 +92,7 @@ void printUserIn(char* user){
   	memset(&promptArrow,0,1024);
   	strcpy(promptArrow,user);
   	strcat(promptArrow," > ");
-  	printf("%s\n",promptArrow);
+  	printf("%s",promptArrow);
   }
 }
 
@@ -100,9 +100,9 @@ void printUserOut(char* user){
   if(user!=NULL){
   	char promptArrow[1024];
   	memset(&promptArrow,0,1024);
-  	strcat(promptArrow," < ");
-  	strcpy(promptArrow,user);
-  	printf("%s\n",promptArrow);
+  	strcpy(promptArrow," < ");
+  	strcat(promptArrow,user);
+  	printf("%s",promptArrow);
   }
 }
 

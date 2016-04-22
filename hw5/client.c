@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
   //bool verbose;
   //bool newUser;
   char *username;
-  char *portNumber;
+  char *portNumber; 
   char * argArray[1024];
   char * flagArray[1024];
   memset(&argArray, 0, sizeof(argArray));
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]){
  
   /*********** NOTIFY SERVER OF CONNECTION *****/
   if (performLoginProcedure(clientFd, username) == 0){
-      printf("Failed to login properly\n");
+      fprintf(stderr,"Failed to login properly\n");
       close(clientFd);
       exit(0); 
   }
@@ -139,7 +139,9 @@ int main(int argc, char* argv[]){
               close(clientFd);
               exit(EXIT_SUCCESS);
             }
-            //IF RECEIVED MSG BACK FROM SERVER
+            /***********************************/
+            /* RECEIVED MSG BACK FROM SERVER  */
+            /*********************************/
             else if ( extractArgAndTestMSG(message,NULL,NULL,NULL) ){
             	char toUser[1024];
             	char fromUser[1024]; 
@@ -148,7 +150,7 @@ int main(int argc, char* argv[]){
               //CLEAR BUFFERS BEFORE FILLING MESSAGE CONTACT INFO
             	memset(&toUser,0,strnlen(toUser,1024));
             	memset(&fromUser,0,strnlen(fromUser,1024));
-            	memset(&messageFromUser,0,strnlen(messageFromUser,1023));
+            	memset(&messageFromUser,0,1024);
  
               // EXTRACT THE ARGS AND SEE IF IT'S VALID
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
@@ -163,14 +165,11 @@ int main(int argc, char* argv[]){
                     //SEND CHAT  
                     int chatBox = getChatFdFromUsername(fromUser);
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
-
-
                 }else{ //A CHAT ALREADY EXISTS
                     //SEND CHAT 
                     int chatBox = getChatFdFromUsername(fromUser);
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
-
             	} 
             }
 

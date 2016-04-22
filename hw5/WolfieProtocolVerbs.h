@@ -84,8 +84,8 @@
 #define PROTOCOL_ERR1 "ERR 01 USER NOT AVAILABLE \r\n\r\n"
 #endif 
 
-#ifndef PROTOCOL_ERR2
-#define PROTOCOL_ERR2 "ERR 02 BAD PASSWORD \r\n\r\n"
+#ifndef PROTOCOL_ERR02
+#define PROTOCOL_ERR02 "ERR 02 BAD PASSWORD \r\n\r\n"
 #endif 
 
 #ifndef PROTOCOL_ERR100
@@ -491,6 +491,10 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
                 break;*/
     case ERR0:   
                 send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+
+    case ERR1:   
+                send(fd,PROTOCOL_ERR1,strlen(PROTOCOL_ERR1),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
   }
 
