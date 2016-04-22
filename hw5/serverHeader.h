@@ -403,7 +403,12 @@ void killServerHandler(){
 
   printf("\n/***********************************/\n");
   printf("/*\t");
-  printf("%s-40",headline);
+  if(optionalFd>=0){
+    printf("%s-40 : %d",headline,optionalFd);
+  }
+  else {
+    printf("%s-40",headline);
+  }
   printf("\t*/");
   printf("/***********************************/\n");
 

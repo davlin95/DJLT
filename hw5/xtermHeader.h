@@ -49,14 +49,14 @@ void setChatUser(char* username, int fd){
 
 }
 
-int getFdFromUsername(char* username){
+int getChatFdFromUsername(char* username){
   if(username==NULL){
     fprintf(stderr,"getFdFromUsername(): input username is NULL\n");
   }
   int i;
   for(i=0;i<1024;i++){
     if(allChatUsers[i]!=NULL && (strcmp(username,allChatUsers[i])==0) ){
-      if(allChatFds[i]>0)
+      if(allChatFds[i]>=0)
         return allChatFds[i];
     }
   }
@@ -65,13 +65,13 @@ int getFdFromUsername(char* username){
 }
 
 
-char* getUsernameFromFd(int fd){
+char* getChatUsernameFromChatFd(int fd){
   if(fd <0){
     fprintf(stderr,"getUsernameFromFd(): input fd is erroneous\n");
   }
   int i;
   for(i=0;i<1024;i++){
-    if(allChatFds[i]>0 && allChatFds[i]==fd ){
+    if(allChatFds[i]>=0 && allChatFds[i]==fd ){
       if(allChatUsers[i]!=NULL)
         return allChatUsers[i];
     }
@@ -83,7 +83,7 @@ char* getUsernameFromFd(int fd){
 /*
  * A function that gets the index of fd in the allChatsFds array 
  */
-int getIndexFromFd(int fd){
+int getChatIndexFromFd(int fd){
   int i;
   for(i=0; i< 1024;i++){
     if(allChatFds[i]==fd){
@@ -105,12 +105,12 @@ int getPollIndexFromFd(int fd){
 }
 
 bool deleteChatUserByUsername(char* username){
-  int fd = getFdFromUsername(username);
+  int fd = getChatFdFromUsername(username);
   if(fd<0){
     fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
     return false;
   }
-  int index = getIndexFromFd(fd);
+  int index = getChatIndexFromFd(fd);
   if(index<0){
     fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
     return false;

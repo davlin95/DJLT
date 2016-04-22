@@ -154,6 +154,23 @@ int createAndConnect(char* portNumber, int clientFd){
   freeaddrinfo(results);
   return -1;
 }
+
+
+ void printStarHeadline(char* headline,int optionalFd){
+
+  printf("\n/***********************************/\n");
+  printf("/*\t");
+  if(optionalFd>=0){
+    printf("%s-40 : %d",headline,optionalFd);
+  }
+  else {
+    printf("%s-40",headline);
+  }
+  printf("\t*/");
+  printf("/***********************************/\n");
+
+ }
+ 
 /*
  *A function that makes the socket non-blocking
  *@param fd: file descriptor of the socket

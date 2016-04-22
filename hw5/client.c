@@ -152,19 +152,25 @@ int main(int argc, char* argv[]){
             	char fromUser[1024]; 
             	char messageFromUser[1024];
  
+              //CLEAR BUFFERS BEFORE FILLING MESSAGE CONTACT INFO
             	memset(&toUser,0,strlen(toUser));
             	memset(&fromUser,0,strlen(fromUser));
             	memset(&messageFromUser,0,strlen(messageFromUser));
  
+              // EXTRACT THE ARGS AND SEE IF IT'S VALID
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
+                printStarHeadline("MESSAGE ADDRESS",-1);
             		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
-            	} 
-            	printf("Creating Xterm, pollNum is %d\n", clientPollNum);
-            	createXterm(toUser); 
 
+                //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
+                if(getChatFdFromUsername(fromUser)<0 && strcmp(toUser,username)==0){
+                    printf("Creating Xterm for user: %s\n",fromUser);
+                    createXterm(fromUser); 
+
+                }
+            	} 
             }
 
-            //printf("Data received: %s\n",message);
             memset(&message,0,1024);   
           }
           if((serverBytes=read(clientFd,message,1))==0){
@@ -214,23 +220,36 @@ int main(int argc, char* argv[]){
         }
         else{
           /*************** USER TYPED INTO CHAT XTERM **********/
-          printf("Just received write from chat xterm window fd at i= %d: %d\n",clientPollFds[i].fd,i);
           char chatBuffer[1024];
           memset(chatBuffer,0,1024);
 
+          //READ BYTES FROM CHAT BOX CHILD PROCESS
           int chatBytes =-1;
           chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
           if(chatBytes>0){
-            printf("Read: %s",chatBuffer);
+            printStarHeadline("READ FROM CHATBOX: ",-1);
+            printf("%s",chatBuffer);
           }
 
-          char * helloChatBox = "Hello chatbox\n\0";
-          chatBytes = send(clientPollFds[i].fd,helloChatBox,strlen(helloChatBox),0);
-          printf("Just wrote into chat xterm window %d\n", chatBytes);
+          //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
+          char* toPerson = getChatUsernameFromChatFd(clientPollFds[i].fd);
+          if(toPerson==NULL){
+            fprintf(stderr,"error in poll loop: getChatUsernameFromChatFd() returned NULL person string\n");
+          }
+          char relayMessage[1024];
+          memset(&relayMessage,0,1024);
+          if(buildMSGProtocol(relayMessage,toPerson,username, chatBuffer)==false){
+              fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+          }
+          chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
 
         }
+
+
+
         /* MOVE ON TO NEXT POLL FD */
       }
+
     /* FOREVER RUNNING LOOP */ 
     }
   return 0;
