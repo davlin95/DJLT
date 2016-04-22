@@ -205,9 +205,9 @@ int main(int argc, char* argv[]){
               char msgBuffer[1024];
 
               memset(&msgToBuffer,0,1024);
-              memset(&msgFromBuffer,0,1024);
+              memset(&msgFromBuffer,0,1024); 
               memset(&msgBuffer,0,1024);
-
+ 
               extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
               printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
               Client* toUser= getClientByUsername(msgToBuffer);
@@ -215,10 +215,9 @@ int main(int argc, char* argv[]){
                 char messageResponse[1024];
                 memset(&messageResponse,0,1024);
                 buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
-                printf("Sending the response MSG to both clients:%s and %s\n", toUser->userName, getClientByFd(pollFds[i].fd)->userName);
                 send(toUser->session->commSocket,messageResponse,strlen(messageResponse),0);
                 send(pollFds[i].fd,messageResponse,strlen(messageResponse),0);
-                printf("Finished sending to clients\n");
+                printf("Finished Sending response MSG to both clients:%s and %s\n", toUser->userName, getClientByFd(pollFds[i].fd)->userName);
               }
             }
             /*********************************/

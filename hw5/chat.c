@@ -10,6 +10,20 @@
 #include <sys/socket.h>
 
 
+ void printStarHeadline(char* headline,int optionalFd){
+
+  printf("\n/***********************************/\n");
+  printf("/*\t");
+  if(optionalFd>=0){
+    printf("%-60s : %d",headline,optionalFd);
+  }
+  else {
+    printf("%-60s",headline);
+  }
+  printf("\t*/\n");
+  printf("/***********************************/\n");
+
+ }
 
                 /************************************/
                 /*  Global Structures               */
@@ -111,10 +125,7 @@ int main(int argc, char ** argv) {
         /*   POLLIN FROM CHATFD           */
         /*********************************/
         if(chatPollFds[i].fd == chatFd){
-          printf("\n/***********************************/\n"); 
-          printf("/*   CLIENT TALKING TO THIS CHAT   */\n");
-          printf("/***********************************/\n");
-
+          printStarHeadline("CLIENT TALKING TO THIS CHAT",-1);
           int clientBytes =0;
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
 
@@ -158,6 +169,7 @@ int main(int argc, char ** argv) {
             	createXterm(toUser); 
             }  */
 
+            printf("%s\n",message);
             memset(&message,0,1024);   
           }
           if((clientBytes=read(chatFd,message,1))==0){
@@ -171,10 +183,7 @@ int main(int argc, char ** argv) {
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(chatPollFds[i].fd == 0){
-
-          printf("\n/***********************************/\n");
-          printf("/*   STDIN INPUT :                  */\n");
-          printf("/***********************************/\n");
+          printStarHeadline("STDIN INPUT",-1);
         
           int bytes=0;
           char stdinBuffer[1024];  

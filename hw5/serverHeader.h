@@ -404,12 +404,12 @@ void killServerHandler(){
   printf("\n/***********************************/\n");
   printf("/*\t");
   if(optionalFd>=0){
-    printf("%s-40 : %d",headline,optionalFd);
+    printf("%-60s : %d",headline,optionalFd);
   }
   else {
-    printf("%s-40",headline);
+    printf("%-60s",headline);
   }
-  printf("\t*/");
+  printf("\t*/\n");
   printf("/***********************************/\n");
 
  }

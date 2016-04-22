@@ -98,12 +98,9 @@ int main(int argc, char* argv[]){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
     while(1){
-      printf("waiting at clientPoll, clientPollNum = %d\n", clientPollNum);
       pollStatus = poll(clientPollFds, clientPollNum, -1);
-      printf("past poll\n");
       if(pollStatus<0){
-      	printf("enountered poll error");
-        fprintf(stderr,"poll():%s\n",strerror(errno));
+        fprintf(stderr,"poll(): %s\n",strerror(errno));
         break;
       } 
       int i; 
@@ -119,9 +116,7 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
         if(clientPollFds[i].fd == clientFd){
-          printf("\n/***********************************/\n"); 
-          printf("/*   SERVER TALKING TO THIS CLIENT   */\n");
-          printf("/***********************************/\n");
+          printStarHeadline("SERVER TALKING TO THIS CLIENT",-1);
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){
             if (checkVerb(PROTOCOL_EMIT, message)){
@@ -147,7 +142,6 @@ int main(int argc, char* argv[]){
             }
             //IF RECEIVED MSG BACK FROM SERVER
             else if ( extractArgAndTestMSG(message,NULL,NULL,NULL) ){
-            	printf("TESTING RESULTS OF MSG PROTOCOL FROM SERVER");
             	char toUser[1024];
             	char fromUser[1024]; 
             	char messageFromUser[1024];
@@ -167,6 +161,10 @@ int main(int argc, char* argv[]){
                     printf("Creating Xterm for user: %s\n",fromUser);
                     createXterm(fromUser); 
 
+                }else{ //A CHAT ALREADY EXISTS
+                    int chatBox = getChatFdFromUsername(fromUser);
+                    send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
+
                 }
             	} 
             }
@@ -184,10 +182,7 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(clientPollFds[i].fd == 0){
-
-          printf("\n/***********************************/\n");
-          printf("/*   STDIN INPUT :                  */\n");
-          printf("/***********************************/\n");
+          printStarHeadline("STDIN INPUT",-1);
          
           int bytes=0;
           char stdinBuffer[1024];  
@@ -219,9 +214,11 @@ int main(int argc, char* argv[]){
           } 
         }
         else{
-          /*************** USER TYPED INTO CHAT XTERM **********/
+          /****************************************/
+          /*       USER TYPED INTO CHAT XTERM    */
+          /**************************************/  
           char chatBuffer[1024];
-          memset(chatBuffer,0,1024);
+          memset(chatBuffer,0,1024);  
 
           //READ BYTES FROM CHAT BOX CHILD PROCESS
           int chatBytes =-1;
@@ -242,7 +239,6 @@ int main(int argc, char* argv[]){
               fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
           }
           chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
-
         }
 
 
