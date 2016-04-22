@@ -192,7 +192,7 @@ bool verifyPassword(char* password);
   }
  }
 
-/*
+/* 
  * A function that disconnects all connected users. 
  */
  void disconnectAllUsers(){

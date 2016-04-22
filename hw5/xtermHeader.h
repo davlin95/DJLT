@@ -87,7 +87,7 @@ char* getChatUsernameFromChatFd(int fd){
 /*
  * A function that gets the chat index associated with the pid, if not found returns -1;
  */ 
-int getChatIndexOfPid(pid_t pid){
+int getChatIndexFromPid(pid_t pid){
 	int i;
 	for(i=0;i<1024;i++){
 		if(xtermArray[i]==pid){
@@ -104,7 +104,7 @@ int getChatIndexFromFd(int fd){
   int i;
   for(i=0; i< 1024;i++){
     if(allChatFds[i]==fd){
-      printf("getIndexFromFd(): found index for this fd %d at index %d\n",fd,i);
+      printf("getChatIndexFromFd(): found index for this fd %d at index %d\n",fd,i);
       return i;
     }
   }

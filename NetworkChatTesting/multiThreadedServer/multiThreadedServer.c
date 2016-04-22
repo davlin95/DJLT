@@ -150,7 +150,7 @@ int main(int argc, char* argv[]){
             /*****************************/
             recognizeAndExecuteStdin(stdinBuffer);
             memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
-          } 
+          }  
         }else if(pollFds[i].fd == pollFds[2].fd ){
           printf("global socket triggered poll\n");
           char blank[1024];

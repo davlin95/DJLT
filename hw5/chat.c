@@ -96,7 +96,7 @@ int main(int argc, char ** argv) {
           int clientBytes =0;
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
             printUserIn(otherUser);
-            printf("%s\n",message);
+            printf("%s",message);
             printUserOut(originalUser);
             memset(&message,0,1024);   
           }
@@ -113,7 +113,7 @@ int main(int argc, char ** argv) {
         else if(chatPollFds[i].fd == 0){
           printStarHeadline("STDIN INPUT",-1);
         
-          int bytes=0;
+          int bytes=0; 
           char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){

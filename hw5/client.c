@@ -8,11 +8,31 @@
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <signal.h>
+#include <sys/wait.h>
 #include "xtermHeader.h"    
 
 int clientFd=-1; 
-bool existsChat=false;
- 
+
+void xtermReaperHandler(){
+  pid_t pid;
+  int reapStatus;
+  while( (pid = waitpid(-1,&reapStatus,WUNTRACED) ) > 0 ){
+    char deadChild[1024];
+    memset(deadChild,0,1024); 
+    sprintf(deadChild,"pid: %d died\n",pid);
+    write(1,deadChild,1023);
+  }
+  int index = getChatIndexFromPid(pid);
+  int pollIndex = getPollIndexFromFd(allChatFds[index]);
+  //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
+  close(allChatFds[index]);
+  allChatFds[index]=-1;
+  free(allChatUsers[index]);
+  allChatUsers[index]=NULL;
+  xtermArray[index]=-1;
+  clientPollFds[pollIndex].fd=-1;
+}
+
 void killClientProgramHandler(int fd){  
     if(fd >0){ 
       close(fd);
@@ -21,12 +41,8 @@ void killClientProgramHandler(int fd){
     exit(0);
 }
 
-void handleKilledChat(){
-  
-}
-
 int main(int argc, char* argv[]){ 
-  signal(SIGCHLD,handleKilledChat);
+  signal(SIGCHLD,xtermReaperHandler);
   initializeChatGlobals();
   int argCounter;  
   //bool verbose;
@@ -100,7 +116,6 @@ int main(int argc, char* argv[]){
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
-        break;
       } 
       int i; 
       for(i=0;i<clientPollNum;i++){
@@ -108,8 +123,8 @@ int main(int argc, char* argv[]){
           continue; 
         } 
         if(clientPollFds[i].revents!=POLLIN){
-          fprintf(stderr,"poll.revents:%s\n",strerror(errno));
-          break;
+            fprintf(stderr,"poll.revents:%s\n",strerror(errno));
+            break;
         }  
         /***********************************/
         /*   POLLIN FROM CLIENTFD         */
@@ -124,7 +139,7 @@ int main(int argc, char* argv[]){
               if (extractArgAndTest(message, sessionLength)){
                 displayClientConnectedTime(sessionLength);
               }   
-            } 
+            }  
             else if (checkVerb(PROTOCOL_UTSIL, message)){
               int length = strlen(message) - 4;
               char *protocolTerminator = (void *)message + length;
