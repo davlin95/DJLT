@@ -10,53 +10,151 @@ bool validUsername(char *username){
   return true;
 }
 
-char* protocol_IAM_Helper(char* string, char *userBuffer){
-    if (checkVerb(PROTOCOL_IAM, string)){
+bool protocol_Login_Helper(char* verb, char* string, char *userBuffer){
+    if (checkVerb(verb, string)){
       if (extractArgAndTest(string, userBuffer)){
-        if (validUsername(userBuffer))
-          return userBuffer;
+        return true;
       }
     }
-    return NULL;
+    return false;
 }
 
-void processValidClient(char* clientUserName, int fd){
-  Client* newClient = createClient();
-  setClientUserName(newClient,clientUserName);
-  startSession(newClient->session);
-  newClient->session->commSocket = fd;
-  addClientToList(newClient);
-}
-
-char* performLoginProcedure(int fd,char* userBuffer){
-  //INITIALIZE
+bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUser){
+  //-----------------------------------------------------------||
+  //  INITIALIZE protocolBuffer TO STORE RESPONSE FROM CLIENT  ||
+  //-----------------------------------------------------------||
   char protocolBuffer[1024];
+  //----------------------------------||
+  //     READ RESPONSE FROM CLIENT    ||                       
+  //----------------------------------||
+  /*
   memset(&protocolBuffer,0,1024);
-
-  //WAIT FOR WOLFIE
-  printf("waiting for WOLFIE\n");
-  int bytes=1;
-  bytes = read(fd,&protocolBuffer,1024);
-  if(strcmp(protocolBuffer, PROTOCOL_WOLFIE)!=0){
-    return NULL;
-  }else{
-    protocolMethod(fd,EIFLOW,NULL,NULL,NULL);
-    printf("sent elflow to client\n");
+  if (Read(fd, protocolBuffer))
+    return false;
+  */  
+  memset(&protocolBuffer,0,1024);
+  if (read(fd, &protocolBuffer,1024) < 0){
+    fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
   }
-
-  /*memset the protocol buffer so it can be reused for second verb*/
+  //-----------------------------------------------|| 
+  //      CHECK IF EXPECTED: WOLFIE \r\n\r\n,      ||
+  //-----------------------------------------------|| 
+  if(checkVerb(PROTOCOL_WOLFIE, protocolBuffer)){
+    protocolMethod(fd,EIFLOW,NULL,NULL,NULL);
+  }
+  else{
+    fprintf(stderr, "Expected protocol verb WOLFIE\n");
+    return false;
+  }
+  //-----------------------------------------||
+  //     READ NEXT RESPONSE FROM CLIENT      ||                       
+  //-----------------------------------------||
+  /*
+  if (Read(fd, protocolBuffer))
+    return false;
+  */
   memset(&protocolBuffer,0,1024);
-  bytes =-1;
-
-  bytes = read(fd,&protocolBuffer,1024);
-  if (protocol_IAM_Helper(protocolBuffer, userBuffer) != NULL){
-    if (getClientByUsername(userBuffer)==NULL){
-      protocolMethod(fd, HI, userBuffer,NULL,NULL);
-      sendMessageOfTheDay(fd);
-      return userBuffer;
+  if (read(fd, &protocolBuffer,1024) < 0){
+    fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+  }
+  //-------------------------------------------------------|| 
+  //    CHECK IF RESPONSE: IAMNEW <username> \r\n\r\n      ||  
+  //-------------------------------------------------------||
+  if (protocol_Login_Helper(PROTOCOL_IAMNEW, protocolBuffer, userBuffer)){
+    *newUser = true;
+    if (validUsername(userBuffer) && getAccountByUsername(userBuffer)==NULL){
+      protocolMethod(fd, HINEW, userBuffer,NULL,NULL);
+    }
+    else{
+      protocolMethod(fd, ERR0, NULL,NULL,NULL);
+      protocolMethod(fd, BYE, NULL,NULL,NULL);
+      fprintf(stderr, "Invalid Username or account already exists.\n");
+      return false; 
+    }
+  } 
+  //--------------------------------------------------||
+  //    CHECK IF RESPONSE: IAM <username> \r\n\r\n    || 
+  //--------------------------------------------------||
+  else if (protocol_Login_Helper(PROTOCOL_IAM, protocolBuffer, userBuffer)){
+    if (getAccountByUsername(userBuffer)!=NULL){
+      if(getClientByUsername(userBuffer)==NULL){
+        protocolMethod(fd, AUTH, NULL, NULL, NULL);
+      } 
+      else{
+        protocolMethod(fd, ERR0, NULL,NULL,NULL);
+        protocolMethod(fd, BYE, NULL,NULL,NULL);
+        fprintf(stderr, "User already signed in.\n");
+        return false;
+      }
+    }
+    else{
+      protocolMethod(fd, ERR1, NULL,NULL,NULL);
+      protocolMethod(fd, BYE, NULL,NULL,NULL);
+      fprintf(stderr, "Account doesn't exist.\n");
+      return false;
     }
   }
-  protocolMethod(fd, ERR0, NULL,NULL,NULL);
-  protocolMethod(fd, BYE, NULL,NULL,NULL);
-  return NULL; 
+  else {
+    fprintf(stderr, "Expected protocol verb IAM or IAMNEW\n");
+    return false;
+  }
+  //-----------------------------------------||
+  //     READ NEXT RESPONSE FROM CLIENT      ||                       
+  //-----------------------------------------||
+  /*
+  if (Read(fd, protocolBuffer))
+    return false;
+  */
+  memset(&protocolBuffer,0,1024);
+  if (read(fd, &protocolBuffer,1024) < 0){
+    fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+  }
+  //------------------------------------------------------||
+  //    CHECK IF RESPONSE: NEWPASS <password> \r\n\r\n    || 
+  //------------------------------------------------------||
+  if (protocol_Login_Helper(PROTOCOL_NEWPASS, protocolBuffer, passBuffer)){
+    if (validPassword(passBuffer)){
+      protocolMethod(fd, SSAPWEN, NULL, NULL, NULL);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL);
+      return true;
+    }
+    else{
+      protocolMethod(fd, ERR2, NULL, NULL, NULL);
+      protocolMethod(fd, BYE, NULL, NULL, NULL);
+      fprintf(stderr, "Invalid Password\n");
+      return false;
+    }
+  }
+
+  //---------------------------------------------------||
+  //    CHECK IF RESPONSE: PASS <password> \r\n\r\n    || 
+  //---------------------------------------------------||
+  else if (protocol_Login_Helper(PROTOCOL_PASS, protocolBuffer, passBuffer)){
+    char *salt;
+    unsigned char hashBuffer[1024];
+    memset(&hashBuffer, 0, 1024);
+    salt = getAccountByUsername(userBuffer)->salt;
+    strcat(passBuffer, salt);
+    sha256(passBuffer, hashBuffer);
+    if (strcmp((getAccountByUsername(userBuffer))->password, (char*)hashBuffer)==0){
+      protocolMethod(fd, SSAP, NULL, NULL, NULL);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL);
+      return true;
+    }
+    else{
+      protocolMethod(fd, ERR2, NULL, NULL, NULL);
+      protocolMethod(fd, BYE, NULL, NULL, NULL);
+      fprintf(stderr, "Invalid Password\n");
+      return false;
+    }
+  }
+  else{
+    fprintf(stderr, "expected NEWPASS or PASS\n");
+  }
+  return false;
 }

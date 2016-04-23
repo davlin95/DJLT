@@ -7,7 +7,7 @@
 #include <stdlib.h> 
 #include <errno.h>
 #include <sys/fcntl.h>
-#include <signal.h>
+#include <signal.h> 
 #include <sys/wait.h>
 #include "xtermHeader.h"    
 
@@ -46,7 +46,6 @@ void xtermReaperHandler(){
   clientPollFds[pollIndex].fd=-1;
 
 }
-
 void killClientProgramHandler(int fd){  
     if(fd >0){  
       close(fd);
@@ -60,7 +59,7 @@ int main(int argc, char* argv[]){
   initializeChatGlobals();
   int argCounter;   
   //bool verbose;
-  //bool newUser;
+  bool newUser;
   char *username;
   char *portNumber; 
   char * argArray[1024];
@@ -68,14 +67,14 @@ int main(int argc, char* argv[]){
   memset(&argArray, 0, sizeof(argArray));
   memset(&flagArray, 0, sizeof(flagArray));
   argCounter = initArgArray(argc, argv, argArray);
-  if (argCounter != 4){
+  if (argCounter != 5){
     USAGE("./client");
     exit(EXIT_FAILURE);
   } 
   initFlagArray(argc, argv, flagArray);
   argCounter = 0;
   while (flagArray[argCounter] != NULL){
-    if (strcmp(flagArray[argCounter], "-h")==0){
+    if (strcmp(flagArray[argCounter], "-h")==0){ 
       USAGE("./client");
       exit(EXIT_SUCCESS);
     } 
@@ -83,29 +82,29 @@ int main(int argc, char* argv[]){
       //verbose = true;
     }
     if (strcmp(flagArray[argCounter], "-c")==0){
-      //newUser = true;
+      newUser = true;
     }
     argCounter++;
   }
   portNumber = argArray[2];
   username = argArray[1];
-  char message[1024]; 
-  signal(SIGINT,killClientProgramHandler); 
-
+  char message[1024];  
+  signal(SIGINT,killClientProgramHandler);  
+ 
   if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
   }
  
   /*********** NOTIFY SERVER OF CONNECTION *****/
-  if (performLoginProcedure(clientFd, username) == 0){
-      fprintf(stderr,"Failed to login properly\n");
+  if (performLoginProcedure(clientFd, username, newUser) == 0){
+      printf("Failed to login properly\n");
       close(clientFd);
       exit(0); 
   }
   if (makeNonBlocking(clientFd)<0){   
     fprintf(stderr, "Error making socket nonblocking.\n");
-  }
+  }   
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -127,7 +126,7 @@ int main(int argc, char* argv[]){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
     while(1){
-      printf("waiting on poll\n");
+      printf(VERBOSE "waiting on poll\n" DEFAULT);
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
@@ -149,7 +148,7 @@ int main(int argc, char* argv[]){
         if(clientPollFds[i].fd == clientFd){
           printStarHeadline("SERVER TALKING TO THIS CLIENT",-1);
           int serverBytes =0;
-          while( (serverBytes = recv(clientFd, message, 1024, 0))>0){
+          while( (serverBytes = recv(clientFd, message, 1024, 0))>0){ 
             if (checkVerb(PROTOCOL_EMIT, message)){
               char sessionLength[1024]; 
               memset(&sessionLength, 0, 1024);
@@ -158,15 +157,14 @@ int main(int argc, char* argv[]){
               }   
             }  
             else if (checkVerb(PROTOCOL_UTSIL, message)){
-              int length = strlen(message) - 4;
-              char *protocolTerminator = (void *)message + length;
-              if (strcmp(protocolTerminator, "\r\n\r\n") == 0){
-                  char *messagePtr = (void *)message + 6;
-                  printf("CONNECTED USERS\n");
-                  write(1, messagePtr, length-3);
-              } 
+            	char listOfUsers[1024];
+            	memset(&listOfUsers, 0, 1024);
+              	if (extractArgsAndTest(message, listOfUsers))
+              		printf("%s\n", listOfUsers);
+              	else
+              		fprintf(stderr, "Error with UTSIL response\n");
             }
-            else if (checkVerb(PROTOCOL_BYE, message)){
+            else if (checkVerb(PROTOCOL_BYE, message)){ 
               printf("RECEIVED BYE FROM SERVER\n");
               close(clientFd);
               exit(EXIT_SUCCESS);
@@ -209,8 +207,8 @@ int main(int argc, char* argv[]){
           }
           if((serverBytes=read(clientFd,message,1))==0){
             printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
-            close(clientFd); 
-            exit(0);
+            close(clientFd);  
+            exit(0); 
           }
         }
  
@@ -219,10 +217,9 @@ int main(int argc, char* argv[]){
         /*********************************/
         else if(clientPollFds[i].fd == 0){
           printStarHeadline("STDIN INPUT",-1);
-         
           int bytes=0;
-          char stdinBuffer[1024];  
-          memset(&stdinBuffer,0,1024);
+          char stdinBuffer[1024];   
+          memset(&stdinBuffer,0,1024); 
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             printf("reading from client STDIN...\n"); 
             /*send time verb to server*/
@@ -230,19 +227,22 @@ int main(int argc, char* argv[]){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL);
             }  
             else if(strcmp(stdinBuffer,"/listu\n")==0){
-              protocolMethod(clientFd, LISTU, NULL, NULL, NULL);
+              protocolMethod(clientFd, LISTU, NULL, NULL, NULL); 
             }
             else if(strcmp(stdinBuffer,"/logout\n")==0){
               protocolMethod(clientFd, BYE, NULL, NULL, NULL);
-              waitForByeAndClose(clientFd);
-              exit(EXIT_SUCCESS);
-            } 
+              waitForByeAndClose(clientFd); 
+              exit(EXIT_SUCCESS);   
+            }  
             else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
             	processChatCommand(clientFd,stdinBuffer,username);
             }
+            else if(strcmp(stdinBuffer,"/help\n")==0){  
+            	displayHelpMenu(clientHelpMenuStrings);
+            } 
             else{
             	/***********TEST COMMUNICATING WITH SERVER ****************/
-            	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0);
+            	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0); 
             	printf("sent string :%s from client to server\n",stdinBuffer);
             	memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
             }
@@ -278,6 +278,7 @@ int main(int argc, char* argv[]){
                   fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
               }
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
+
           }
 
         }

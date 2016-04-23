@@ -1,5 +1,5 @@
 all: multiServer
 
 multiServer: multiThreadedServer.c
-	gcc -g -pthread multiThreadedServer.c -o multiServer
+	gcc -g -Wall -Werror multiThreadedServer.c -o multiServer -lcrypto  -pthread -l sqlite3
 

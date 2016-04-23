@@ -56,17 +56,6 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
     printf("connected for %d hour(s), %d minute(s), and %d second(s)\n", hour, minute, second);
   }
 
- /* 
-  * A help menu function for client
-  */ 
- void displayHelpMenu(char **helpMenuStrings){
-    char** str = helpMenuStrings;
-    while(*str!=NULL){
-      printf("%-30s\n",*str); 
-      str++;
-    }
- }
-
 
 
 
@@ -198,24 +187,23 @@ void waitForByeAndClose(int clientFd){
   char byeBuffer[1024];
   memset(&byeBuffer,0,1024);
   makeBlocking(clientFd);
-              
   int byeBytes=-1;  
   byeBytes = read(clientFd,&byeBuffer,1024);
   if(byeBytes > 0){
     if(checkVerb(PROTOCOL_BYE,byeBuffer)){
       printf("Valid BYE FROM SERVER\n");
-    }
+    } 
   }
   printf("CLOSING SERVER\n");
   close(clientFd);
 }
 
-bool protocol_HI_Helper(char* string, char *username){
-    char usernameBuffer[1024];
-    memset(&usernameBuffer, 0, 1024);
-    if (checkVerb(PROTOCOL_HI, string)){
-      if (extractArgAndTest(string, usernameBuffer)){
-        if(strcmp(usernameBuffer, username) == 0)
+bool protocol_Login_Helper(char *verb, char* string, char *stringToMatch){
+    char argBuffer[1024];
+    memset(&argBuffer, 0, 1024);
+    if (checkVerb(verb, string)){
+      if (extractArgAndTest(string, argBuffer)){
+        if(strcmp(argBuffer, stringToMatch) == 0)
           return true;
       }
     }
@@ -223,46 +211,188 @@ bool protocol_HI_Helper(char* string, char *username){
 }
 
 
-bool performLoginProcedure(int fd,char* username){
+bool performLoginProcedure(int fd,char* username, bool newUser){ 
   char protocolBuffer[1024];
-  memset(&protocolBuffer,0,1024);
-  protocolMethod(fd, WOLFIE, NULL, NULL, NULL);
-  //int bytes=-1;
-  read(fd,&protocolBuffer,1024);
-  if(strcmp(protocolBuffer,PROTOCOL_EIFLOW)!=0){
+  char *messageArray[1024];
+  int noOfMessages;
+  protocolMethod(fd, WOLFIE, NULL, NULL, NULL); 
+  //----------------------------------||
+  //     READ RESPONSE FROM CLIENT    ||                       
+  //----------------------------------||
+  /*
+  if (Read(fd, protocolBuffer))
     return false;
-  }else{
-    protocolMethod(fd, IAM, username, NULL,NULL);
-  }
-  /*memset the protocol buffer so it can be reused for second verb*/
+  */
   memset(&protocolBuffer,0,1024);
-  int bytes =-1;
-  bytes = read(fd,&protocolBuffer,1024);
-  if(bytes<0){
-    fprintf(stderr,"performLoginProcedure(): bytes read negative\n");
+  if (read(fd, &protocolBuffer,1024) < 0){
+    fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
   }
-
-  if (strcmp(protocolBuffer, PROTOCOL_ERR0) == 0){
-    printf("%s\n", protocolBuffer);
+  //----------------------------------------------|| 
+  //      CHECK IF EXPECTED: EIFLOW \r\n\r\n      ||
+  //----------------------------------------------||
+  if(checkVerb(PROTOCOL_EIFLOW, protocolBuffer)){
+    if (!newUser)
+      protocolMethod(fd, IAM, username, NULL,NULL);
+    else
+      protocolMethod(fd, IAMNEW, username, NULL, NULL); 
+  }
+  else{
+    printf("Expected protocol verb EIFLOW\n");
+    return false;
+  }
+  //----------------------------------||
+  //     READ RESPONSE FROM SERVER    ||                       
+  //----------------------------------||
+  /*
+  if (Read(fd, protocolBuffer))
+    return false;
+    */
+  memset(&protocolBuffer,0,1024);
+  if (read(fd, &protocolBuffer,1024) < 0){
+    fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+  }
+  printf("protcolBuffer: %s\n", protocolBuffer);
+  //----------------------------------------------------|| 
+  //      CHECK IF EXPECTED: ERR0 or ERR1 and BYE       ||
+  //----------------------------------------------------|| 
+  if (checkVerb(PROTOCOL_ERR0, protocolBuffer) || checkVerb(PROTOCOL_ERR1, protocolBuffer)){
+    memset(&messageArray, 0, 1024);
+    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
+      printf("Received Error and bye together\n");
+      if (checkVerb(PROTOCOL_BYE, messageArray[1])){
+        fprintf(stderr, "Error sending username, received ERR and BYE\n");
+        return false;
+      }
+    }
+    printf("Didn't receive Error and bye together\n");
     memset(&protocolBuffer,0,1024);
-    bytes = read(fd,&protocolBuffer,1024);
-    printf("%s\n", protocolBuffer);
+    if (read(fd, &protocolBuffer,1024) < 0){
+      fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+    }
+    if (checkVerb(PROTOCOL_BYE, protocolBuffer)){
+        fprintf(stderr, "Error sending username, received ERR and BYE\n");
+        return false;
+    }
+  }
+  //---------------------------------------------|| 
+  //      CHECK IF EXPECTED: HINEW or AUTH       ||
+  //---------------------------------------------||
+  if (protocol_Login_Helper(PROTOCOL_HINEW, protocolBuffer, username) || checkVerb(PROTOCOL_AUTH, protocolBuffer)){
+    char password[1024];
+    memset(&password,0,1024);
+    strcpy(password, getpass("password: "));
+    if (!newUser)
+      protocolMethod(fd, PASS, password, NULL, NULL);
+    else
+      protocolMethod(fd, NEWPASS, password, NULL, NULL);
+  }
+  else {
+    printf("Expected protocol verb AUTH or HINEW\n");
     return false;
   }
-  if (protocol_HI_Helper(protocolBuffer, username) == 0){
+  //----------------------------------|| 
+  //     READ RESPONSE FROM SERVER    ||                       
+  //----------------------------------||
+  memset(&protocolBuffer,0,1024);
+  if (read(fd,&protocolBuffer,1024) < 0){
+    fprintf(stderr,"performLoginProcedure(): bytes read negative\n");
     return false;
   }
-  else if(strcmp(protocolBuffer,PROTOCOL_BYE)==0){
-    printf("RECEIVED FROM SERVER BYE\n");
-    close(fd);
-    exit(0);
+  //--------------------------------------------|| 
+  //      CHECK IF EXPECTED: ERR2 and BYE       ||
+  //--------------------------------------------||
+  if (checkVerb(PROTOCOL_ERR2, protocolBuffer)){
+    memset(&messageArray, 0, 1024);
+    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
+      printf("Received Error and bye together\n");
+      if (checkVerb(PROTOCOL_BYE, messageArray[1])){
+        fprintf(stderr, "Error sending password, received ERR and BYE\n");
+        return false;
+      }
+    }
+    printf("Didn't receive Error and bye together\n");
+    memset(&protocolBuffer,0,1024);
+    if (read(fd, &protocolBuffer,1024) < 0){
+      fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+    }
+    if (checkVerb(PROTOCOL_BYE, protocolBuffer)){
+        fprintf(stderr, "Error sending password, received ERR and BYE\n");
+        return false;
+    }
   }
-  printf("protocol HI helper succeeded");
-  memset(&protocolBuffer, 0, 1024);
-  bytes = -1;
-  bytes = read(fd,&protocolBuffer,1024);
-  printf("MOTD: %s\n", protocolBuffer);
-  return true;
+  //-----------------------------------------------------------|| 
+  //      CHECK IF EXPECTED: SSAPWEN or SSAP, HI and MOTD      ||
+  //-----------------------------------------------------------||
+  if (checkVerb(PROTOCOL_SSAPWEN, protocolBuffer) || checkVerb(PROTOCOL_SSAP, protocolBuffer)){
+    char motd[1024];
+    memset(&motd, 0, 1024);
+    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>2){
+      if (checkVerb(PROTOCOL_HI, messageArray[1])){
+        if (noOfMessages == 3){
+          printf("Received SSAPWEN/SSAP, HI, and MOTD together.\n");
+          if (checkVerb(PROTOCOL_MOTD, messageArray[2])){
+            if (extractArgsAndTest(messageArray[2], motd)){
+              printf("%s\n", motd);
+              return true;
+            }
+          }
+          else{
+            fprintf(stderr, "Didn't receive MOTD\n");
+            return false;
+          }
+        }
+        memset(&protocolBuffer, 0, 1024);
+        read(fd,&protocolBuffer,1024);
+        if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
+            if (extractArgsAndTest(protocolBuffer, motd)){
+              printf("%s\n", motd);
+              return true;
+            }
+        }
+        else{
+            fprintf(stderr, "Didn't receive MOTD\n");
+            return false;
+        }
+      }
+      else{
+        fprintf(stderr, "Didn't receive HI\n");
+      }
+    }
+    printf("Didn't receive SSAPWEN/SSAP, HI, and MOTD together\n");
+    memset(&protocolBuffer, 0, 1024);
+    if (read(fd, &protocolBuffer,1024) < 0){
+      fprintf(stderr,"Read(): bytes read negative\n");
+    return false;
+    }
+    if (protocol_Login_Helper(PROTOCOL_HI, protocolBuffer, username)){
+      memset(&protocolBuffer, 0, 1024);
+      if (read(fd, &protocolBuffer,1024) < 0){
+        fprintf(stderr,"Read(): bytes read negative\n");
+      return false;
+      }
+      if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
+        if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
+          if (extractArgsAndTest(protocolBuffer, motd)){
+              printf("%s\n", motd);
+              return true;
+          }
+        }
+        else
+          fprintf(stderr, "Expected verb MOTD");
+      }
+      else 
+        printf("Expected MOTD");
+    }
+    else
+      printf("protocol_Login_Helper failed");
+  }
+  else 
+    printf("Expected SSAP or SSAPWEN\n");
+  return false; 
 }
 
 void recognizeAndExecuteStdin(char* userTypedIn){

@@ -1,3 +1,7 @@
+#include "sharedMethods.h"
+
+
+char messageOfTheDay[1024];
 /* Create file defining WOLFIE PROTOCOL */
 
 #ifndef PROTOCOL_WOLFIE
@@ -84,8 +88,8 @@
 #define PROTOCOL_ERR1 "ERR 01 USER NOT AVAILABLE \r\n\r\n"
 #endif 
 
-#ifndef PROTOCOL_ERR02
-#define PROTOCOL_ERR02 "ERR 02 BAD PASSWORD \r\n\r\n"
+#ifndef PROTOCOL_ERR2
+#define PROTOCOL_ERR2 "ERR 02 BAD PASSWORD \r\n\r\n"
 #endif 
 
 #ifndef PROTOCOL_ERR100
@@ -159,7 +163,7 @@
 #ifndef SSAPWEN
 #define SSAPWEN 16
 #endif 
-
+ 
 #ifndef AUTH
 #define AUTH 17
 #endif 
@@ -188,6 +192,35 @@
 #define ERR100 23
 #endif
 
+
+int getMessages(char** messageArray, char* protocolBuffer){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char message[1024];
+    char* msgPtr = message;
+    char tempString[1024];
+
+    //CLEAR THE BUFFERS
+    memset(&tempString, 0, 1024);
+    memset(&message, 0, 1024);
+
+    //CHOP UP A COPY OF THE TESTED STRING
+    strcpy(tempString, protocolBuffer);
+    token = strtok_r(tempString, "\r\n\r\n", &savePtr);
+    while (token != NULL){
+      strcpy(msgPtr, token);
+      strcat(msgPtr, "\r\n\r\n");
+      messageArray[arrayIndex++] = msgPtr;
+      msgPtr = (void*)msgPtr + strlen(message);
+      token = strtok_r(NULL,"\r\n\r\n",&savePtr);
+    }
+    messageArray[arrayIndex] = NULL;
+    for (int i = 0; i <arrayIndex; i++){
+      printf("messageArray[%d] = %s\n", i, messageArray[i]);
+    }
+    return arrayIndex;
+}
 /* 
  * A function that checks if the returned string is the protocol verb to be compared 
  */
@@ -201,6 +234,16 @@ bool checkVerb(char *protocolVerb, char* string){
  * Takes a string and tests it for the following structure. PROTOCOL_TYPE MIDDLEARGUMENT \r\n\r\n
  * and fills the buffer with the middle argument, if it returns true (meaning it pass formatting test)
  */
+bool extractArgsAndTest(char *string, char *buffer){
+  char *argPtr = (void *)strchr(string, ' ') + 1;
+  char *protocolTerminator = (void *)string + strlen(string) - 4;
+  if (strcmp(protocolTerminator, "\r\n\r\n") == 0){
+    strncpy(buffer, argPtr, strlen(argPtr) - 4);
+    return true;
+  }
+  return false;
+} 
+
 bool extractArgAndTest(char *string, char *buffer){
     char * savePtr;
     char *token;
@@ -221,8 +264,9 @@ bool extractArgAndTest(char *string, char *buffer){
     }
 
     //LOOK FOR TEST CASES
-    if (arrayIndex > 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0)
+    if (arrayIndex > 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0){
       return false;
+    }
     //PASSES TEST
     strcpy(buffer, protocolArray[1]);
     return true;
@@ -414,18 +458,14 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
     case IAM:   
                 if(optionalString!=NULL){
                   	buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                    printf("sending from protocolmethod to server: %s",buffer);
-                	write(fd,buffer,strlen(buffer));
-                    char * str = "finished writing to fd\n";
-                    write(1,str,strlen(str));
+                    send(fd, buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
                 } // MACRO NULL TERMINATED BY DEFAULT
                 break;
 
     case MOTD:   
-                if(optionalString!=NULL){
-                 	buildProtocolString(buffer, PROTOCOL_MOTD, optionalString);
-                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
-                }
+                buildProtocolString(buffer, PROTOCOL_MOTD, messageOfTheDay);
+                send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case HI:   
                 if(optionalString!=NULL){
@@ -447,7 +487,7 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
                 break;
     case EMIT:   
                 if(optionalString!=NULL){
-                  	buildProtocolString(buffer, PROTOCOL_EMIT, optionalString);
+                  buildProtocolString(buffer, PROTOCOL_EMIT, optionalString);
                 	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 }
                 break;
@@ -456,76 +496,62 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
                 send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
 
-   /* case UOFF:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+    case UOFF:   
+                if(optionalString!=NULL){
+                  buildProtocolString(buffer, PROTOCOL_UOFF, optionalString);
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case IAMNEW:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                if(optionalString!=NULL){
+                  buildProtocolString(buffer, PROTOCOL_IAMNEW, optionalString);
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case HINEW:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                if(optionalString!=NULL){
+                  buildProtocolString(buffer, PROTOCOL_HINEW, optionalString);
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case NEWPASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                if(optionalString!=NULL){
+                  buildProtocolString(buffer, PROTOCOL_NEWPASS, optionalString);
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
     case SSAPWEN:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                send(fd,PROTOCOL_SSAPWEN,strlen(PROTOCOL_SSAPWEN),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case AUTH:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                send(fd,PROTOCOL_AUTH,strlen(PROTOCOL_AUTH),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+                if(optionalString!=NULL){
+                  buildProtocolString(buffer, PROTOCOL_PASS, optionalString);
+                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                }
                 break;
-    case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
+    case SSAP:   
+                send(fd,PROTOCOL_SSAP,strlen(PROTOCOL_SSAP),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-    case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-    case PASS:   
-                send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;*/
-    case ERR0:   
-                send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
-
     case ERR1:   
                 send(fd,PROTOCOL_ERR1,strlen(PROTOCOL_ERR1),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+    case ERR2:   
+                send(fd,PROTOCOL_ERR2,strlen(PROTOCOL_ERR2),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+    case ERR100:   
+                send(fd,PROTOCOL_ERR100,strlen(PROTOCOL_ERR100),0); // MACRO NULL TERMINATED BY DEFAULT
+                break;
+    case ERR0:   
+                send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
   }
 
 }
 
 
-/*
- * returns the argc+1, for the null that is attached. 
- */
-int initArgArray(int argc, char **argv, char **argArray){
-    int i;
-    int argCount = 0;
-    for (i = 0; i<argc; i++){
-        if (strcmp(argv[i], "-h")!=0 && strcmp(argv[i], "-v")!=0){
-            argArray[argCount] = argv[i];
-            argCount++;
-        }
-    }
-    argArray[argCount++] = NULL;
-    return argCount;
-}
 
-int initFlagArray(int argc, char **argv, char **flagArray){
-    int i;
-    int argCount = 0;
-    for (i = 0; i<argc; i++){
-        if (strcmp(argv[i], "-h")==0 || strcmp(argv[i], "-v")==0 || strcmp(argv[i], "-c")==0){
-            flagArray[argCount] = argv[i];
-            argCount++;
-        }
-    }
-    flagArray[argCount] = NULL;
-    return argCount;
-}
+
+

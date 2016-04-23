@@ -1,6 +1,7 @@
 						/***********************************************************************/
 						/*                    HEADER DETAILS                                  */
 						/**********************************************************************/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,8 +13,11 @@
 #include <time.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
+#include <openssl/rand.h>
+#include <openssl/sha.h>
 #include "WolfieProtocolVerbs.h"
-#define _GNU_SOURCE
+#include <pthread.h> 
+#include <sqlite3.h>
 
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
@@ -23,7 +27,6 @@
 struct pollfd pollFds[1024];
 int pollNum=0;
 
-char messageOfTheDay[1024];
 
 typedef struct sessionData{
   struct in_addr *ipAddress;
@@ -42,6 +45,7 @@ typedef struct clientData{
 typedef struct accountData{
 	char *userName;
 	char *password;
+  char *salt;
   struct accountData *next;
   struct accountData *prev;
 }Account;
@@ -53,12 +57,15 @@ typedef struct accountData{
 Client* clientHead;
 Account* accountHead;
 
-Client *createClient(){
+Client *createClient(char *username, int fd){
   Client *client = malloc(sizeof(struct clientData));
   Session *clientSession = malloc(sizeof(struct sessionData));
   struct in_addr *clientIPAddress= malloc(sizeof(struct in_addr));
-  client->session = clientSession;
-  ((Session *)client->session)->ipAddress = clientIPAddress;
+  client->userName = malloc( (strlen(username)+1)*sizeof(char) );
+  strcpy(client->userName, username);
+  client->session = clientSession; 
+  client->session->ipAddress = clientIPAddress;
+  client->session->commSocket = fd;
   return client;
 }
 
@@ -84,12 +91,12 @@ void destroyClientMemory(Client* user){
     free(user);
   }
 }
-
+/*
 void setClientUserName(Client* client,char* name){
   client->userName = malloc( (strlen(name)+1)*sizeof(char) );
   strcpy(client->userName,name);
 }
-
+*/
 void addClientToList(Client* client){
   client->next=clientHead;
   client->prev=NULL;
@@ -97,15 +104,25 @@ void addClientToList(Client* client){
 }
 
 
-Account *createAccount(){
+Account *createAccount(char *username, char* password, char* salt){
   Account *account = malloc(sizeof(struct accountData));
+  account->userName = malloc((strlen(username)+1)*sizeof(char));
+  strcpy(account->userName, username);
+  account->password = malloc((strlen(password)+1)*sizeof(char));
+  strcpy(account->password, password);
+  account->salt = malloc((strlen(salt)+1)*sizeof(char));
+  strcpy(account->salt, salt);
   return account;
 }
+
+void addAccountToList(Account* account){
+  account->next=accountHead;
+  account->prev=NULL;
+  accountHead=account;
+}
+
+
 void loadAccountFile();
-
-Account* getAccount(int accountId);
-
-void setAccount(Account* newAccount);
 
 
 
@@ -124,13 +141,13 @@ char* serverHelpMenuStrings[]={"/users \t List users currently logged in.", "/he
             "ACCOUNTS_FILE  File containing username and password data to be loaded upon execution.\n" \
             ,(name)                                                                                    \
         );                                                                                             \
-    } while(0)
+    } while(0) 
 
 
             /************ STDIN READING ***********/
 void compactPollDescriptors(){
   int i,j;
-  for (i=0; i<pollNum; i++)
+  for (i=0; i<pollNum; i++) 
   {
     // IF ENCOUNTER A CLOSED FD
     if (pollFds[i].fd == -1)
@@ -305,7 +322,7 @@ void processUsers();
 
 void killServerHandler(){
     disconnectAllUsers();
-    printf("disconnected All users\n");
+    printf("disconnected All users\n"); 
     exit(EXIT_SUCCESS);
 }
 
@@ -321,7 +338,7 @@ void killServerHandler(){
   }
 
   void sendMessage(int fd, char *message){
-    write(fd,message,strlen(message));
+    write(fd,message,strlen(message)); 
   }
 
  /*
@@ -378,37 +395,32 @@ void killServerHandler(){
  */
  Client* getClientByUsername(char* username){
     Client* clientPtr;
-    for(clientPtr = clientHead; clientPtr!=NULL; clientPtr = clientPtr->next){
-      if (strcmp(username, clientPtr->userName) == 0){
-        printf("getClientByUsername FOUND USER: %s", username);
+    for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+      if (strcmp(username, clientPtr->userName) == 0)
         return clientPtr;
       }
-    }
     return NULL;
   }
 
   Client* getClientByFd(int fd){
     Client* clientPtr;
     for(clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
-      printf("returnClientData: id is %d\n", fd);
       if (clientPtr->session->commSocket == fd)
         return clientPtr;
     }
     return NULL;
   }
 
-
- 						/******* ACCESSORY METHODS ******/
- /* 
-  * A help menu function for client
-  */ 
- void displayHelpMenu(char **helpMenuStrings){
-    char** str = helpMenuStrings;
-    while(*str!=NULL){
-      printf("%-30s\n",*str); 
-      str++;
+  Account* getAccountByUsername(char* username){
+    Account* accountPtr;
+    for(accountPtr = accountHead; accountPtr; accountPtr = accountPtr->next){
+      if (strcmp(username, accountPtr->userName) == 0)
+        return accountPtr;
     }
- }
+    return NULL;
+  } 
+
+ 
 
  void printStarHeadline(char* headline,int optionalFd){
 
@@ -549,8 +561,8 @@ int makeReusable(int fd){
  *@param results: addrinfo list
  *@param serverFd: socket to be initialized
  *@return: serverFD, -1 otherwise
- */
-int findSocketandBind(struct addrinfo *results, int serverFd){
+ */ 
+int findSocketandBind(struct addrinfo *results, int serverFd){  
   if ((serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
     fprintf(stderr,"socket(): %s\n",strerror(errno));
     return -1;
@@ -653,4 +665,41 @@ bool buildUtsilArg(char *argBuffer){
     }
     printf("arg is %s\n", argBuffer);
     return true;
+}
+
+void sha256(char* password, unsigned char *output){
+  SHA256_CTX sha256;
+  SHA256_Init(&sha256);
+  SHA256_Update(&sha256, password, strlen(password));
+  SHA256_Final(output, &sha256);
+}
+
+void processValidClient(char* clientUserName, int fd){
+  Client* newClient = createClient(clientUserName, fd);
+  startSession(newClient->session);
+  addClientToList(newClient);
+}
+
+void processValidAccount(char *username, char *password, char *salt){
+  Account* newAccount = createAccount(username, password, salt);
+  addAccountToList(newAccount);
+}
+
+int callback(void* NotUsed, int argc, char **argv, char**azColName){
+  int i;
+  for (i = 0; i < argc; i+=3){
+    processValidAccount(argv[i], argv[i+1], argv[i+2]);
+  }
+  return 0;
+}
+char * createSQLInsert(Account *account, char* sqlBuffer){
+  char* sqlPtr = sqlBuffer;
+  strcat(sqlPtr, "INSERT INTO ACCOUNTS (username, password, salt) VALUES ('");
+  strcat(sqlPtr, account->userName);
+  strcat(sqlPtr, "', '");
+  strcat(sqlPtr, account->password);
+  strcat(sqlPtr, "', '");
+  strcat(sqlPtr, account->salt);
+  strcat(sqlPtr, "');");
+  return sqlPtr;
 }
