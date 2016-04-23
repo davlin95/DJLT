@@ -1,4 +1,3 @@
-
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,6 +24,7 @@ int main(int argc, char* argv[]){
   char * flagArray[1024]; 
   memset(&argArray, 0, sizeof(argArray));
   memset(&flagArray, 0, sizeof(flagArray));
+  
   //DATABASE VARIABLES
   sqlite3 *db;
   char *zErrMsg = 0;
@@ -35,7 +35,7 @@ int main(int argc, char* argv[]){
     USAGE("./server"); 
     exit(EXIT_FAILURE);  
   } else if (argCounter == 5){
-    
+
     if ((rc = sqlite3_open(argArray[3], &db))){
       fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(db));
       exit(0);
@@ -79,8 +79,6 @@ int main(int argc, char* argv[]){
   pthread_t threadId[1026];  
   signal(SIGINT,killServerHandler); 
 
-  // threadStatus = pthread_create(&tid[0], NULL, &acceptThread, NULL);
-  // pthread_join(tid[0],NULL);
   int serverFd = 0, connfd;    
 
   /*******************/
@@ -179,6 +177,7 @@ int main(int argc, char* argv[]){
             /*******************************/
             /* EXECUTE STDIN COMMANDS     */
             /*****************************/
+
             /*************** EXECUTE STDIN COMMANDS ***********/
             if (strcmp(stdinBuffer, "/shutdown\n")==0){  
               char sqlInsert[1024];
@@ -271,14 +270,16 @@ int main(int argc, char* argv[]){
               printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
               Client* toUser= getClientByUsername(msgToBuffer);
               printf("DONE SEARCHING FOR USER\n"); 
+              
               //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
               if( toUser!=NULL && strcmp(msgToBuffer, msgFromBuffer)!=0 ){
                 //SEND MESSAGE BACK
                 char messageResponse[1024];
                 memset(&messageResponse,0,1024);
                 buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
-                send(toUser->session->commSocket,messageResponse,strlen(messageResponse),0);
-                send(pollFds[i].fd,messageResponse,strlen(messageResponse),0);
+                send(toUser->session->commSocket,messageResponse,strnlen(messageResponse,1023),0);
+                send(pollFds[i].fd,messageResponse,strnlen(messageResponse,1023),0);
+              
               }else{ 
                 //ERROR BACK TO USER
                 protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL);
@@ -342,9 +343,10 @@ void* loginThread(void* args){
   memset(&username, 0, 1024); 
   char password[1024];
   memset(&password, 0, 1024);
-  printf("Accepted new client in loginThread! Client CONNFD IS %d\n", connfd);
+  printf("Encountered new client in loginThread! Client CONNFD IS %d\n", connfd);
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   if (performLoginProcedure(connfd, username, password, newUser)){
+    fprintf(stderr,"performLoginProcedure should be true\n");
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
     pollNum++;
@@ -373,6 +375,7 @@ void* loginThread(void* args){
     }
 
   }else {
+    close(connfd);
     printf("Client %d failed to login",connfd);
   }
   return NULL; 

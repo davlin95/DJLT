@@ -169,10 +169,6 @@ void compactPollDescriptors(){
  */
 void* loginThread(void* args);
 
-/*
- * Spawns a communication thread for the client
- */
-void spawnCommunicationThread();
 
 
 						/******** CLIENT MANAGEMENT FUNCTIONS ******/
@@ -220,8 +216,8 @@ bool verifyPassword(char* password);
      clientPtr= clientPtr->next;
      disconnectUser(logginOffUser->userName);
    }
-
  }
+
 /*
  * A function that prints the account struct into string
  * @param accountData: account struct to be printed
@@ -230,6 +226,7 @@ bool verifyPassword(char* password);
 void accountStructToString(Account* accountData){
   printf("Username: %-15s Password: %s\n", accountData->userName, accountData->password);
 }
+
 /*
  *A function that prints all accounts
  *@return: void

@@ -18,6 +18,7 @@
                 /************************************/
                 /*  Global Structures               */
                 /************************************/
+
 struct pollfd clientPollFds[1024];
 int clientPollNum;
  
@@ -89,17 +90,18 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
  *@param portNumber: portNumber used for getaddrinfo method
  *@return: initialized addrinfo list results
  */
-struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumber){
+struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumber, char* ipAddress){
   int status;
   struct addrinfo settings;
   memset(&settings,0,sizeof(settings));
   settings.ai_family=AF_INET;
   settings.ai_socktype=SOCK_STREAM;
-  status = getaddrinfo(NULL,portNumber,&settings,&results);
+  status = getaddrinfo(ipAddress,portNumber,&settings,&results);
   if(status!=0){
     fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
     return NULL;
   }
+  printf("getaddrinfo successful()\n");
   return results;
 }
 /*
@@ -121,17 +123,20 @@ int makeReusable(int fd){
  *@param clientFd: socket to be initialized
  *@return: clientFD, -1 otherwise
  */
-int createAndConnect(char* portNumber, int clientFd){
+int createAndConnect(char* portNumber, int clientFd, char* ipAddress){
   struct addrinfo resultsStruct;
   struct addrinfo* results=&resultsStruct;
-  if((results = buildAddrInfoStructs(results, portNumber)) == NULL){
+  if((results = buildAddrInfoStructs(results, portNumber, ipAddress)) == NULL){
+    fprintf(stderr,"createAndConnect(): unable to buildAddrInfoStructs()\n");
     return -1;
   }
   if ((clientFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
+    fprintf(stderr,"createAndConnect(): unable to build socket\n");
     freeaddrinfo(results);
     return -1;
   }
   if (connect(clientFd, results->ai_addr, results->ai_addrlen)!=-1){
+    fprintf(stderr,"createAndConnect(): Able to connect to socket\n");
     freeaddrinfo(results);
     return clientFd;
   }
@@ -330,7 +335,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
   if (checkVerb(PROTOCOL_SSAPWEN, protocolBuffer) || checkVerb(PROTOCOL_SSAP, protocolBuffer)){
     char motd[1024];
     memset(&motd, 0, 1024);
-    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>2){
+    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
       if (checkVerb(PROTOCOL_HI, messageArray[1])){
         if (noOfMessages == 3){
           printf("Received SSAPWEN/SSAP, HI, and MOTD together.\n");
@@ -338,7 +343,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
             if (extractArgsAndTest(messageArray[2], motd)){
               printf("%s\n", motd);
               return true;
-            }
+            } 
           }
           else{
             fprintf(stderr, "Didn't receive MOTD\n");

@@ -16,7 +16,7 @@ int clientFd=-1;
 void cleanUpChatFd(int fd){
   int chatIndex = getChatIndexFromFd(fd);
   int pollIndex = getPollIndexFromFd(fd);
-  
+
   //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
   allChatFds[chatIndex]=-1;
   free(allChatUsers[chatIndex]);
@@ -24,8 +24,8 @@ void cleanUpChatFd(int fd){
   xtermArray[chatIndex]=-1;
   close(clientPollFds[pollIndex].fd);
   clientPollFds[pollIndex].fd=-1;
-
 }
+
 void xtermReaperHandler(){
   pid_t pid;
   int reapStatus;
@@ -62,6 +62,7 @@ int main(int argc, char* argv[]){
   bool newUser;
   char *username;
   char *portNumber; 
+  char* ipAddress;
   char * argArray[1024];
   char * flagArray[1024];
   memset(&argArray, 0, sizeof(argArray));
@@ -71,6 +72,7 @@ int main(int argc, char* argv[]){
     USAGE("./client");
     exit(EXIT_FAILURE);
   } 
+
   initFlagArray(argc, argv, flagArray);
   argCounter = 0;
   while (flagArray[argCounter] != NULL){
@@ -84,14 +86,15 @@ int main(int argc, char* argv[]){
     if (strcmp(flagArray[argCounter], "-c")==0){
       newUser = true;
     }
-    argCounter++;
+    argCounter++; 
   }
-  portNumber = argArray[2];
   username = argArray[1];
+  portNumber = argArray[2];
+  ipAddress = argArray[3];
   char message[1024];  
   signal(SIGINT,killClientProgramHandler);  
  
-  if ((clientFd = createAndConnect(portNumber, clientFd)) < 0){
+  if ((clientFd = createAndConnect(portNumber, clientFd,ipAddress)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
   }
