@@ -13,6 +13,19 @@
 
 int clientFd=-1; 
 
+void cleanUpChatFd(int fd){
+  int chatIndex = getChatIndexFromFd(fd);
+  int pollIndex = getPollIndexFromFd(fd);
+  
+  //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
+  allChatFds[chatIndex]=-1;
+  free(allChatUsers[chatIndex]);
+  allChatUsers[chatIndex]=NULL;
+  xtermArray[chatIndex]=-1;
+  close(clientPollFds[pollIndex].fd);
+  clientPollFds[pollIndex].fd=-1;
+
+}
 void xtermReaperHandler(){
   pid_t pid;
   int reapStatus;
@@ -25,16 +38,17 @@ void xtermReaperHandler(){
   int index = getChatIndexFromPid(pid);
   int pollIndex = getPollIndexFromFd(allChatFds[index]);
   //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
-  close(allChatFds[index]);
   allChatFds[index]=-1;
   free(allChatUsers[index]);
   allChatUsers[index]=NULL;
   xtermArray[index]=-1;
+  close(clientPollFds[pollIndex].fd);
   clientPollFds[pollIndex].fd=-1;
+
 }
 
 void killClientProgramHandler(int fd){  
-    if(fd >0){ 
+    if(fd >0){  
       close(fd);
     }
     printf("Clean exit on clientFd\n"); 
@@ -44,7 +58,7 @@ void killClientProgramHandler(int fd){
 int main(int argc, char* argv[]){ 
   signal(SIGCHLD,xtermReaperHandler);
   initializeChatGlobals();
-  int argCounter;  
+  int argCounter;   
   //bool verbose;
   //bool newUser;
   char *username;
@@ -113,17 +127,20 @@ int main(int argc, char* argv[]){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
     while(1){
+      printf("waiting on poll\n");
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
       } 
       int i; 
       for(i=0;i<clientPollNum;i++){
+        printf("checking forloop\n");
         if(clientPollFds[i].revents==0){
+          printf("continue forloop\n");
           continue; 
         } 
         if(clientPollFds[i].revents!=POLLIN){
-            fprintf(stderr,"poll.revents:%s\n",strerror(errno));
+            printf("poll.revents:%s\n",strerror(errno));
             break;
         }  
         /***********************************/
@@ -242,25 +259,28 @@ int main(int argc, char* argv[]){
           //READ BYTES FROM CHAT BOX CHILD PROCESS
           int chatBytes =-1;
           chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
-          if(chatBytes>0){
+          /*if(chatBytes>0){
             printStarHeadline("READ FROM CHATBOX: ",-1);
             printf("%s",chatBuffer);
+          }*/
+          if(chatBytes==0){
+              cleanUpChatFd(clientPollFds[i].fd);
+          }else{
+
+              //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
+              char* toPerson = getChatUsernameFromChatFd(clientPollFds[i].fd);
+              if(toPerson==NULL){
+                  fprintf(stderr,"error in poll loop: getChatUsernameFromChatFd() returned NULL person string\n");
+              }
+              char relayMessage[1024];
+              memset(&relayMessage,0,1024);
+              if(buildMSGProtocol(relayMessage,toPerson,username, chatBuffer)==false){
+                  fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+              }
+              chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
           }
 
-          //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
-          char* toPerson = getChatUsernameFromChatFd(clientPollFds[i].fd);
-          if(toPerson==NULL){
-            fprintf(stderr,"error in poll loop: getChatUsernameFromChatFd() returned NULL person string\n");
-          }
-          char relayMessage[1024];
-          memset(&relayMessage,0,1024);
-          if(buildMSGProtocol(relayMessage,toPerson,username, chatBuffer)==false){
-              fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
-          }
-          chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
         }
-
-
 
         /* MOVE ON TO NEXT POLL FD */
       }

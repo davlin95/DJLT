@@ -10,7 +10,7 @@
 #include <sys/socket.h>
 #include "chatHeader.h"
 
-               
+
 
 int main(int argc, char ** argv) {
   signal(SIGKILL, endProcessHandler);
@@ -111,7 +111,7 @@ int main(int argc, char ** argv) {
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(chatPollFds[i].fd == 0){
-          printStarHeadline("STDIN INPUT",-1);
+          //printStarHeadline("STDIN INPUT",-1);
         
           int bytes=0; 
           char stdinBuffer[1024];  
@@ -127,6 +127,5 @@ int main(int argc, char ** argv) {
       }
     /* FOREVER RUNNING LOOP */ 
     }
-
   	return 0;
 }
