@@ -58,9 +58,6 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
   }
 
 
-
-
-
  /********** LOGISTICAL I/O FUNCTIONS *******/
  /* 
   * A function that disconnects the user from the server
@@ -117,6 +114,8 @@ int makeReusable(int fd){
   }
   return 0;
 }
+
+
 /*
  *A function that creates a socket and connects it to the server
  *@param portNumber: portNumber of the Server

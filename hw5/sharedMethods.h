@@ -15,17 +15,16 @@
  }
 
  /*
-  *	read wrapper method
+  *	read wrapper method that reads byte by byte 
   */
-bool Read(int fd, char* protocolBuffer){
-	if (protocolBuffer)
-	printf("entering read function and fd is %d\n", fd);
-  if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
-    return false;
+bool Read(int fd, char* buffer, int bufferSize){
+  int bytes = 0;
+  char character;
+  char* bufferPtr=buffer;
+  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL  ){
+    *bufferPtr=character;
+     bufferPtr++;
   }
-  printf("Read(): %s\n", protocolBuffer);
-  return true;
 }
 
 /*
