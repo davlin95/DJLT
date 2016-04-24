@@ -1,18 +1,9 @@
 #include "clientHeader.h"
+		
 
-
-					/*************************/
-					/*     GLOBALS CHAT     */
-					/***********************/
-int allChatFds[1024];
-pid_t xtermArray[1024];
-char* allChatUsers[1024];
-int chatIndex =0;
-
- 					/************************************************/
-                    /*           XTERM CHAT PROGRAM                */
-                    /***********************************************/
-
+				/****************************************/
+				/* Accessory method needed at this spot */
+				/****************************************/
 /*
  *A function that makes the socket non-blocking
  *@param fd: file descriptor of the socket
@@ -32,98 +23,9 @@ int makeNonBlockingForChat(int fd){
   return 1;
 }
 
-void setChatUser(char* username, int fd, pid_t xtermProcess){
-  char* newUser = malloc((strlen(username)+1)*sizeof(int));
-  strcpy(newUser,username);
-
-  //ADD TO GLOBAL DATA STRUCTURES
-  allChatFds[chatIndex]=fd;
-  allChatUsers[chatIndex]=newUser;
-  xtermArray[chatIndex]=xtermProcess;
-  chatIndex++;
-
-  if (makeNonBlockingForChat(fd)<0){ 
-    fprintf(stderr, "Error making fd nonblocking.\n");
-  }
-
-  //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
-  clientPollFds[clientPollNum].fd = fd;
-  clientPollFds[clientPollNum].events = POLLIN;
-  clientPollNum++;
-  printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
-
-}
-
-
-int getChatFdFromUsername(char* username){
-  if(username==NULL){
-    fprintf(stderr,"getFdFromUsername(): input username is NULL\n");
-  }
-  int i;
-  for(i=0;i<1024;i++){
-    if(allChatUsers[i]!=NULL && (strcmp(username,allChatUsers[i])==0) ){
-      if(allChatFds[i]>=0)
-        return allChatFds[i];
-    }
-  }
-  return -1;
-}
-
-
-char* getChatUsernameFromChatFd(int fd){
-  if(fd <0){
-    fprintf(stderr,"getUsernameFromFd(): input fd is erroneous\n");
-  }
-  int i;
-  for(i=0;i<1024;i++){
-    if(allChatFds[i]>=0 && allChatFds[i]==fd ){
-      if(allChatUsers[i]!=NULL)
-        return allChatUsers[i];
-    }
-  }
-  return NULL;
-}
-
-/*
- * A function that gets the chat index associated with the pid, if not found returns -1;
- */ 
-int getChatIndexFromPid(pid_t pid){
-	int i;
-	for(i=0;i<1024;i++){
-		if(xtermArray[i]==pid){
-			return i;
-		}
-	}
-	return -1;
-}
-
-/*
- * A function that gets the index of fd in the allChatsFds array 
- */
-int getChatIndexFromFd(int fd){
-  int i;
-  for(i=0; i< 1024;i++){
-    if(allChatFds[i]==fd){
-      printf("getChatIndexFromFd(): found index for this fd %d at index %d\n",fd,i);
-      return i;
-    }
-  }
-  return -1;
-}
-
-/*
- * A function that searches for the corresponding index in the poll structure that contains this FD. 
- */
-int getPollIndexFromFd(int fd){
-  int i;
-  for(i=0; i< 1024;i++){
-    if(clientPollFds[i].fd==fd){
-      return i;
-    }
-  }
-  return -1;
-}
-
+					/************************/
+					/*  SIGNALS            */
+					/**********************/
 /*
  * Send SIGINT to process 
  */
@@ -133,57 +35,124 @@ void killXterm(pid_t xtermProcess){
 	}
 }
 
-/*
- * A function that cleans up relevant global information by username. 
- */
-bool deleteChatUserByUsername(char* username){
-  //GET FD ASSOCIATED WITH THE USERNAME
-  int fd = getChatFdFromUsername(username);
-  if(fd<0){
-    fprintf(stderr,"deleteChatUserByUsername(): username not associated with an fd\n");
-    return false;
+					/*************************/
+					/*     GLOBALS CHAT     */
+					/***********************/
+
+typedef struct xtermStruct{
+  //NODE DATA
+  int chatFd;
+  pid_t xtermProcess;
+  char* toUser;
+
+  //LINKED LIST FEATURES
+  struct xtermStruct *next;
+  struct xtermStruct *prev;
+}Xterm;
+
+//HEAD OF LINKED LIST STRUCT PTR
+Xterm* xtermHead;
+
+		
+						/***********************/
+                        /* XTERM STRUCT METHODS */
+						/***********************/
+Xterm* createXtermStruct(char* username,int fd, pid_t xtermProcess){
+  Xterm* newXterm = malloc(sizeof(Xterm));
+
+  //GET MALLOCED USERNAME STRING
+  char* newUser = malloc((strlen(username)+1)*sizeof(char));
+  strcpy(newUser,username);
+
+  //MAKE THE XTERM CHAT FD NONBLOCKING
+  if (makeNonBlockingForChat(fd)<0){ 
+    fprintf(stderr,"createXtermStruct(): Error making fd nonblocking\n");
   }
 
-  // GET THE CHAT INDEX ASSOCIATED WITH THE FD 
-  int index = getChatIndexFromFd(fd);
-  if(index<0){
-    fprintf(stderr,"deleteChatUserByUsername(): index not found for this fd\n");
-    return false;
-  }
+  //ADD VALUES TO STRUCT
+  newXterm->toUser = newUser;
+  newXterm->chatFd = fd;
+  newXterm->xtermProcess = xtermProcess;
 
-  //CLEANS UP DATA AT THE INDEX SAFELY, FOR THE USERNAME STRING AND PID PROCESS
-  if(allChatUsers[index]!=NULL){
-    free(allChatUsers[index]);
-    allChatUsers[index]=NULL;
-    killXterm(xtermArray[index]);
-    xtermArray[index]=-1;
-  }else{
-    fprintf(stderr,"deleteChatUserByUsername(): no strings associated with this index\n");
-    return false;
-  }
+  newXterm->next = NULL;
+  newXterm->prev = NULL;
 
-  //GET THE INDEX OF THE USER'S FD IN THE POLL STRUCTURE
-  int pollIndex = getPollIndexFromFd(fd);
-  if(pollIndex<0){
-    fprintf(stderr,"deleteChatUserByUsername(): error finding pollindex for the fd\n");
-    return false;
-  }
-
-  //CLEAN UP THE USER FD IN THE POLL STRUCTURE AND THE ALLCHAT STRUCTURE
-  close(clientPollFds[pollIndex].fd);
-  clientPollFds[pollIndex].fd=-1;
-  allChatFds[index]=-1;
-
-  return true;
+  return newXterm;
 }
 
+void destroyXtermMemory(Xterm* xterm){
+  if(xterm != NULL){
+    //UNLINK THE XTERM FROM THE REST OF LIST
+    if(xterm->prev !=NULL){
+      xterm->prev->next = xterm->next;
+    }
+    if(xterm->next !=NULL){
+      xterm->next->prev = xterm->prev;
+    }
+    //RESET THE XTERM HEAD IF MUST 
+    if(xterm == xtermHead && xterm->prev != NULL){
+      xtermHead = xterm->prev;
+    }else if(xterm == xtermHead && xterm->next != NULL){
+      xtermHead = xterm->next;
+    }else if(xterm== xtermHead){
+      xtermHead = NULL;
+    }
 
-void initializeChatGlobals(){
-  memset(allChatUsers,'\0',sizeof(allChatUsers));
-  memset(allChatFds,0,1024);
-  memset(xtermArray,-1,1024);
+    //ACTUAL FREEING PROCESS
+    free(xterm->toUser);
+    free(xterm);
+  }
 }
 
+	
+ 					/************************************************/
+                    /*           XTERM CHAT PROGRAM                */
+                    /***********************************************/
+
+void setChatUser(char* username, int fd, pid_t xtermProcess){
+  //Create new xterm
+  Xterm* newXterm = createXtermStruct(username,fd,xtermProcess);
+
+  //ADD TO GLOBAL DATA STRUCTURES
+  newXterm->next = xtermHead;
+  xtermHead = newXterm;
+
+  //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
+  clientPollFds[clientPollNum].fd = fd;
+  clientPollFds[clientPollNum].events = POLLIN;
+  clientPollNum++;
+  printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+}
+
+Xterm* getXtermByUsername(char* username){
+	Xterm* xtermPtr;
+    for(xtermPtr = xtermHead; xtermPtr!=NULL; xtermPtr = xtermPtr->next){
+      if (strcmp(xtermPtr->toUser,username) == 0){
+        return xtermPtr;
+      }
+    }
+    return NULL;
+}
+
+Xterm* getXtermByPid(pid_t pid){
+	Xterm* xtermPtr;
+    for(xtermPtr = xtermHead; xtermPtr!=NULL; xtermPtr = xtermPtr->next){
+      if(xtermPtr->xtermProcess==pid){
+        return xtermPtr;
+      }
+    }
+    return NULL;
+}
+
+Xterm* getXtermByChatFd(int fd){
+	Xterm* xtermPtr;
+    for(xtermPtr = xtermHead; xtermPtr!=NULL; xtermPtr = xtermPtr->next){
+      if(xtermPtr->chatFd==fd){
+        return xtermPtr;
+      }
+    }
+    return NULL;
+}
 
 void createSocketPair(int socketsArray[], int size){
   if(size <2){
@@ -230,7 +199,6 @@ char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* orig
 	strcpy(user2,originalUser);
   }
   xtermArgs[9]=user2;
-
   return xtermArgs;
 }
 
@@ -290,7 +258,6 @@ char* statFind(char* findDir, char* buffer){
 }
 
 int createXterm(char * sendToUser, char* originalUser){
-  printf("before setChatUser clientPollNum = %d\n",clientPollNum);
   pid_t pid;
   int socketArr[10];
 
@@ -312,10 +279,10 @@ int createXterm(char * sendToUser, char* originalUser){
     // FAILED XTERM, CLEAN UP GLOBAL RESOURCES
     if(execStatus<0){
       fprintf(stderr,"createXterm():Failed to execute\n");
-      deleteChatUserByUsername(sendToUser);
       exit(EXIT_FAILURE); 
     }
-  }else if(pid<0){
+  }
+  else if(pid<0){ //PARENT
     fprintf(stderr,"createXterm(): error forking\n");
     exit(EXIT_FAILURE);
   }

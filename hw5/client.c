@@ -9,44 +9,49 @@
 #include <sys/fcntl.h>
 #include <signal.h> 
 #include <sys/wait.h>
-#include "xtermHeader.h"    
+#include "xtermHeader.h"     
 
-int clientFd=-1; 
 
 /*
- * A function that removes the dependent datastructures for the fd. 
+ * A function that removes the dependent datastructures for the xterm, by clearing up its memory 
+ * and refleting the changes in the clientPollFds structure. 
  */
-void cleanUpChatFd(int fd){
-  int chatIndex = getChatIndexFromFd(fd);
-  int pollIndex = getPollIndexFromFd(fd);
-
-  //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
-  allChatFds[chatIndex]=-1;
-  free(allChatUsers[chatIndex]);
-  allChatUsers[chatIndex]=NULL;
-  xtermArray[chatIndex]=-1;
-  close(clientPollFds[pollIndex].fd);
-  clientPollFds[pollIndex].fd=-1;
+void cleanUpXterm(Xterm* xterm){
+  if(xterm!=NULL){
+    int chatFd = xterm->chatFd;
+    destroyXtermMemory(xterm);
+    //REMOVE THE CHATFD FROM THE POLL STRUCTURE
+    int i;
+    for(i=0;i<clientPollNum;i++){
+      if(clientPollFds[i].fd == chatFd){
+        close(clientPollFds[i].fd);
+        clientPollFds[i].fd = -1;
+      }
+    }
+    compactClientPollDescriptors();
+  }
 }
 
 void xtermReaperHandler(){
   pid_t pid;
   int reapStatus;
   while( (pid = waitpid(-1,&reapStatus,WUNTRACED) ) > 0 ){
+    //NOTIFY THE ADMIN WHICH XTERM PROCESS DIED
     char deadChild[1024];
     memset(deadChild,0,1024); 
     sprintf(deadChild,"pid: %d died\n",pid);
     write(1,deadChild,1023);
   }
-  int index = getChatIndexFromPid(pid);
-  int pollIndex = getPollIndexFromFd(allChatFds[index]);
+
   //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
-  allChatFds[index]=-1;
-  free(allChatUsers[index]);
-  allChatUsers[index]=NULL;
-  xtermArray[index]=-1;
-  close(clientPollFds[pollIndex].fd);
-  clientPollFds[pollIndex].fd=-1;
+  Xterm* deadXterm = getXtermByPid(pid);
+  if(deadXterm!=NULL){
+    cleanUpXterm(deadXterm);
+  }else{
+    fprintf(stderr,"xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
+  }
+  //MOVE THE POLL AHEAD 
+  writeToGlobalSocket();
 }
 
 
@@ -60,14 +65,12 @@ void killClientProgramHandler(){
   exit(0);
 }
 
+
 int main(int argc, char* argv[]){ 
 
   /* Attach Signal handlers */
   signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
-
-  //Global structures for chat 
-  initializeChatGlobals();
 
   //Program Startup Vars 
   int argCounter;   
@@ -149,6 +152,7 @@ int main(int argc, char* argv[]){
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
 
+    //UNBLOCK THE GLOBAL SOCKET/READ AND ADD THE GLOBAL READ SOCKET ON POLL WATCH
     if(makeNonBlocking(globalSocketPair[0])<0){
       fprintf(stderr, "Error making global socket 1 nonblocking.\n");
     }
@@ -163,9 +167,11 @@ int main(int argc, char* argv[]){
     /*   ETERNAL POLL       */
     /***********************/
     while(1){
+      printf("waiting at poll()\n");
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
+        continue;
       } 
       int i; 
       for(i=0;i<clientPollNum;i++){
@@ -225,18 +231,20 @@ int main(int argc, char* argv[]){
             		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
 
                 //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
-                if(getChatFdFromUsername(fromUser)<0 && strcmp(toUser,username)==0){
+                if(getXtermByUsername(fromUser)==NULL && strcmp(toUser,username)==0){
                     //CREATE CHAT BOX
                     printf("Creating Xterm for user: %s\n",fromUser);
                     createXterm(fromUser,username);
+
                     //SEND CHAT  
-                    int chatBox = getChatFdFromUsername(fromUser);
-                    send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
-                }else{ //A CHAT ALREADY EXISTS
-                    //SEND CHAT 
-                    int chatBox = getChatFdFromUsername(fromUser);
-                    send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
+                    Xterm* xterm = getXtermByUsername(fromUser);
+                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                }else{ 
+                    //A CHAT ALREADY EXISTS, SEND TO IT
+                    Xterm* xterm = getXtermByUsername(fromUser);
+                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
+
             	}  
             } 
             memset(&message,0,1024);   
@@ -292,37 +300,40 @@ int main(int argc, char* argv[]){
           /****************************************/
           /*       USER TYPED INTO CHAT XTERM    */
           /**************************************/  
-          char chatBuffer[1024];
-          memset(chatBuffer,0,1024);  
 
           //READ BYTES FROM CHAT BOX CHILD PROCESS
+          char chatBuffer[1024];
+          memset(chatBuffer,0,1024);  
           int chatBytes =-1;
           chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
 
+          //IF XTERM DIED
           if(chatBytes==0){
-              cleanUpChatFd(clientPollFds[i].fd);
+            printf("xterm died detected in poll loop read\n");
+            cleanUpXterm(getXtermByChatFd(clientPollFds[i].fd));
           }else{
 
               //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
-              char* toPerson = getChatUsernameFromChatFd(clientPollFds[i].fd);
-              if(toPerson==NULL){
-                  fprintf(stderr,"error in poll loop: getChatUsernameFromChatFd() returned NULL person string\n");
+              Xterm* xterm = getXtermByChatFd(clientPollFds[i].fd);
+              if(xterm==NULL){
+                  fprintf(stderr,"error in poll loop: getXtermByChatFd() returned NULL\n");
+                  continue;//continue searching the rest of for loop for events
               }
               char relayMessage[1024];
               memset(&relayMessage,0,1024);
-              if(buildMSGProtocol(relayMessage,toPerson,username, chatBuffer)==false){
-                  fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+              if(buildMSGProtocol(relayMessage ,xterm->toUser, username, chatBuffer)==false){
+                fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+                continue; //continue searching the rest of for loop for events
               }
-              chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
+              chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1023),0);
           }
-
         }
+        
+      }/* MOVE ON TO NEXT POLL FD */
+        
+    }/* FOREVER RUNNING LOOP */ 
 
-        /* MOVE ON TO NEXT POLL FD */
-      }
 
-    /* FOREVER RUNNING LOOP */ 
-    }
-  return 0;
+    return 0;
 }
 

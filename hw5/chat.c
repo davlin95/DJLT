@@ -15,6 +15,7 @@
 int main(int argc, char ** argv) {
   signal(SIGKILL, endProcessHandler);
   signal(SIGINT,endProcessHandler);
+  
 	//INITIALIZE THE PASSED SOCKET PAIR
 	  chatFd=0;
     if(argv[1]!=NULL && isAllDigits(argv[1]) ){

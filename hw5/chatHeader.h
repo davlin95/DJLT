@@ -111,13 +111,5 @@ void printUserOut(char* user){
   }
 }
 
-void spawnChatWindow();
 
-void openChatWindow();
-
-void closeChatWindow();
-
-void executeXterm();
-
-void processGeometry(int width, int height);
 

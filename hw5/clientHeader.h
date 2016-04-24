@@ -18,7 +18,7 @@
                 /************************************/
                 /*  Global Structures               */
                 /************************************/
-
+int clientFd=-1; 
 struct pollfd clientPollFds[1024];
 int clientPollNum;
 int verbose = 0; 
@@ -59,7 +59,22 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
     printf("connected for %d hour(s), %d minute(s), and %d second(s)\n", hour, minute, second);
   }
 
-
+void compactClientPollDescriptors(){
+  int i,j;
+  for (i=0; i<clientPollNum; i++) 
+  {
+    // IF ENCOUNTER A CLOSED FD
+    if (clientPollFds[i].fd == -1)
+    {
+      // SHIFT ALL SUBSEQUENT ELEMENTS LEFT BY ONE SLOT
+      for(j = i; j < clientPollNum; j++)
+      {
+        clientPollFds[j].fd = clientPollFds[j+1].fd;
+      }
+      clientPollNum--;
+    }
+  }
+}
 
 
  			/***********************************************************************/
@@ -444,6 +459,14 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
   else 
     printf("Expected SSAP or SSAPWEN\n");
   return false; 
+}
+
+
+void writeToGlobalSocket(){
+  if(globalSocket>0){
+      write(globalSocket," ",1);
+      printf("\nwrote to globalSocket\n");
+    }
 }
 
 void recognizeAndExecuteStdin(char* userTypedIn){
