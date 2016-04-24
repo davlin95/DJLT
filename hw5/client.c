@@ -116,8 +116,8 @@ int main(int argc, char* argv[]){
     int pollStatus;
     clientPollNum=2;
 
-    /* Set poll for clientFd */
-    clientPollFds[0].fd = clientFd;
+    /* Set poll for clientFd */ 
+    clientPollFds[0].fd = clientFd; 
     clientPollFds[0].events = POLLIN;
 
     /* Set poll for stdin */ 
@@ -204,7 +204,7 @@ int main(int argc, char* argv[]){
                     int chatBox = getChatFdFromUsername(fromUser);
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
-            	} 
+            	}  
             } 
 
             memset(&message,0,1024);   

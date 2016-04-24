@@ -22,7 +22,7 @@
 struct pollfd clientPollFds[1024];
 int clientPollNum;
 int verbose = 0; 
-#define USAGE(name) do {                                                                  \
+#define USAGE(name) do {                                                                        \
         fprintf(stderr,                                                                         \
             "\n%s [-hcv] NAME SERVER_IP SERVER_PORT\n"                                          \
             "-h           Displays help menu & returns EXIT_SUCCESS.\n"                         \
@@ -400,9 +400,27 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
       fprintf(stderr,"Read(): bytes read negative\n");
     return false;
     }
-    if (verbose)
-          printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+    memset(&messageArray, 0, 1024);
+    if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
+      if (verbose)
+        printf(VERBOSE "%s" DEFAULT, messageArray[0]);
+      if (checkVerb(PROTOCOL_HI, messageArray[0])){
+        if (verbose)
+          printf(VERBOSE "%s" DEFAULT, messageArray[0]);
+        if (checkVerb(PROTOCOL_MOTD, messageArray[1])){
+            if (verbose)
+              printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+            if (extractArgsAndTest(messageArray[1], motd)){
+              printf("%s\n", motd);
+              return true;
+            }
+          }
+        }
+      }
+      printf("noOfMessages: %d\n", noOfMessages);
     if (protocol_Login_Helper(PROTOCOL_HI, protocolBuffer, username)){
+      if (verbose)
+          printf(VERBOSE "%s" DEFAULT, protocolBuffer);
       memset(&protocolBuffer, 0, 1024);
       if (read(fd, &protocolBuffer,1024) < 0){
         fprintf(stderr,"Read(): bytes read negative\n");
