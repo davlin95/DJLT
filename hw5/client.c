@@ -55,24 +55,34 @@ void killClientProgramHandler(int fd){
 }
 
 int main(int argc, char* argv[]){ 
+
+  /* Attach Signal handlers */
+  signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
+
+  //Global structures for chat 
   initializeChatGlobals();
+
+  //Program Startup Vars 
   int argCounter;   
-  //bool verbose;
   bool newUser;
   char *username;
   char *portNumber; 
   char* ipAddress;
+  char message[1024];  
   char * argArray[1024];
   char * flagArray[1024];
   memset(&argArray, 0, sizeof(argArray));
   memset(&flagArray, 0, sizeof(flagArray));
   argCounter = initArgArray(argc, argv, argArray);
+
+  //USER NEEDS HELP 
   if (argCounter != 5){
     USAGE("./client");
     exit(EXIT_FAILURE);
   } 
 
+  // BUILD FLAG ARRAY 
   initFlagArray(argc, argv, flagArray);
   argCounter = 0;
   while (flagArray[argCounter] != NULL){
@@ -88,12 +98,13 @@ int main(int argc, char* argv[]){
     }
     argCounter++; 
   }
+
+  //INIT USER PASSED IN ARGS
   username = argArray[1];
   portNumber = argArray[2];
   ipAddress = argArray[3];
-  char message[1024];  
-  signal(SIGINT,killClientProgramHandler);  
  
+  // TRY CONNECTING TO SOCKET 
   if ((clientFd = createAndConnect(portNumber, clientFd,ipAddress)) < 0){
     fprintf(stderr, "Error creating socket and connecting to server. \n");
     exit(0);
@@ -104,10 +115,7 @@ int main(int argc, char* argv[]){
       printf("Failed to login properly\n");
       close(clientFd);
       exit(0); 
-  }
-  if (makeNonBlocking(clientFd)<0){   
-    fprintf(stderr, "Error making socket nonblocking.\n");
-  }   
+  } 
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -120,31 +128,34 @@ int main(int argc, char* argv[]){
     /* Set poll for clientFd */
     clientPollFds[0].fd = clientFd;
     clientPollFds[0].events = POLLIN;
-
+    if (makeNonBlocking(clientFd)<0){   
+      fprintf(stderr, "Error making socket nonblocking.\n");
+    }  
     /* Set poll for stdin */ 
     clientPollFds[1].fd = 0;
     clientPollFds[1].events = POLLIN; 
- 
     if (makeNonBlocking(0)<0){ 
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
+
+    /************************/
+    /*   ETERNAL POLL       */
+    /***********************/
     while(1){
-      printf(VERBOSE "waiting on poll\n" DEFAULT);
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
       } 
       int i; 
       for(i=0;i<clientPollNum;i++){
-        printf("checking forloop\n");
         if(clientPollFds[i].revents==0){
-          printf("continue forloop\n");
           continue; 
         } 
         if(clientPollFds[i].revents!=POLLIN){
-            printf("poll.revents:%s\n",strerror(errno));
+            fprintf(stderr,"poll.revents:%s\n",strerror(errno));
             break;
         }  
+
         /***********************************/
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
@@ -175,7 +186,7 @@ int main(int argc, char* argv[]){
             /***********************************/
             /* RECEIVED MSG BACK FROM SERVER  */
             /*********************************/
-            else if ( extractArgAndTestMSG(message,NULL,NULL,NULL) ){
+            else if (extractArgAndTestMSG(message,NULL,NULL,NULL) ){
             	char toUser[1024];
             	char fromUser[1024]; 
             	char messageFromUser[1024];
@@ -205,7 +216,6 @@ int main(int argc, char* argv[]){
                 }
             	} 
             }
-
             memset(&message,0,1024);   
           }
           if((serverBytes=read(clientFd,message,1))==0){
@@ -224,7 +234,6 @@ int main(int argc, char* argv[]){
           char stdinBuffer[1024];   
           memset(&stdinBuffer,0,1024); 
           while( (bytes=read(0,&stdinBuffer,1024))>0){
-            printf("reading from client STDIN...\n"); 
             /*send time verb to server*/
             if(strcmp(stdinBuffer,"/time\n")==0){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL);
@@ -244,12 +253,12 @@ int main(int argc, char* argv[]){
             	displayHelpMenu(clientHelpMenuStrings);
             } 
             else{
-            	/***********TEST COMMUNICATING WITH SERVER ****************/
+            	/********TEST COMMUNICATING WITH SERVER ****************/
             	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0); 
             	printf("sent string :%s from client to server\n",stdinBuffer);
             	memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
+              /****************** @TODO REMOVE THIS FOR FINAL SUBMISSION ****/
             }
-
           } 
         }
         else{
@@ -262,10 +271,7 @@ int main(int argc, char* argv[]){
           //READ BYTES FROM CHAT BOX CHILD PROCESS
           int chatBytes =-1;
           chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
-          /*if(chatBytes>0){
-            printStarHeadline("READ FROM CHATBOX: ",-1);
-            printf("%s",chatBuffer);
-          }*/
+
           if(chatBytes==0){
               cleanUpChatFd(clientPollFds[i].fd);
           }else{
@@ -281,7 +287,6 @@ int main(int argc, char* argv[]){
                   fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
               }
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1024),0);
-
           }
 
         }
