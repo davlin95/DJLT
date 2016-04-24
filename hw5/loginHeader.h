@@ -34,7 +34,6 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //      CHECK IF EXPECTED: WOLFIE \r\n\r\n,      ||
   //-----------------------------------------------|| 
   if(checkVerb(PROTOCOL_WOLFIE, protocolBuffer)){
-
     if (verbose){
       printf(VERBOSE "%s" DEFAULT, protocolBuffer);
     }
@@ -98,17 +97,14 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   //     READ NEXT RESPONSE FROM CLIENT      ||                       
   //-----------------------------------------||
-  /*
-  if (Read(fd, protocolBuffer))
-    return false;
-  */
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
     fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
-  if (verbose)
+  if (verbose){
       printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+  }
   //------------------------------------------------------||
   //    CHECK IF RESPONSE: NEWPASS <password> \r\n\r\n    || 
   //------------------------------------------------------||

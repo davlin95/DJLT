@@ -19,12 +19,13 @@
   */
 bool ReadBlockedSocket(int fd, char* buffer){
   int bytes = 0;
+  int counter =0;
   char character;
   char* bufferPtr=buffer;
-  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL  ){
+  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL && counter<1023){
     *bufferPtr=character;
      bufferPtr++;
-     break;
+     counter++;
   }
   if(bytes == -1){
     return false;
@@ -37,12 +38,13 @@ bool ReadBlockedSocket(int fd, char* buffer){
   */
 bool ReadNonBlockedSocket(int fd, char* buffer){
   int bytes = 0;
+  int counter =0;
   char character;
   char* bufferPtr=buffer;
-  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL  ){
+  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL && counter<1024  ){
     *bufferPtr=character;
      bufferPtr++;
-     break;
+     counter++;
   }
   if(bytes == 0){
     return false;

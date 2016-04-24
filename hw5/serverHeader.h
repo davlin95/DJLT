@@ -192,9 +192,10 @@ bool verifyPassword(char* password);
  * A function that disconnects users
  */
  Client* getClientByUsername(char* user);
+ void printStarHeadline(char * string,int optionalOrNegative);
 
  void disconnectUser(char* user){
-  printStarHeadline("Disconnecting USER");
+  printStarHeadline("Disconnecting USER",-1);
   Client* loggedOffClient = getClientByUsername(user);
   if(loggedOffClient!=NULL){
     //SEND BYE BACK TO USER

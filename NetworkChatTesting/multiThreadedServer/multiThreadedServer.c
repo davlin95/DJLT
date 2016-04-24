@@ -89,7 +89,7 @@ int main(int argc, char* argv[]){
     }
     argCounter++;   
   }
-
+ 
   /***************************************/
   /* EXTRACT ARGV FOR IMPORTANT STRINGS */
   /*************************************/
@@ -150,6 +150,7 @@ int main(int argc, char* argv[]){
     /* ETERNAL POLL    */
     /******************/
     while(1){
+      printf("waiting for poll\n");
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll():%s",strerror(errno)); 
@@ -241,7 +242,7 @@ int main(int argc, char* argv[]){
                   exit(0);
                 }
               }
-              sqlite3_close(db);
+              sqlite3_close(database);
               processShutdown();
             }
             //EXECUTE OTHER COMMANDS
@@ -263,29 +264,23 @@ int main(int argc, char* argv[]){
         /************************************/
         else{
           printStarHeadline("COMMUNICATION FROM CLIENT",pollFds[i].fd);
-          int bytes,doneReading=0;
+          int doneReading=0;
+          //int bytes;
           char clientMessage[1024];
 
           /***********************/  
           /* READ FROM CLIENT   */
           /*********************/
-          while(1){ 
-
+          //while(1){ //get rid of while loop reading due to while loop in wrapper
             /*** STORE CLIENT BYTES INTO BUFFER ****/
             memset(&clientMessage,0, 1024);
-            bytes = read(pollFds[i].fd,clientMessage,strnlen(clientMessage,1023));
-            if(bytes<0){
-              if(errno!=EAGAIN){
-                doneReading=1;
-                fprintf(stderr,"Error reading from client %d\n",pollFds[i].fd);
-              }
-              break;
-            }
-            //DETECTED THAT CLIENT FD IS CLOSED
-            else if(bytes==0){
+            if(ReadNonBlockedSocket(pollFds[i].fd ,clientMessage)==false){
+              fprintf(stderr,"ReadNonBlockedSocket(): Detected Socket Closed\n");
+              printf("attempting to read BYE if it is there\n");
+              memset(&clientMessage,0, 1024);
+              ReadNonBlockedSocket(pollFds[i].fd ,clientMessage);
               doneReading=1;
-              break; 
-            }  
+            }
             
             /****************************/ 
             /* CLIENT BUILT IN REQUESTS */ 
@@ -311,8 +306,8 @@ int main(int argc, char* argv[]){
             else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
               if (verbose){
                 printf(VERBOSE "%s" DEFAULT, clientMessage);
-              }              doneReading=1; 
-              break; 
+              }              
+              doneReading=1; 
             }
             else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
               printStarHeadline("GOT MSG!!!",-1);
@@ -349,7 +344,7 @@ int main(int argc, char* argv[]){
             /* OUTPUT MESSAGE FROM CLIENT : DELETE AFTER TESTING  */
             /*****************************************************/
             printf("%s\n",clientMessage);
-         }  
+  //       }  //get rid of while loop reading due to while loop in wrapper read
 
          /********************************/
          /* IF CLIENT LOGGED OFF        */
@@ -360,8 +355,9 @@ int main(int argc, char* argv[]){
            Client * clientPtr;
            strcpy(username, getClientByFd(pollFds[i].fd)->userName);
            disconnectUser(username); 
-           for (clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
-            protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
+           //NOTIFY EVERY USER THAT THE USER LOGGED OFF
+           for (clientPtr = clientHead; clientPtr!=NULL; clientPtr = clientPtr->next){
+              protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
            }
            pollFds[i].fd=-1;
            compactDescriptors=1;
@@ -391,7 +387,6 @@ int main(int argc, char* argv[]){
 void* loginThread(void* args){ 
   //CONNFD COPY OF THE ONE ON THE HEAP
   int connfd = *(int *)args; 
-  free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
 
   //USER INFO
   int user = 0;      
@@ -404,13 +399,14 @@ void* loginThread(void* args){
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   printf("Encountered new client in loginThread! Client CONNFD IS %d\n", connfd);
   if (performLoginProcedure(connfd, username, password, newUser)){
+
+    /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
+    if (makeNonBlocking(connfd)<0){
+      fprintf(stderr, "Error making connection socket nonblocking.\n");
+    }   
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
     pollNum++; 
-    if (makeNonBlocking(connfd)<0){
-      fprintf(stderr, "Error making connection socket nonblocking.\n");
-    } 
-    /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
 
     /***********************************/
     /* NEW USER NEEDS ACCOUNT CREATED */
@@ -422,14 +418,16 @@ void* loginThread(void* args){
       memset(&saltBuffer, 0, 1024);
       memset(&passwordHash, 0, 1024);
 
-      //CREATE RANDOM NUMBER SALT
+      //CREATE RANDOM NUMBER SALT 
       if (RAND_bytes(saltBuffer, 10) == 0){
         fprintf(stderr, "LoginThread(): Error creating salt\n");
       }
 
-      //APPEND SALT AND HASH IT
+      //APPEND SALT AND HASH IT 
       strcat(password, (char*)saltBuffer);
       sha256(password, passwordHash);
+
+      //STORE IT IN NEW ACCOUNT STRUCT INTO GLOBAL LIST
       processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);
     }
     processValidClient(username,connfd);
@@ -445,6 +443,7 @@ void* loginThread(void* args){
     writeToGlobalSocket();
     printf("Client %d failed to login",connfd);
     close(connfd);
+    free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
   }
   //EXIT THREAD 
   return NULL; 

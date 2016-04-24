@@ -50,12 +50,14 @@ void xtermReaperHandler(){
 }
 
 
-void killClientProgramHandler(){  
-    if(clientFd >0){  
-      close(clientFd);
-    }
-    printf("Clean exit on clientFd\n"); 
-    exit(0);
+void killClientProgramHandler(){
+  printf("\n"); 
+  protocolMethod(clientFd,BYE,NULL,NULL,NULL,verbose); 
+  if(clientFd >0){  
+    printf("closing clientFd cleanly\n");
+    close(clientFd);
+  }
+  exit(0);
 }
 
 int main(int argc, char* argv[]){ 
@@ -268,19 +270,14 @@ int main(int argc, char* argv[]){
               waitForByeAndClose(clientFd); 
               exit(EXIT_SUCCESS);   
             }  
-            else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
+            else if(strstr(stdinBuffer,"/chat")!=NULL){ 
+              // CONTAINS "/chat"
             	processChatCommand(clientFd,stdinBuffer,username, verbose);
             }
             else if(strcmp(stdinBuffer,"/help\n")==0){  
             	displayHelpMenu(clientHelpMenuStrings);
             } 
-            else{
-            	/********TEST COMMUNICATING WITH SERVER ****************/
-            	send(clientFd,stdinBuffer,(strlen(stdinBuffer)),0); 
-            	printf("sent string :%s from client to server\n",stdinBuffer);
-            	memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
-              /****************** @TODO REMOVE THIS FOR FINAL SUBMISSION ****/
-            }
+            
           } 
         }
         /*******************************/
