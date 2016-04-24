@@ -18,7 +18,6 @@ int globalSocket=-1;
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
-  //bool verbose;
   char *portNumber;
   char * argArray[1024];
   char * flagArray[1024]; 
@@ -69,7 +68,7 @@ int main(int argc, char* argv[]){
       exit(EXIT_SUCCESS);
     }
     if (strcmp(flagArray[argCounter], "-v")==0){
-      //verbose = true;
+      verbose = true;
     }
     argCounter++;   
   }
@@ -207,7 +206,7 @@ int main(int argc, char* argv[]){
         }else if(pollFds[i].fd == pollFds[2].fd ){
           printf("global socket triggered poll\n");
           char blank[1024];
-          read(pollFds[2].fd,&blank,1024);
+          read(pollFds[2].fd,&blank,1023);
         }
         /**************************************/
         /*   POLLIN: PREVIOUS CLIENT         */
@@ -224,7 +223,7 @@ int main(int argc, char* argv[]){
 
             /*** STORE CLIENT BYTES INTO BUFFER ****/
             memset(&clientMessage,0, 1024);
-            bytes = read(pollFds[i].fd,clientMessage,sizeof(clientMessage));
+            bytes = read(pollFds[i].fd,clientMessage,strnlen(clientMessage,1023));
             if(bytes<0){
               if(errno!=EAGAIN){
                 doneReading=1;
@@ -235,7 +234,9 @@ int main(int argc, char* argv[]){
               doneReading=1;
               break; 
             }  
-
+            if (verbose)
+              printf(VERBOSE "%s" DEFAULT, clientMessage);
+ 
             /****************************/ 
             /* CLIENT BUILT IN REQUESTS */ 
             /***************************/
@@ -244,13 +245,13 @@ int main(int argc, char* argv[]){
               char sessionlength[1024];
               memset(&sessionlength, 0, 1024);
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength)) 
-                protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL);     
+                protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL, verbose);     
             }  
             else if (checkVerb(PROTOCOL_LISTU, clientMessage)){   
               char usersBuffer[1024];
               memset(&usersBuffer, 0, 1024); 
               if (buildUtsilArg(usersBuffer))   
-                protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL);  
+                protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL, verbose);  
             } 
             else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
               doneReading=1; 
@@ -282,7 +283,7 @@ int main(int argc, char* argv[]){
               
               }else{ 
                 //ERROR BACK TO USER
-                protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL);
+                protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL, verbose);
               }
 
             }
@@ -299,8 +300,15 @@ int main(int argc, char* argv[]){
          /* IF CLIENT LOGGED OFF */
          /******************************/
          if(doneReading){
+           char username[1024];
+           memset(&username, 0, 1024);
+           Client * clientPtr;
+           strcpy(username, getClientByFd(pollFds[i].fd)->userName);
            printf("Closing session with client: %d\n",pollFds[i].fd);
-           disconnectUser(getClientByFd(pollFds[i].fd)->userName);
+           disconnectUser(username);
+           for (clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
+            protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
+           }
            pollFds[i].fd=-1;
            compactDescriptors=1;
 

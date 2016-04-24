@@ -13,6 +13,9 @@
 
 int clientFd=-1; 
 
+/*
+ * A function that removes the dependent datastructures for the fd. 
+ */
 void cleanUpChatFd(int fd){
   int chatIndex = getChatIndexFromFd(fd);
   int pollIndex = getPollIndexFromFd(fd);
@@ -44,11 +47,12 @@ void xtermReaperHandler(){
   xtermArray[index]=-1;
   close(clientPollFds[pollIndex].fd);
   clientPollFds[pollIndex].fd=-1;
-
 }
-void killClientProgramHandler(int fd){  
-    if(fd >0){  
-      close(fd);
+
+
+void killClientProgramHandler(){  
+    if(clientFd >0){  
+      close(clientFd);
     }
     printf("Clean exit on clientFd\n"); 
     exit(0);
@@ -91,7 +95,7 @@ int main(int argc, char* argv[]){
       exit(EXIT_SUCCESS);
     } 
     if (strcmp(flagArray[argCounter], "-v")==0){
-      //verbose = true;
+      verbose = true;
     }
     if (strcmp(flagArray[argCounter], "-c")==0){
       newUser = true;
@@ -163,6 +167,8 @@ int main(int argc, char* argv[]){
           printStarHeadline("SERVER TALKING TO THIS CLIENT",-1);
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){ 
+          	if (verbose)
+          		printf(VERBOSE "%s" DEFAULT, message);
             if (checkVerb(PROTOCOL_EMIT, message)){
               char sessionLength[1024]; 
               memset(&sessionLength, 0, 1024);
@@ -215,13 +221,14 @@ int main(int argc, char* argv[]){
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
             	} 
-            }
+            } 
             memset(&message,0,1024);   
+          
           }
           if((serverBytes=read(clientFd,message,1))==0){
             printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
             close(clientFd);  
-            exit(0); 
+            exit(0);  
           }
         }
  
@@ -236,18 +243,18 @@ int main(int argc, char* argv[]){
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             /*send time verb to server*/
             if(strcmp(stdinBuffer,"/time\n")==0){
-              protocolMethod(clientFd, TIME, NULL, NULL, NULL);
+              protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose);
             }  
             else if(strcmp(stdinBuffer,"/listu\n")==0){
-              protocolMethod(clientFd, LISTU, NULL, NULL, NULL); 
+              protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose); 
             }
             else if(strcmp(stdinBuffer,"/logout\n")==0){
-              protocolMethod(clientFd, BYE, NULL, NULL, NULL);
+              protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose);
               waitForByeAndClose(clientFd); 
               exit(EXIT_SUCCESS);   
             }  
             else if(strstr(stdinBuffer,"/chat")!=NULL){ // CONTAINS "/chat"
-            	processChatCommand(clientFd,stdinBuffer,username);
+            	processChatCommand(clientFd,stdinBuffer,username, verbose);
             }
             else if(strcmp(stdinBuffer,"/help\n")==0){  
             	displayHelpMenu(clientHelpMenuStrings);

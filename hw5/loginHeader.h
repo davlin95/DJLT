@@ -20,28 +20,25 @@ bool protocol_Login_Helper(char* verb, char* string, char *userBuffer){
 }
 
 bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUser){
-  //-----------------------------------------------------------||
-  //  INITIALIZE protocolBuffer TO STORE RESPONSE FROM CLIENT  ||
-  //-----------------------------------------------------------||
-  char protocolBuffer[1024];
   //----------------------------------||
   //     READ RESPONSE FROM CLIENT    ||                       
-  //----------------------------------||
-  /*
-  memset(&protocolBuffer,0,1024);
-  if (Read(fd, protocolBuffer))
-    return false;
-  */  
+  //----------------------------------||  
+  char protocolBuffer[1024];
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
     fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
+
   //-----------------------------------------------|| 
   //      CHECK IF EXPECTED: WOLFIE \r\n\r\n,      ||
   //-----------------------------------------------|| 
   if(checkVerb(PROTOCOL_WOLFIE, protocolBuffer)){
-    protocolMethod(fd,EIFLOW,NULL,NULL,NULL);
+
+    if (verbose){
+      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+    }
+    protocolMethod(fd,EIFLOW,NULL,NULL,NULL, verbose);
   }
   else{
     fprintf(stderr, "Expected protocol verb WOLFIE\n");
@@ -50,26 +47,24 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   //     READ NEXT RESPONSE FROM CLIENT      ||                       
   //-----------------------------------------||
-  /*
-  if (Read(fd, protocolBuffer))
-    return false;
-  */
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
     fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
+  if (verbose)
+      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
   //-------------------------------------------------------|| 
   //    CHECK IF RESPONSE: IAMNEW <username> \r\n\r\n      ||  
   //-------------------------------------------------------||
   if (protocol_Login_Helper(PROTOCOL_IAMNEW, protocolBuffer, userBuffer)){
     *newUser = true;
     if (validUsername(userBuffer) && getAccountByUsername(userBuffer)==NULL){
-      protocolMethod(fd, HINEW, userBuffer,NULL,NULL);
+      protocolMethod(fd, HINEW, userBuffer,NULL,NULL, verbose);
     }
     else{
-      protocolMethod(fd, ERR0, NULL,NULL,NULL);
-      protocolMethod(fd, BYE, NULL,NULL,NULL);
+      protocolMethod(fd, ERR0, NULL,NULL,NULL, verbose);
+      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
       fprintf(stderr, "Invalid Username or account already exists.\n");
       return false; 
     }
@@ -80,18 +75,18 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   else if (protocol_Login_Helper(PROTOCOL_IAM, protocolBuffer, userBuffer)){
     if (getAccountByUsername(userBuffer)!=NULL){
       if(getClientByUsername(userBuffer)==NULL){
-        protocolMethod(fd, AUTH, NULL, NULL, NULL);
+        protocolMethod(fd, AUTH, NULL, NULL, NULL, verbose);
       } 
       else{
-        protocolMethod(fd, ERR0, NULL,NULL,NULL);
-        protocolMethod(fd, BYE, NULL,NULL,NULL);
+        protocolMethod(fd, ERR0, NULL,NULL,NULL,verbose);
+        protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
         fprintf(stderr, "User already signed in.\n");
         return false;
       }
     }
     else{
-      protocolMethod(fd, ERR1, NULL,NULL,NULL);
-      protocolMethod(fd, BYE, NULL,NULL,NULL);
+      protocolMethod(fd, ERR1, NULL,NULL,NULL, verbose);
+      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
       fprintf(stderr, "Account doesn't exist.\n");
       return false;
     }
@@ -112,19 +107,21 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
+  if (verbose)
+      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
   //------------------------------------------------------||
   //    CHECK IF RESPONSE: NEWPASS <password> \r\n\r\n    || 
   //------------------------------------------------------||
   if (protocol_Login_Helper(PROTOCOL_NEWPASS, protocolBuffer, passBuffer)){
     if (validPassword(passBuffer)){
-      protocolMethod(fd, SSAPWEN, NULL, NULL, NULL);
-      protocolMethod(fd, HI, userBuffer, NULL, NULL);
-      protocolMethod(fd, MOTD, NULL, NULL, NULL);
+      protocolMethod(fd, SSAPWEN, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose);
       return true;
     }
     else{
-      protocolMethod(fd, ERR2, NULL, NULL, NULL);
-      protocolMethod(fd, BYE, NULL, NULL, NULL);
+      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
       fprintf(stderr, "Invalid Password\n");
       return false;
     }
@@ -141,14 +138,14 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     strcat(passBuffer, salt);
     sha256(passBuffer, hashBuffer);
     if (strcmp((getAccountByUsername(userBuffer))->password, (char*)hashBuffer)==0){
-      protocolMethod(fd, SSAP, NULL, NULL, NULL);
-      protocolMethod(fd, HI, userBuffer, NULL, NULL);
-      protocolMethod(fd, MOTD, NULL, NULL, NULL);
+      protocolMethod(fd, SSAP, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose);
       return true;
     }
     else{
-      protocolMethod(fd, ERR2, NULL, NULL, NULL);
-      protocolMethod(fd, BYE, NULL, NULL, NULL);
+      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
       fprintf(stderr, "Invalid Password\n");
       return false;
     }
