@@ -215,7 +215,7 @@ int main(int argc, char* argv[]){
           int bytes,doneReading=0,writeStatus=-1;
           char clientMessage[1024];
 
-          /***********************/ 
+          /***********************/  
           /* READ FROM CLIENT   */
           /*********************/
           while(1){ 

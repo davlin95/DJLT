@@ -17,7 +17,7 @@ int chatIndex =0;
  *A function that makes the socket non-blocking
  *@param fd: file descriptor of the socket
  *@return: 0 if success, -1 otherwise
- */
+ */  
 int makeNonBlockingForChat(int fd){
   int flags;
   if ((flags = fcntl(fd, F_GETFL, 0)) < 0){

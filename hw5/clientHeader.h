@@ -219,7 +219,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
   char protocolBuffer[1024];
   char *messageArray[1024];
   int noOfMessages;
-  protocolMethod(fd, WOLFIE, NULL, NULL, NULL, verbose); 
+  protocolMethod(fd, WOLFIE, NULL, NULL, NULL, verbose);  
   //----------------------------------||
   //     READ RESPONSE FROM CLIENT    ||                       
   //----------------------------------||
