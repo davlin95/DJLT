@@ -27,6 +27,7 @@
 struct pollfd pollFds[1024];
 int pollNum=0;
 int verbose = 0;
+int globalSocket;
 
 
 typedef struct sessionData{
@@ -699,4 +700,11 @@ char * createSQLInsert(Account *account, char* sqlBuffer){
   strcat(sqlPtr, account->salt);
   strcat(sqlPtr, "');");
   return sqlPtr;
+}
+
+void writeToGlobalSocket(){
+  if(globalSocket>0){
+      write(globalSocket," ",1);
+      printf("\nwrote to globalSocket\n");
+    }
 }
