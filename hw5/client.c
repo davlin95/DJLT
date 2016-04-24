@@ -29,33 +29,35 @@ void cleanUpXterm(Xterm* xterm){
       }
     }
     compactClientPollDescriptors();
+  }else{
+    fprintf(stderr,"cleanUpXterm(): error xterm is NULL\n");
   }
 }
 
-void doNothingHandler(){
-  printf("CAUGHT THAT SIGUSR1\n");
-}
 
 void xtermReaperHandler(){
   pid_t pid;
   int reapStatus; 
-  while( (pid = waitpid(-1,&reapStatus,WUNTRACED) ) > 0 ){
+  pid = waitpid(-1,&reapStatus,WUNTRACED);
+  while(pid > 0){
     //NOTIFY THE ADMIN WHICH XTERM PROCESS DIED
     char deadChild[1024];
     memset(deadChild,0,1024); 
     sprintf(deadChild,"pid: %d died\n",pid);
     write(1,deadChild,1023);
-  }
 
-  //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
-  Xterm* deadXterm = getXtermByPid(pid);
-  if(deadXterm!=NULL){
-    cleanUpXterm(deadXterm);
-  }else{
-    fprintf(stderr,"xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
+    //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
+    Xterm* deadXterm = getXtermByPid(pid);
+    if(deadXterm!=NULL){
+      cleanUpXterm(deadXterm);
+    }else{
+      fprintf(stderr,"xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
+    }
+
+    //MOVE THE POLL AHEAD TO STOP DISABILITY, AND ATTEMPT TO RE-REAP
+    writeToGlobalSocket();
+    pid = waitpid(-1,&reapStatus,WUNTRACED);
   }
-  //MOVE THE POLL AHEAD 
-  writeToGlobalSocket();
 }
 
 
@@ -75,7 +77,6 @@ int main(int argc, char* argv[]){
   /* Attach Signal handlers */
   signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
-  signal(SIGUSR1,doNothingHandler);
 
   //Program Startup Vars 
   int argCounter;   

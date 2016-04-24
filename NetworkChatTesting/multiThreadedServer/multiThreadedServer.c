@@ -422,7 +422,7 @@ void* loginThread(void* args){
 
       //APPEND SALT AND HASH IT 
       strcat(password, (char*)saltBuffer);
-      sha256(password, passwordHash);
+      sha256(password, passwordHash); 
 
       //STORE IT IN NEW ACCOUNT STRUCT INTO GLOBAL LIST
       processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);

@@ -142,7 +142,7 @@ Xterm* getXtermByPid(pid_t pid){
 	Xterm* xtermPtr;
     for(xtermPtr = xtermHead; xtermPtr!=NULL; xtermPtr = xtermPtr->next){
       if( (xtermPtr->xtermProcess)==pid){
-      	printf("xtermProcess = %d, pid = %d", xtermPtr->xtermProcess,pid);
+      	//printf("xtermProcess = %d, pid = %d", xtermPtr->xtermProcess,pid);
         return xtermPtr;
       }
     }
