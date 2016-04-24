@@ -207,6 +207,7 @@ int getMessages(char** messageArray, char* protocolBuffer){
 
     //CHOP UP A COPY OF THE TESTED STRING
     strcpy(tempString, protocolBuffer);
+    printf("tempString is %s\n", tempString);
     token = strtok_r(tempString, "\r\n\r\n", &savePtr);
     while (token != NULL){
       strcpy(msgPtr, token);
@@ -394,12 +395,12 @@ bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* messag
 }
 
 
-void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3);
+void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3, int verbose);
 
 /* 
  * Process a string containing the "/chat" command, includes testing for errors. 
  */
-bool processChatCommand(int fd, char* string, char* thisUserName){
+bool processChatCommand(int fd, char* string, char* thisUserName, int verbose){
     char * savePtr;
     char *token;
     int arrayIndex = 0;
@@ -438,113 +439,158 @@ bool processChatCommand(int fd, char* string, char* thisUserName){
     messageReplica[1023]='\0';
 
     //CALL PROTOCOL METHODS BASED ON PARAMETERS
-    protocolMethod(fd,MSG,protocolArray[1],thisUserName,messageReplica);
+    protocolMethod(fd,MSG,protocolArray[1],thisUserName,messageReplica, verbose);
     return true;
 }
 
-void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3){
+void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optionalString2, char* optionalString3, int verbose){
   char buffer[1032];
   memset(&buffer,0,1032);
   switch(wolfieVerb){
     case WOLFIE: 
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_WOLFIE);
                 send(fd,PROTOCOL_WOLFIE,strlen(PROTOCOL_WOLFIE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case EIFLOW:
+    case EIFLOW: 
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_EIFLOW);
                 send(fd,PROTOCOL_EIFLOW,strlen(PROTOCOL_EIFLOW),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case BYE:   
+    case BYE:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_BYE);
                 send(fd,PROTOCOL_BYE,strlen(PROTOCOL_BYE),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case IAM:   
                 if(optionalString!=NULL){
-                  	buildProtocolString(buffer, PROTOCOL_IAM, optionalString);
-                    send(fd, buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
-                break;
+                  	buildProtocolString(buffer, PROTOCOL_IAM, optionalString); 
+                    if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 } // MACRO NULL TERMINATED BY DEFAULT
                 break;
 
     case MOTD:   
                 buildProtocolString(buffer, PROTOCOL_MOTD, messageOfTheDay);
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, buffer);
                 send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case HI:   
                 if(optionalString!=NULL){
-                  	buildProtocolString(buffer, PROTOCOL_HI, optionalString);
-                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  	buildProtocolString(buffer, PROTOCOL_HI, optionalString); 
+                    if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
-    case LISTU:   
+    case LISTU:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_LISTU);
                 send(fd,PROTOCOL_LISTU,strlen(PROTOCOL_LISTU),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case UTSIL:   
                 if(optionalString!=NULL){
-                 	buildProtocolString(buffer, PROTOCOL_UTSIL, optionalString);
-                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                 	buildProtocolString(buffer, PROTOCOL_UTSIL, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
-    case TIME:   
+    case TIME:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_TIME);
                 send(fd,PROTOCOL_TIME,strlen(PROTOCOL_TIME),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case EMIT:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_EMIT, optionalString);
-                	send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_EMIT, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
     case MSG:   
-                buildMSGProtocol(buffer,optionalString,optionalString2, optionalString3);
+                buildMSGProtocol(buffer,optionalString,optionalString2, optionalString3); 
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, buffer);
                 send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
 
     case UOFF:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_UOFF, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_UOFF, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
     case IAMNEW:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_IAMNEW, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_IAMNEW, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
     case HINEW:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_HINEW, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_HINEW, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
     case NEWPASS:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_NEWPASS, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_NEWPASS, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
-    case SSAPWEN:   
+    case SSAPWEN:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_SSAPWEN);
                 send(fd,PROTOCOL_SSAPWEN,strlen(PROTOCOL_SSAPWEN),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case AUTH:   
+    case AUTH:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_AUTH);
                 send(fd,PROTOCOL_AUTH,strlen(PROTOCOL_AUTH),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case PASS:   
                 if(optionalString!=NULL){
-                  buildProtocolString(buffer, PROTOCOL_PASS, optionalString);
-                  send(fd,buffer,strlen(buffer),0); // MACRO NULL TERMINATED BY DEFAULT
+                  buildProtocolString(buffer, PROTOCOL_PASS, optionalString); 
+                  if (verbose)
+                        printf(VERBOSE "%s" DEFAULT, buffer);
+                    send(fd, buffer,strlen(buffer),0);
                 }
                 break;
-    case SSAP:   
+    case SSAP:    
+                if (verbose)
+                  printf(VERBOSE "%s" DEFAULT, PROTOCOL_SSAP);
                 send(fd,PROTOCOL_SSAP,strlen(PROTOCOL_SSAP),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case ERR1:   
+    case ERR1:    
+                if (verbose)
+                  printf(ERROR "%s" DEFAULT, PROTOCOL_ERR1);
                 send(fd,PROTOCOL_ERR1,strlen(PROTOCOL_ERR1),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case ERR2:   
+    case ERR2:    
+                if (verbose)
+                  printf(ERROR "%s" DEFAULT, PROTOCOL_ERR2);
                 send(fd,PROTOCOL_ERR2,strlen(PROTOCOL_ERR2),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
     case ERR100:   
+                if (verbose)
+                  printf(ERROR "%s" DEFAULT, PROTOCOL_ERR100); 
                 send(fd,PROTOCOL_ERR100,strlen(PROTOCOL_ERR100),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
-    case ERR0:   
+    case ERR0:    
+                if (verbose)
+                  printf(ERROR "%s" DEFAULT, PROTOCOL_ERR0);
                 send(fd,PROTOCOL_ERR0,strlen(PROTOCOL_ERR0),0); // MACRO NULL TERMINATED BY DEFAULT
                 break;
   }

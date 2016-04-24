@@ -26,6 +26,7 @@
 #define MAX_INPUT 1024
 struct pollfd pollFds[1024];
 int pollNum=0;
+int verbose = 0;
 
 
 typedef struct sessionData{
@@ -193,7 +194,7 @@ bool verifyPassword(char* password);
   if(loggedOffClient!=NULL){
     //SEND BYE BACK TO USER
     printf("sending bye to client's descriptor %d\n",loggedOffClient->session->commSocket);
-    protocolMethod((loggedOffClient->session->commSocket),BYE,NULL,NULL,NULL); 
+    protocolMethod((loggedOffClient->session->commSocket),BYE,NULL,NULL,NULL, verbose); 
 
     //CLOSING USER SOCKET
     printf("closing client's descriptor %d\n",loggedOffClient->session->commSocket);
@@ -443,9 +444,8 @@ void recognizeAndExecuteStdin(char* userTypedIn){
   }else if(strcmp(userTypedIn,"/help\n")==0){
     //PRINT OUT HELP
     displayHelpMenu(serverHelpMenuStrings);
-  }else if(strcmp(userTypedIn,"/shutdown\n")==0){
-    //SHUTDOWN
-    processShutdown();
+  }else if(strcmp(userTypedIn,"/accts\n")==0){
+    processAcctsRequest();
   }
 }
 
