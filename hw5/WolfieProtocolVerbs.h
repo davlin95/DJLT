@@ -265,7 +265,7 @@ bool extractArgAndTest(char *string, char *buffer){
     }
 
     //LOOK FOR TEST CASES
-    if (arrayIndex > 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0){
+    if (arrayIndex != 3 || strcmp(protocolArray[2], "\r\n\r\n")!=0){
       return false;
     }
     //PASSES TEST

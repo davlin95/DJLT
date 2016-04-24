@@ -14,7 +14,6 @@
 #include "../../hw5/serverHeader.h" 
 #include "../../hw5/loginHeader.h"    
 
-int globalSocket=-1;
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
@@ -299,13 +298,13 @@ int main(int argc, char* argv[]){
          /********************************/
          /* IF CLIENT LOGGED OFF */
          /******************************/
-         if(doneReading){
+         if(doneReading){ 
            char username[1024];
            memset(&username, 0, 1024);
            Client * clientPtr;
            strcpy(username, getClientByFd(pollFds[i].fd)->userName);
            printf("Closing session with client: %d\n",pollFds[i].fd);
-           disconnectUser(username);
+           disconnectUser(username); 
            for (clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
             protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
            }
@@ -347,7 +346,7 @@ void* loginThread(void* args){
   int user = false;      
   int *newUser = &user; 
   int connfd = *(int *)args; 
-  char username[1024];
+  char username[1024]; 
   memset(&username, 0, 1024); 
   char password[1024];
   memset(&password, 0, 1024);
@@ -357,7 +356,7 @@ void* loginThread(void* args){
     fprintf(stderr,"performLoginProcedure should be true\n");
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
-    pollNum++;
+    pollNum++; 
     if (makeNonBlocking(connfd)<0){
       fprintf(stderr, "Error making connection socket nonblocking.\n");
     } 
@@ -383,6 +382,7 @@ void* loginThread(void* args){
     }
 
   }else {
+    writeToGlobalSocket();
     close(connfd);
     printf("Client %d failed to login",connfd);
   }
