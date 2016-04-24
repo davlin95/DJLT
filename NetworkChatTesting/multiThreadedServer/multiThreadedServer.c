@@ -23,42 +23,60 @@ int main(int argc, char* argv[]){
   memset(&argArray, 0, sizeof(argArray));
   memset(&flagArray, 0, sizeof(flagArray));
   
-  //DATABASE VARIABLES
-  sqlite3 *db;
-  char *zErrMsg = 0;
-  int rc;
+  //INITIALIZE DATABASE VARIABLES
+  sqlite3 *database;
+  char *dbErrorMessage = 0;
+  int dbResult;
   char *sql;
+
+  //INIT ARGUMENTS INTO ARRAY 
   argCounter = initArgArray(argc, argv, argArray);
   if (argCounter < 4 || argCounter > 5){
     USAGE("./server"); 
     exit(EXIT_FAILURE);  
-  } else if (argCounter == 5){
+  } 
 
-    if ((rc = sqlite3_open(argArray[3], &db))){
-      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(db));
+  /**************************************************/
+  /* User entered DB Path With 5TH ELEMENT -C FLAG */
+  /************************************************/
+  if (argCounter == 5){
+    //OPEN DATABASE
+    if ((dbResult = sqlite3_open(argArray[3], &database))){
+      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
       exit(0);
     }
+    //GET ACCOUNT INFO 
     sql = "SELECT * FROM ACCOUNTS";
-    if ((rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg)) != SQLITE_OK){
-      fprintf(stderr, "SQL Error: %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+      sqlite3_free(dbErrorMessage);
       exit(0);
     }
-  } else{
-    if ((rc = sqlite3_open("accounts.db", &db))){
-      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(db));
+  } 
+  /*********************************************/
+  /*  DB PATH BUT NO 5TH ELEMENT -C FLAG      */
+  /*******************************************/
+  else{
+    //OPEN DATABASE
+    if ((dbResult = sqlite3_open("accounts.db", &database))){
+      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
       exit(0);
     }
+    //NO PREVIOUS DB, CREATE NEW ACCOUNTS
     sql = "CREATE TABLE ACCOUNTS("                        \
           "username     CHAR(1024) PRIMARY KEY NOT NULL," \
           "password     CHAR(1024) NOT NULL,"             \
           "salt         CHAR(1024) NOT NULL);";
-    if ((rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg)) != SQLITE_OK){
-      fprintf(stderr, "SQL Error: %s\n", zErrMsg);
-      sqlite3_free(zErrMsg);
+    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+      sqlite3_free(dbErrorMessage);
       exit(0);
     }
   }
+
+  /**************************/
+  /*  PARSE ARGS FOR FLAGS */
+  /*************************/
   initFlagArray(argc, argv, flagArray);
   argCounter = 0;
   while (flagArray[argCounter] != NULL){
@@ -71,22 +89,32 @@ int main(int argc, char* argv[]){
     }
     argCounter++;   
   }
+
+  /***************************************/
+  /* EXTRACT ARGV FOR IMPORTANT STRINGS */
+  /*************************************/
   portNumber = argArray[1];   
   strcpy(messageOfTheDay, argArray[2]); 
+
+
+  /***********************************/
+  /* PROGRAM THREAD ARR AND SIGNALS  */
+  /**********************************/
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];  
   signal(SIGINT,killServerHandler); 
 
-  int serverFd = 0, connfd;    
 
   /*******************/
   /* Create Socket  */ 
   /*****************/ 
+  int connfd;    
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
     printf("error createBindListen\n");
     exit(EXIT_FAILURE);       
-  } else 
+  }else{
     printf("Listening\n"); 
+  }
 
     /******************************************/
     /*        IMPLEMENT POLL                 */
@@ -105,30 +133,39 @@ int main(int argc, char* argv[]){
     pollFds[1].fd = 0;
     pollFds[1].events = POLLIN;
 
+    //CREATE GLOBAL SOCKET-READ PIPE PAIR
     int socketPair[2]={0,0};
     createSocketPair(socketPair,2);
     if(socketPair[0]>0 && socketPair[1]>0){
       makeNonBlocking(socketPair[0]);
+      makeNonBlocking(socketPair[1]);
 
+      //ADD TO WATCHED FD SET
       pollFds[2].fd= socketPair[0];
       pollFds[2].events = POLLIN;
       globalSocket = socketPair[1];
-      printf("twin socket pairs are %d , %d",socketPair[0],socketPair[1]);
     }
 
+    /********************/
+    /* ETERNAL POLL    */
+    /******************/
     while(1){
       pollStatus = poll(pollFds, pollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll():%s",strerror(errno)); 
-        break;
+        break; // exit due to poll error
       }
+
+      /******************************************************/
+      /* EVENT TRIGGERED: CHECK ALL POLLS FOR OCCURED EVENT */
+      /*****************************************************/
       int i;
       for(i=0;i<pollNum;i++){
         if(pollFds[i].revents==0) continue;
         if(pollFds[i].revents!=POLLIN){ 
           fprintf(stderr,"poll.revents:%s",strerror(errno));
           break;
-        } 
+        }
         /***********************************/  
         /*   POLLIN FROM SERVERFD         */
         /*********************************/
@@ -146,18 +183,20 @@ int main(int argc, char* argv[]){
             
             if(connfd<0){
               if(errno!=EWOULDBLOCK){
-                fprintf(stderr,"accept(): %s\n",strerror(errno));
+                fprintf(stderr,"accept() in poll loop: %s\n",strerror(errno));
                 close(connfd); 
               }
               break;
             }
-            *connfdPtr=connfd; 
+            *connfdPtr=connfd; // pass pointer to malloced int to login thread 
 
             /************** LOGIN THREAD FOR EVERY CONNFD *******/
             threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, connfdPtr);
             pthread_setname_np(threadId[threadNum-1],"LOGIN THREAD");
             if(threadStatus<0){
-              printf("Error spawning login thread for descriptor %d\n",connfd);
+              close(connfd);
+              free(connfdPtr);
+              fprintf(stderr,"Error spawning login thread for descriptor %d\n",connfd);
             }
           }
         }
@@ -170,49 +209,61 @@ int main(int argc, char* argv[]){
           int bytes=0;
           char stdinBuffer[1024];
           memset(&stdinBuffer,0,1024);
+
+          /*******************************/
+          /* EXECUTE STDIN COMMANDS     */
+          /*****************************/
           while( (bytes=read(0,&stdinBuffer,1024))>0){  
-
-            /*******************************/
-            /* EXECUTE STDIN COMMANDS     */
-            /*****************************/
-
-            /*************** EXECUTE STDIN COMMANDS ***********/
-            if (strcmp(stdinBuffer, "/shutdown\n")==0){  
+            if (strcmp(stdinBuffer, "/shutdown\n")==0){
+              // ATTEMPT SQL SHUTDOWN
               char sqlInsert[1024];
               Account * accountPtr;
               sql = "DELETE FROM ACCOUNTS;";
-              if ((rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg)) != SQLITE_OK){
-                  fprintf(stderr, "SQL Error: %s\n", zErrMsg);
-                  sqlite3_free(zErrMsg);
+
+              //@QUESTION: ISN'T DELETE FROM ACCOUNTS EXECUTED WITHOUT THE USERNAME ATTACHED IN NEXT BLOCK
+              //ATTEMPT TO CLEAR USERS
+              if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+                  fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                  //SHUTDOWN PROCEDURES
+                  sqlite3_free(dbErrorMessage);
+                  processShutdown();
                   exit(0);
               }
-              for (accountPtr = accountHead; accountPtr; accountPtr = accountPtr->next){
+              for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
                 memset(&sqlInsert, 0, 1024);
                 sql = createSQLInsert(accountPtr, sqlInsert);
                 printf("sql = %s\n", sql);
-                if ((rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg)) != SQLITE_OK){
-                  fprintf(stderr, "SQL Error: %s\n", zErrMsg);
-                  sqlite3_free(zErrMsg);
+                if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+                  fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                  //SHUTDOWN PROCEDURES
+                  sqlite3_free(dbErrorMessage);
+                  processShutdown();
                   exit(0);
                 }
               }
               sqlite3_close(db);
               processShutdown();
             }
+            //EXECUTE OTHER COMMANDS
             recognizeAndExecuteStdin(stdinBuffer);
             memset(&stdinBuffer,0,strnlen(stdinBuffer,1024));
           }  
-        }else if(pollFds[i].fd == pollFds[2].fd ){
+        }
+
+        /********************************************/
+        /* LOOP FORWARD DUE TO GLOBAL SOCKET WRITE */
+        /******************************************/
+        else if(pollFds[i].fd == pollFds[2].fd ){
           printf("global socket triggered poll\n");
-          char blank[1024];
-          read(pollFds[2].fd,&blank,1023);
+          char globalByte;
+          read(pollFds[2].fd,&globalByte,1);
         }
         /**************************************/
         /*   POLLIN: PREVIOUS CLIENT         */
         /************************************/
         else{
           printStarHeadline("COMMUNICATION FROM CLIENT",pollFds[i].fd);
-          int bytes,doneReading=0,writeStatus=-1;
+          int bytes,doneReading=0;
           char clientMessage[1024];
 
           /***********************/  
@@ -229,35 +280,45 @@ int main(int argc, char* argv[]){
                 fprintf(stderr,"Error reading from client %d\n",pollFds[i].fd);
               }
               break;
-            }else if(bytes==0){  
+            }
+            //DETECTED THAT CLIENT FD IS CLOSED
+            else if(bytes==0){
               doneReading=1;
               break; 
             }  
-            if (verbose)
-              printf(VERBOSE "%s" DEFAULT, clientMessage);
- 
+            
             /****************************/ 
             /* CLIENT BUILT IN REQUESTS */ 
             /***************************/
- 
             if (checkVerb(PROTOCOL_TIME, clientMessage)){  
+              if (verbose){
+                printf(VERBOSE "%s" DEFAULT, clientMessage);
+              }
               char sessionlength[1024];
               memset(&sessionlength, 0, 1024);
               if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength)) 
                 protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL, verbose);     
             }  
-            else if (checkVerb(PROTOCOL_LISTU, clientMessage)){   
+            else if (checkVerb(PROTOCOL_LISTU, clientMessage)){
+              if (verbose){
+                printf(VERBOSE "%s" DEFAULT, clientMessage);
+              }
               char usersBuffer[1024];
               memset(&usersBuffer, 0, 1024); 
               if (buildUtsilArg(usersBuffer))   
                 protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL, verbose);  
             } 
             else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
-              doneReading=1; 
-              printf("BYE PROTOCOL, Client said: %s", clientMessage);
+              if (verbose){
+                printf(VERBOSE "%s" DEFAULT, clientMessage);
+              }              doneReading=1; 
               break; 
-            }else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
+            }
+            else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
               printStarHeadline("GOT MSG!!!",-1);
+              if (verbose){
+                printf(VERBOSE "%s" DEFAULT, clientMessage);
+              }                
               char msgToBuffer[1024];
               char msgFromBuffer[1024];
               char msgBuffer[1024];
@@ -269,7 +330,6 @@ int main(int argc, char* argv[]){
               extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
               printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
               Client* toUser= getClientByUsername(msgToBuffer);
-              printf("DONE SEARCHING FOR USER\n"); 
               
               //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
               if( toUser!=NULL && strcmp(msgToBuffer, msgFromBuffer)!=0 ){
@@ -277,40 +337,34 @@ int main(int argc, char* argv[]){
                 char messageResponse[1024];
                 memset(&messageResponse,0,1024);
                 buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
+                //SEND TO BOTH USERS 
                 send(toUser->session->commSocket,messageResponse,strnlen(messageResponse,1023),0);
                 send(pollFds[i].fd,messageResponse,strnlen(messageResponse,1023),0);
-              
               }else{ 
-                //ERROR BACK TO USER
+                //FAILED SEND, ERROR BACK TO USER
                 protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL, verbose);
               }
-
             }
-            /*********************************/
-            /* OUTPUT MESSAGE FROM CLIENT   */
-            /*******************************/
-            writeStatus = write(1,clientMessage,bytes);
-            if(writeStatus<0){
-              fprintf(stderr,"Error writing client message %d\n",pollFds[i].fd);
-            }
+            /*******************************************************/
+            /* OUTPUT MESSAGE FROM CLIENT : DELETE AFTER TESTING  */
+            /*****************************************************/
+            printf("%s\n",clientMessage);
+         }  
 
-         }
          /********************************/
-         /* IF CLIENT LOGGED OFF */
+         /* IF CLIENT LOGGED OFF        */
          /******************************/
          if(doneReading){ 
            char username[1024];
            memset(&username, 0, 1024);
            Client * clientPtr;
            strcpy(username, getClientByFd(pollFds[i].fd)->userName);
-           printf("Closing session with client: %d\n",pollFds[i].fd);
            disconnectUser(username); 
            for (clientPtr = clientHead; clientPtr; clientPtr = clientPtr->next){
             protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
            }
            pollFds[i].fd=-1;
            compactDescriptors=1;
-
          } 
         }
       }// MOVE ON TO NEXT POLL FD EVENT
@@ -320,21 +374,13 @@ int main(int argc, char* argv[]){
         compactDescriptors=0;
         compactPollDescriptors();
       } 
- 
     }/* FOREVER RUNNING LOOP */ 
 
    
   /************************/
   /* FINAL EXIT CLEANUP  */
   /**********************/ 
-  if(serverFd>0){  
-    close(serverFd);  
-    printf("closed serverFd\n");  
-  }  
-  if(connfd>0){
-    close(connfd); 
-    printf("closed connfd\n");  
-  }  
+  disconnectAllUsers();
   return 0;
 }    
  
@@ -342,18 +388,22 @@ int main(int argc, char* argv[]){
 /*     LOGIN THREAD  */ 
 /********************/
  
-void* loginThread(void* args){   
-  int user = false;      
-  int *newUser = &user; 
+void* loginThread(void* args){ 
+  //CONNFD COPY OF THE ONE ON THE HEAP
   int connfd = *(int *)args; 
+  free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
+
+  //USER INFO
+  int user = 0;      
+  int *newUser = &user; 
   char username[1024]; 
   memset(&username, 0, 1024); 
   char password[1024];
   memset(&password, 0, 1024);
-  printf("Encountered new client in loginThread! Client CONNFD IS %d\n", connfd);
+
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
+  printf("Encountered new client in loginThread! Client CONNFD IS %d\n", connfd);
   if (performLoginProcedure(connfd, username, password, newUser)){
-    fprintf(stderr,"performLoginProcedure should be true\n");
     pollFds[pollNum].fd = connfd;
     pollFds[pollNum].events = POLLIN;
     pollNum++; 
@@ -361,16 +411,23 @@ void* loginThread(void* args){
       fprintf(stderr, "Error making connection socket nonblocking.\n");
     } 
     /**** IF CLIENT FOLLOWED PROTOCOL, CREATE AND PROCESS CLIENT ****/
-    printf("user is %d\n", user);
+
+    /***********************************/
+    /* NEW USER NEEDS ACCOUNT CREATED */
+    /*********************************/
     if (user){
-      printf("creating new account\n");
+      printf("Login thread creating new account for logged in user: %s\n",username);
       unsigned char saltBuffer[1024];
       unsigned char passwordHash[1024]; 
       memset(&saltBuffer, 0, 1024);
       memset(&passwordHash, 0, 1024);
+
+      //CREATE RANDOM NUMBER SALT
       if (RAND_bytes(saltBuffer, 10) == 0){
-        fprintf(stderr, "Error creating salt\n");
+        fprintf(stderr, "LoginThread(): Error creating salt\n");
       }
+
+      //APPEND SALT AND HASH IT
       strcat(password, (char*)saltBuffer);
       sha256(password, passwordHash);
       processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);
@@ -380,12 +437,16 @@ void* loginThread(void* args){
       write(globalSocket," ",1);
       printf("\nwrote to globalSocket\n");
     }
-
-  }else {
-    writeToGlobalSocket();
-    close(connfd);
-    printf("Client %d failed to login",connfd);
   }
+  /**********************/
+  /* USER FAILED LOGIN */
+  /********************/
+  else {
+    writeToGlobalSocket();
+    printf("Client %d failed to login",connfd);
+    close(connfd);
+  }
+  //EXIT THREAD 
   return NULL; 
 }
 

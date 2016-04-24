@@ -76,3 +76,4 @@ int initFlagArray(int argc, char **argv, char **flagArray){
     flagArray[argCount] = NULL;
     return argCount;
 }
+

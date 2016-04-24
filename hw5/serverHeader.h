@@ -27,6 +27,7 @@
 struct pollfd pollFds[1024];
 int pollNum=0;
 int verbose = 0;
+int serverFd=-1;
 int globalSocket;
 
 
@@ -73,13 +74,14 @@ Client *createClient(char *username, int fd){
 
 void destroyClientMemory(Client* user){
   if(user != NULL){
-
+    //UNLINK THE CLIENT FROM THE REST OF LIST
     if(user->prev !=NULL){
       user->prev->next = user->next;
     }
     if(user->next !=NULL){
       user->next->prev = user->prev;
     }
+    //RESET THE CLIENT HEAD IF MUST 
     if(user == clientHead && user->prev != NULL){
       clientHead = user->prev;
     }else if(user == clientHead && user->next != NULL){
@@ -88,6 +90,7 @@ void destroyClientMemory(Client* user){
       clientHead = NULL;
     }
 
+    //ACTUAL FREEING PROCESS
     free(user->session->ipAddress);
     free(user->session);
     free(user);
@@ -191,6 +194,7 @@ bool verifyPassword(char* password);
  Client* getClientByUsername(char* user);
 
  void disconnectUser(char* user){
+  printStarHeadline("Disconnecting USER");
   Client* loggedOffClient = getClientByUsername(user);
   if(loggedOffClient!=NULL){
     //SEND BYE BACK TO USER
@@ -202,7 +206,7 @@ bool verifyPassword(char* password);
     close(loggedOffClient->session->commSocket); 
 
     //MUST BE LAST STEP 
-    printf("Destroying Client: %s",loggedOffClient->userName);
+    printf("Destroying Client: %s\n",loggedOffClient->userName);
     destroyClientMemory(loggedOffClient);
   }
  }
@@ -315,6 +319,9 @@ void processUsers();
  void processShutdown(){
    printf("SHUTTING DOWN()\n");
    disconnectAllUsers();
+   if(serverFd>0){
+     close(serverFd);
+   }
    printf("\nEXITING\n");
    exit(0);
  }

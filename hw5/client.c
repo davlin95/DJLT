@@ -127,10 +127,15 @@ int main(int argc, char* argv[]){
     /* Initialize Polls Interface*/
     memset(clientPollFds, 0 , sizeof(clientPollFds));
     int pollStatus;
-    clientPollNum=2;
+    clientPollNum=3;
 
-    /* Set poll for clientFd */
-    clientPollFds[0].fd = clientFd;
+    // CREATE GLOBAL SOCKET PAIR 
+    int globalSocketPair[2]={0,0};
+    createSocketPair(globalSocketPair,2);
+    globalSocket= globalSocketPair[0]; // assign to global var 
+
+    /* Set poll for clientFd */ 
+    clientPollFds[0].fd = clientFd; 
     clientPollFds[0].events = POLLIN;
     if (makeNonBlocking(clientFd)<0){   
       fprintf(stderr, "Error making socket nonblocking.\n");
@@ -141,6 +146,16 @@ int main(int argc, char* argv[]){
     if (makeNonBlocking(0)<0){ 
       fprintf(stderr, "Error making stdin nonblocking.\n");
     }
+
+    if(makeNonBlocking(globalSocketPair[0])<0){
+      fprintf(stderr, "Error making global socket 1 nonblocking.\n");
+    }
+    if(makeNonBlocking(globalSocketPair[1])<0){
+      fprintf(stderr, "Error making global socket 2 nonblocking.\n");
+    }
+    clientPollFds[2].fd = globalSocketPair[1]; // hold onto the read pipe for the global var. 
+    clientPollFds[2].events = POLLIN;
+
 
     /************************/
     /*   ETERNAL POLL       */
@@ -220,7 +235,7 @@ int main(int argc, char* argv[]){
                     int chatBox = getChatFdFromUsername(fromUser);
                     send(chatBox,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
-            	} 
+            	}  
             } 
             memset(&message,0,1024);   
           
@@ -267,6 +282,14 @@ int main(int argc, char* argv[]){
               /****************** @TODO REMOVE THIS FOR FINAL SUBMISSION ****/
             }
           } 
+        }
+        /*******************************/
+        /*  Catch Global Socket Write */
+        /*****************************/
+        else if(clientPollFds[i].fd == clientPollFds[2].fd){
+          printf("catched read into global socket\n");
+          char byte;
+          read(clientPollFds[2].fd,&byte,1);
         }
         else{
           /****************************************/
