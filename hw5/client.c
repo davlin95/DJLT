@@ -11,6 +11,10 @@
 #include <sys/wait.h>
 #include "xtermHeader.h"     
 
+/*
+ * 1) test the global socket for chat xterms, 
+ *see @questions for wilson, must be -c -v, other way doesn't work for flags. 
+ */
  
 /*
  * A function that removes the dependent datastructures for the xterm, by clearing up its memory 
