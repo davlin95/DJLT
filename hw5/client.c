@@ -235,16 +235,33 @@ int main(int argc, char* argv[]){
                     //CREATE CHAT BOX
                     printf("Creating Xterm for user: %s\n",fromUser);
                     createXterm(fromUser,username);
-
                     //SEND CHAT  
                     Xterm* xterm = getXtermByUsername(fromUser);
                     send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
-                }else{ 
-                    //A CHAT ALREADY EXISTS, SEND TO IT
-                    Xterm* xterm = getXtermByUsername(fromUser);
-                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
                 }
+                //IF CHAT EXISTS FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
+                else if(getXtermByUsername(fromUser)!=NULL && strcmp(toUser,username)==0){ 
+                    Xterm* xterm = getXtermByUsername(fromUser);
+                    if(xterm!=NULL){
+                      send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                    }else{
+                      fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
+                    }
+                }
+                //IF CHATBOX DOESN'T EXIST FROM PREVIOUS CONTACT, BUT THIS CLIENT IS THE SENDER
+                else if(getXtermByUsername(toUser)==NULL && strcmp(fromUser,username)==0){
+                  //CREATE CHAT BOX
+                  printf("Creating Xterm for user: %s\n",toUser);
+                  createXterm(toUser,username);
+                  //SAFE-SEND CHAT  
+                  Xterm* xterm = getXtermByUsername(toUser);
+                  if(xterm!=NULL){
+                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                  }else{
+                    fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
+                  }
 
+                }
             	}  
             } 
             memset(&message,0,1024);   
@@ -307,12 +324,11 @@ int main(int argc, char* argv[]){
           int chatBytes =-1;
           chatBytes = read(clientPollFds[i].fd,chatBuffer,1024);
 
-          //IF XTERM DIED
+          //IF CHILD XTERM DIED
           if(chatBytes==0){
             printf("xterm died detected in poll loop read\n");
             cleanUpXterm(getXtermByChatFd(clientPollFds[i].fd));
           }else{
-
               //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
               Xterm* xterm = getXtermByChatFd(clientPollFds[i].fd);
               if(xterm==NULL){
@@ -330,7 +346,7 @@ int main(int argc, char* argv[]){
         }
         
       }/* MOVE ON TO NEXT POLL FD */
-        
+
     }/* FOREVER RUNNING LOOP */ 
 
 

@@ -286,7 +286,6 @@ int createXterm(char * sendToUser, char* originalUser){
     fprintf(stderr,"createXterm(): error forking\n");
     exit(EXIT_FAILURE);
   }
-
   //UPDATE DATA STRUCTURES
   setChatUser(sendToUser,socketArr[0], pid);
 

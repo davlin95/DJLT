@@ -11,15 +11,15 @@
 #include "chatHeader.h"
 
 
-
 int main(int argc, char ** argv) {
   signal(SIGKILL, endProcessHandler);
   signal(SIGINT,endProcessHandler);
-  
+
 	//INITIALIZE THE PASSED SOCKET PAIR
 	  chatFd=0;
     if(argv[1]!=NULL && isAllDigits(argv[1]) ){
     	chatFd = atoi(argv[1]);
+      makeNonBlocking(chatFd);
     }else{
     	fprintf(stderr,"chat main(): error with argv 1\n");
     }
@@ -43,9 +43,7 @@ int main(int argc, char ** argv) {
     }
 
 
-    if(makeNonBlocking(chatFd)<0){
-    	fprintf(stderr,"chat.c: error with makeNonBlockingForChat\n");
-    }
+
 
 
 	 /****************************************/
@@ -54,7 +52,6 @@ int main(int argc, char ** argv) {
 
     /* Initialize Polls Interface*/
     memset(chatPollFds,0,sizeof(chatPollFds));
-    char message[1024];
     int pollStatus;
     chatPollNum=2;
 
@@ -93,8 +90,8 @@ int main(int argc, char ** argv) {
         /*   POLLIN FROM CHATFD           */
         /*********************************/
         if(chatPollFds[i].fd == chatFd){
-          //printStarHeadline("CLIENT TALKING TO THIS CHAT",-1);
           int clientBytes =0;
+          char message[1024];
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
             printUserIn(otherUser);
             printf("%s",message);
@@ -113,7 +110,6 @@ int main(int argc, char ** argv) {
         /*********************************/
         else if(chatPollFds[i].fd == 0){
           //printStarHeadline("STDIN INPUT",-1);
-        
           int bytes=0; 
           char stdinBuffer[1024];  
           memset(&stdinBuffer,0,1024);
@@ -128,5 +124,6 @@ int main(int argc, char ** argv) {
       }
     /* FOREVER RUNNING LOOP */ 
     }
+    
   	return 0;
 }
