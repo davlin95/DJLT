@@ -246,7 +246,7 @@ void processAcctsRequest(){
     accountStructToString(accountPtr);
     accountPtr = accountPtr->next;
   }
-}
+} 
 /*
  * A function that prints the client struct into string
  * @param clientData: client struct to be printed

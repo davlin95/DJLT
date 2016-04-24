@@ -4,14 +4,14 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <string.h> 
-#include <stdlib.h> 
+#include <stdlib.h>  
 #include <errno.h>
 #include <sys/fcntl.h>
 #include <signal.h> 
 #include <sys/wait.h>
 #include "xtermHeader.h"     
 
-
+ 
 /*
  * A function that removes the dependent datastructures for the xterm, by clearing up its memory 
  * and refleting the changes in the clientPollFds structure. 
@@ -32,9 +32,13 @@ void cleanUpXterm(Xterm* xterm){
   }
 }
 
+void doNothingHandler(){
+  printf("CAUGHT THAT SIGUSR1\n");
+}
+
 void xtermReaperHandler(){
   pid_t pid;
-  int reapStatus;
+  int reapStatus; 
   while( (pid = waitpid(-1,&reapStatus,WUNTRACED) ) > 0 ){
     //NOTIFY THE ADMIN WHICH XTERM PROCESS DIED
     char deadChild[1024];
@@ -71,6 +75,7 @@ int main(int argc, char* argv[]){
   /* Attach Signal handlers */
   signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
+  signal(SIGUSR1,doNothingHandler);
 
   //Program Startup Vars 
   int argCounter;   
@@ -234,14 +239,22 @@ int main(int argc, char* argv[]){
                 if(getXtermByUsername(fromUser)==NULL && strcmp(toUser,username)==0){
                     //CREATE CHAT BOX
                     printf("Creating Xterm for user: %s\n",fromUser);
-                    createXterm(fromUser,username);
-                    //SEND CHAT  
+                    int child = createXterm(fromUser,username);
+                    send(child,messageFromUser,strnlen(messageFromUser,1023),0);
+
+                    /*//CONTINUE TO SEND CHAT  
                     Xterm* xterm = getXtermByUsername(fromUser);
-                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                    if(xterm!=NULL){
+                      send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                    }else{
+                      fprintf(stderr,"createXterm() in poll: not initialized \n");
+                    }*/
                 }
                 //IF CHAT EXISTS FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 else if(getXtermByUsername(fromUser)!=NULL && strcmp(toUser,username)==0){ 
                     Xterm* xterm = getXtermByUsername(fromUser);
+
+                    //SAFE SEND
                     if(xterm!=NULL){
                       send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
                     }else{
@@ -252,14 +265,16 @@ int main(int argc, char* argv[]){
                 else if(getXtermByUsername(toUser)==NULL && strcmp(fromUser,username)==0){
                   //CREATE CHAT BOX
                   printf("Creating Xterm for user: %s\n",toUser);
-                  createXterm(toUser,username);
-                  //SAFE-SEND CHAT  
+                  int child = createXterm(toUser,username);
+                  send(child,messageFromUser,strnlen(messageFromUser,1023),0);
+
+                  /*//SAFE-SEND CHAT  
                   Xterm* xterm = getXtermByUsername(toUser);
                   if(xterm!=NULL){
                     send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
                   }else{
                     fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
-                  }
+                  }*/
 
                 }
             	}  
@@ -287,9 +302,9 @@ int main(int argc, char* argv[]){
             if(strcmp(stdinBuffer,"/time\n")==0){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose);
             }  
-            else if(strcmp(stdinBuffer,"/listu\n")==0){
+            else if(strcmp(stdinBuffer,"/listu\n")==0){ 
               protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose); 
-            }
+            }  
             else if(strcmp(stdinBuffer,"/logout\n")==0){
               protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose);
               waitForByeAndClose(clientFd); 

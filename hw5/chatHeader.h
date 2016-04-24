@@ -11,6 +11,10 @@
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
 
+#define VERBOSE "\x1b[1;34m"
+#define ERROR "\x1b[1;31m"
+#define DEFAULT "\x1b[0m"
+
  				/************************************/
                 /*  Global Structures               */
                 /************************************/
@@ -86,29 +90,18 @@ bool isAllDigits(char* string){
 
  }
 
-void printUserIn(char* user){
-  if(user!=NULL){
-  	char promptArrow[1024];
-  	memset(&promptArrow,0,1024);
-  	strcpy(promptArrow,"\n");
-  	strcat(promptArrow,user);
-  	strcat(promptArrow," >");
-  	printf("%s",promptArrow);
-  }
+void printUserIn(){
+  char rightPromptArrow[1024];
+  memset(&rightPromptArrow,0,1024);
+  strcat(rightPromptArrow," >");
+  printf(VERBOSE"\n%s",rightPromptArrow);
 }
-
-void printUserOut(char* user){
-  if(user!=NULL){
+ 
+void printUserOut(){
   	char promptArrow[1024];
   	memset(&promptArrow,0,1024);
-
-  	strcpy(promptArrow,"\n");
   	strcat(promptArrow,"< ");
-  	strcat(promptArrow,user);
-  	strcat(promptArrow," ");
-
-  	printf("%s",promptArrow);
-  }
+  	printf(ERROR "\n%s",promptArrow);
 }
 
 

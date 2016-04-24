@@ -57,7 +57,7 @@ Xterm* xtermHead;
 						/***********************/
                         /* XTERM STRUCT METHODS */
 						/***********************/
-Xterm* createXtermStruct(char* username,int fd, pid_t xtermProcess){
+Xterm* createXtermStruct(char* username,int fd, pid_t process){
   Xterm* newXterm = malloc(sizeof(Xterm));
 
   //GET MALLOCED USERNAME STRING
@@ -72,7 +72,7 @@ Xterm* createXtermStruct(char* username,int fd, pid_t xtermProcess){
   //ADD VALUES TO STRUCT
   newXterm->toUser = newUser;
   newXterm->chatFd = fd;
-  newXterm->xtermProcess = xtermProcess;
+  newXterm->xtermProcess = process;
 
   newXterm->next = NULL;
   newXterm->prev = NULL;
@@ -114,9 +114,13 @@ void setChatUser(char* username, int fd, pid_t xtermProcess){
   Xterm* newXterm = createXtermStruct(username,fd,xtermProcess);
 
   //ADD TO GLOBAL DATA STRUCTURES
+  if(xtermHead!=NULL){
+  	xtermHead->prev=newXterm;
+  }
   newXterm->next = xtermHead;
   xtermHead = newXterm;
 
+  printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
   //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
   clientPollFds[clientPollNum].fd = fd;
   clientPollFds[clientPollNum].events = POLLIN;
@@ -137,7 +141,8 @@ Xterm* getXtermByUsername(char* username){
 Xterm* getXtermByPid(pid_t pid){
 	Xterm* xtermPtr;
     for(xtermPtr = xtermHead; xtermPtr!=NULL; xtermPtr = xtermPtr->next){
-      if(xtermPtr->xtermProcess==pid){
+      if( (xtermPtr->xtermProcess)==pid){
+      	printf("xtermProcess = %d, pid = %d", xtermPtr->xtermProcess,pid);
         return xtermPtr;
       }
     }
@@ -288,6 +293,5 @@ int createXterm(char * sendToUser, char* originalUser){
   }
   //UPDATE DATA STRUCTURES
   setChatUser(sendToUser,socketArr[0], pid);
-
   return socketArr[0];
 }

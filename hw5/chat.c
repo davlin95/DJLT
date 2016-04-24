@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <errno.h>
+#include <errno.h> 
 #include <sys/poll.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -33,7 +33,7 @@ int main(int argc, char ** argv) {
     	fprintf(stderr,"chat main(): error loading other User's name\n");
     }
 
-    //INITIALIZE ORIGINAL USER
+    //INITIALIZE ORIGINAL USER 
 	  char originalUser[1024];
 	  memset(originalUser,0,1024);
     if(argc>=3 && argv[3]!=NULL){
@@ -49,16 +49,16 @@ int main(int argc, char ** argv) {
 	 /****************************************/
     /*        IMPLEMENT POLL                */
    /****************************************/
-
+ 
     /* Initialize Polls Interface*/
     memset(chatPollFds,0,sizeof(chatPollFds));
     int pollStatus;
     chatPollNum=2;
 
-    /* Set poll for chatFd */
+    /* Set poll for chatFd */ 
     chatPollFds[0].fd = chatFd;
-    chatPollFds[0].events = POLLIN;
-
+    chatPollFds[0].events = POLLIN; 
+ 
     /* Set poll for stdin */ 
     chatPollFds[1].fd = 0;
     chatPollFds[1].events = POLLIN; 
@@ -92,10 +92,15 @@ int main(int argc, char ** argv) {
         if(chatPollFds[i].fd == chatFd){
           int clientBytes =0;
           char message[1024];
+          memset(&message,0,1024);   
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
-            printUserIn(otherUser);
-            printf("%s",message);
-            printUserOut(originalUser);
+            write(1,VERBOSE,strlen(VERBOSE));
+            char* inner = "\n> \0";
+            write(1,inner,strlen(inner));
+            write(1,message,strnlen(message,1023));
+            write(1,ERROR,strlen(ERROR));
+            char* outer = "\n< \0";
+            write(1,outer,strlen(outer));
             memset(&message,0,1024);   
           }
           if((clientBytes=read(chatFd,message,1))==0){
@@ -115,9 +120,11 @@ int main(int argc, char ** argv) {
           memset(&stdinBuffer,0,1024);
           while( (bytes=read(0,&stdinBuffer,1024))>0){
             send(chatFd,stdinBuffer,(strnlen(stdinBuffer,1023)),0);
-            printUserOut(originalUser);
             memset(&stdinBuffer,0,1024);
-          } 
+          }
+          write(1,ERROR,strlen(ERROR));
+          char* outer = "\n< \0";
+          write(1,outer,strlen(outer));
         }
 
         /* MOVE ON TO NEXT POLL FD */
