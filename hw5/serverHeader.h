@@ -32,6 +32,7 @@ int globalSocket;
 
 
 typedef struct sessionData{
+  char* ipAddressString;
   struct in_addr *ipAddress;
   int commSocket;
   time_t start;
@@ -92,6 +93,7 @@ void destroyClientMemory(Client* user){
 
     //ACTUAL FREEING PROCESS
     free(user->session->ipAddress);
+    free(user->session->ipAddressString);
     free(user->session);
     free(user);
   }
@@ -188,12 +190,12 @@ bool verifyUser(int clientFd);
  */
 bool verifyPassword(char* password);
 
+
+ Client* getClientByUsername(char* user);
+ void printStarHeadline(char * string,int optionalOrNegative);
 /*
  * A function that disconnects users
  */
- Client* getClientByUsername(char* user);
- void printStarHeadline(char * string,int optionalOrNegative);
-
  void disconnectUser(char* user){
   printStarHeadline("Disconnecting USER",-1);
   Client* loggedOffClient = getClientByUsername(user);
@@ -251,11 +253,13 @@ void processAcctsRequest(){
  * @return : void
  */
 void clientStructToString(Client* clientData){
+  /*OUTDATED CODE: SINCE NEW FUNCTIONALITY GETS THE STRING DIRECTLY 
   char ipaddress[33];
-  memset(ipaddress, 0, strlen(ipaddress));
-  inet_ntop( AF_INET,(clientData->session->ipAddress), ipaddress, 33);
+  memset(ipaddress, 0, strlen(ipaddress)); 
+  inet_ntop( AF_INET,(clientData->session->ipAddress), ipaddress, 33); */
+
   printf("Username: %-15s IP Address: %s\n", clientData->userName, 
-    ipaddress);
+    clientData->session->ipAddressString);
 }
 /*
  *A function that prints all connected users
@@ -283,15 +287,6 @@ void createSocketPair(int socketsArray[], int size){
   }
 }
 
-/* 
- * A function that creates a socketFd for the port currently listened on. 
- */
- int createSocket(int portNumber);
-
-/* 
- * A method that handles detection of control-C keyboard input 
- */
- void controlC();
 
  					/********* BUILTIN COMMANDS ********/
  /* 
@@ -354,11 +349,6 @@ void killServerHandler(){
   void sendMessageOfTheDay(int clientFd){
     sendMessage(clientFd, messageOfTheDay);
   }
-
-  /*
-   * A function that rejects the client from logging in 
-   */
-  void rejectClient(int clientFd);
 
   /*
    *  A function that services the TIME Verb between server and client. 
@@ -430,14 +420,13 @@ void killServerHandler(){
  
 
  void printStarHeadline(char* headline,int optionalFd){
-
   printf("\n/***********************************/\n");
   printf("/*\t");
   if(optionalFd>=0){
-    printf("%-60s : %d",headline,optionalFd);
+    printf("%-30s : %d",headline,optionalFd);
   }
   else {
-    printf("%-60s",headline);
+    printf("%-30s",headline);
   }
   printf("\t*/\n");
   printf("/***********************************/\n");
@@ -457,22 +446,6 @@ void recognizeAndExecuteStdin(char* userTypedIn){
     processAcctsRequest();
   }
 }
-
-
- /* 
-  * A function that parses the commandline 
-  */
- void parseCommandLine();
- 
- /*
-  * A function that builds an argument array 
-  */
- void buildArguments();
-
-  /*
-  * A function that builds executes the arguments
-  */
- void executeArguments();
 
 
 					/***** USER SECURITY **********/
@@ -644,6 +617,23 @@ int createBindListen(char* portNumber, int serverFd){
   return serverFd;
 }
 
+/*
+ * Takes in a socket fd, and a char buffer, returns the ip address associated with the socket.
+ */
+char* getIpAddressFromSocketFd(int socketFd,char ipAddress[]){
+  int status=0;
+  struct sockaddr address;
+  socklen_t addressLength=sizeof(address);
+  status = getsockname(socketFd,&address,&addressLength);
+  if(status<0){
+    fprintf(stderr,"getIpAddressFromSocketFd():%s",strerror(errno));
+  }
+  memset(ipAddress,0,1024);
+  struct sockaddr_in * ipInet = ((struct sockaddr_in *) &address);
+  char* ipString = inet_ntoa(ipInet->sin_addr );
+  strcpy(ipAddress,ipString);
+  return ipAddress;
+}
 
 
             /***********************************************************************/
@@ -682,6 +672,19 @@ void sha256(char* password, unsigned char *output){
 
 void processValidClient(char* clientUserName, int fd){
   Client* newClient = createClient(clientUserName, fd);
+
+  //GET IPADDRESS STRING FOR THE CLIENT STRUCT
+  char ipAddressBuffer[1024];
+  memset(ipAddressBuffer,0,1024);
+  char* ipString;
+  ipString = getIpAddressFromSocketFd(fd,ipAddressBuffer); // result is ipString
+
+  //ADD IP ADDRESS TO THE CLIENT'S SESSION;
+  char* mallocIpString = malloc((strlen(ipString)+1)*sizeof(char));
+  strcpy(mallocIpString,ipString);
+  newClient->session->ipAddressString = mallocIpString;
+
+  //START SESSION TIME FOR CLIENT
   startSession(newClient->session);
   addClientToList(newClient);
 }
@@ -708,6 +711,13 @@ char * createSQLInsert(Account *account, char* sqlBuffer){
   strcat(sqlPtr, account->salt);
   strcat(sqlPtr, "');");
   return sqlPtr;
+}
+
+void notifyAllUsersUOFF(char* username){
+  Client* clientPtr;
+  for (clientPtr = clientHead; clientPtr!=NULL; clientPtr = clientPtr->next){
+    protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
+  }
 }
 
 void writeToGlobalSocket(){

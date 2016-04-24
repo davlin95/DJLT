@@ -271,80 +271,78 @@ int main(int argc, char* argv[]){
           /***********************/  
           /* READ FROM CLIENT   */
           /*********************/
-          //while(1){ //get rid of while loop reading due to while loop in wrapper
-            /*** STORE CLIENT BYTES INTO BUFFER ****/
+          /*** STORE CLIENT BYTES INTO BUFFER ****/
+          memset(&clientMessage,0, 1024);
+          if(ReadNonBlockedSocket(pollFds[i].fd ,clientMessage)==false){
+            fprintf(stderr,"ReadNonBlockedSocket(): Detected Socket Closed\n");
+            printf("attempting to read BYE if it is there\n");
             memset(&clientMessage,0, 1024);
-            if(ReadNonBlockedSocket(pollFds[i].fd ,clientMessage)==false){
-              fprintf(stderr,"ReadNonBlockedSocket(): Detected Socket Closed\n");
-              printf("attempting to read BYE if it is there\n");
-              memset(&clientMessage,0, 1024);
-              ReadNonBlockedSocket(pollFds[i].fd ,clientMessage);
-              doneReading=1;
-            }
-            
-            /****************************/ 
-            /* CLIENT BUILT IN REQUESTS */ 
-            /***************************/
-            if (checkVerb(PROTOCOL_TIME, clientMessage)){  
-              if (verbose){
-                printf(VERBOSE "%s" DEFAULT, clientMessage);
-              }
-              char sessionlength[1024];
-              memset(&sessionlength, 0, 1024);
-              if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength)) 
-                protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL, verbose);     
-            }  
-            else if (checkVerb(PROTOCOL_LISTU, clientMessage)){
-              if (verbose){
-                printf(VERBOSE "%s" DEFAULT, clientMessage);
-              }
-              char usersBuffer[1024];
-              memset(&usersBuffer, 0, 1024); 
-              if (buildUtsilArg(usersBuffer))   
-                protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL, verbose);  
-            } 
-            else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
-              if (verbose){
-                printf(VERBOSE "%s" DEFAULT, clientMessage);
-              }              
-              doneReading=1; 
-            }
-            else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
-              printStarHeadline("GOT MSG!!!",-1);
-              if (verbose){
-                printf(VERBOSE "%s" DEFAULT, clientMessage);
-              }                
-              char msgToBuffer[1024];
-              char msgFromBuffer[1024];
-              char msgBuffer[1024];
+            ReadNonBlockedSocket(pollFds[i].fd ,clientMessage);
+            doneReading=1;
+          }
 
-              memset(&msgToBuffer,0,1024);
-              memset(&msgFromBuffer,0,1024); 
-              memset(&msgBuffer,0,1024);
- 
-              extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
-              printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
-              Client* toUser= getClientByUsername(msgToBuffer);
-              
-              //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
-              if( toUser!=NULL && strcmp(msgToBuffer, msgFromBuffer)!=0 ){
-                //SEND MESSAGE BACK
-                char messageResponse[1024];
-                memset(&messageResponse,0,1024);
-                buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
-                //SEND TO BOTH USERS 
-                send(toUser->session->commSocket,messageResponse,strnlen(messageResponse,1023),0);
-                send(pollFds[i].fd,messageResponse,strnlen(messageResponse,1023),0);
-              }else{ 
-                //FAILED SEND, ERROR BACK TO USER
-                protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL, verbose);
-              }
+          /****************************/ 
+          /* CLIENT BUILT IN REQUESTS */ 
+          /***************************/
+          if (checkVerb(PROTOCOL_TIME, clientMessage)){  
+            if (verbose){
+              printf(VERBOSE "%s" DEFAULT, clientMessage);
             }
-            /*******************************************************/
-            /* OUTPUT MESSAGE FROM CLIENT : DELETE AFTER TESTING  */
-            /*****************************************************/
-            printf("%s\n",clientMessage);
-  //       }  //get rid of while loop reading due to while loop in wrapper read
+            char sessionlength[1024];
+            memset(&sessionlength, 0, 1024);
+            if (sessionLength(getClientByFd(pollFds[i].fd), sessionlength)) 
+              protocolMethod(pollFds[i].fd, EMIT, sessionlength, NULL,NULL, verbose);     
+          }  
+          else if (checkVerb(PROTOCOL_LISTU, clientMessage)){
+            if (verbose){
+              printf(VERBOSE "%s" DEFAULT, clientMessage);
+            }
+            char usersBuffer[1024];
+            memset(&usersBuffer, 0, 1024); 
+            if (buildUtsilArg(usersBuffer))   
+              protocolMethod(pollFds[i].fd, UTSIL, usersBuffer,NULL,NULL, verbose);  
+          } 
+          else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
+            if (verbose){
+              printf(VERBOSE "%s" DEFAULT, clientMessage);
+            }              
+            doneReading=1; 
+          }
+          else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
+            printStarHeadline("GOT MSG!!!",-1);
+            if (verbose){
+              printf(VERBOSE "%s" DEFAULT, clientMessage);
+            }                
+            char msgToBuffer[1024];
+            char msgFromBuffer[1024];
+            char msgBuffer[1024];
+
+            memset(&msgToBuffer,0,1024);
+            memset(&msgFromBuffer,0,1024); 
+            memset(&msgBuffer,0,1024);
+
+            extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
+            printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
+            Client* toUser= getClientByUsername(msgToBuffer);
+            
+            //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
+            if( toUser!=NULL && strcmp(msgToBuffer, msgFromBuffer)!=0 ){
+              //SEND MESSAGE BACK
+              char messageResponse[1024];
+              memset(&messageResponse,0,1024);
+              buildMSGProtocol(messageResponse,msgToBuffer,msgFromBuffer,msgBuffer);
+              //SEND TO BOTH USERS 
+              send(toUser->session->commSocket,messageResponse,strnlen(messageResponse,1023),0);
+              send(pollFds[i].fd,messageResponse,strnlen(messageResponse,1023),0);
+            }else{ 
+              //FAILED SEND, ERROR BACK TO USER
+              protocolMethod(pollFds[i].fd,ERR1,NULL,NULL,NULL, verbose);
+            } 
+          }
+          /*******************************************************/
+          /* OUTPUT MESSAGE FROM CLIENT : DELETE AFTER TESTING  */
+          /*****************************************************/
+          printf("%s\n",clientMessage);
 
          /********************************/
          /* IF CLIENT LOGGED OFF        */
@@ -352,20 +350,19 @@ int main(int argc, char* argv[]){
          if(doneReading){ 
            char username[1024];
            memset(&username, 0, 1024);
-           Client * clientPtr;
            strcpy(username, getClientByFd(pollFds[i].fd)->userName);
            disconnectUser(username); 
            //NOTIFY EVERY USER THAT THE USER LOGGED OFF
-           for (clientPtr = clientHead; clientPtr!=NULL; clientPtr = clientPtr->next){
-              protocolMethod(getClientByUsername(clientPtr->userName)->session->commSocket, UOFF, username, NULL, NULL, verbose);
-           }
+           notifyAllUsersUOFF(username);
+
+           //CHANGE POLL TO REFLECT USER LOGGED OFF
            pollFds[i].fd=-1;
            compactDescriptors=1;
          } 
         }
       }// MOVE ON TO NEXT POLL FD EVENT
       
-      /* COMPACT POLLS ARRAY */
+      /* COMPACT POLLS ARRAY BEFORE NEXT CHECK OF FORLOOP*/
       if (compactDescriptors){
         compactDescriptors=0;
         compactPollDescriptors();
@@ -430,7 +427,9 @@ void* loginThread(void* args){
       //STORE IT IN NEW ACCOUNT STRUCT INTO GLOBAL LIST
       processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);
     }
+    //ADD CLIENT TO ACTIVE LIST OF USERS
     processValidClient(username,connfd);
+
     if(globalSocket>0){
       write(globalSocket," ",1);
       printf("\nwrote to globalSocket\n");
