@@ -17,14 +17,37 @@
  /*
   *	read wrapper method that reads byte by byte 
   */
-bool Read(int fd, char* buffer, int bufferSize){
+bool ReadBlockedSocket(int fd, char* buffer){
   int bytes = 0;
   char character;
   char* bufferPtr=buffer;
   while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL  ){
     *bufferPtr=character;
      bufferPtr++;
+     break;
   }
+  if(bytes == -1){
+    return false;
+  }
+  return true;
+}
+
+ /*
+  * read wrapper method that reads byte by byte 
+  */
+bool ReadNonBlockedSocket(int fd, char* buffer){
+  int bytes = 0;
+  char character;
+  char* bufferPtr=buffer;
+  while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL  ){
+    *bufferPtr=character;
+     bufferPtr++;
+     break;
+  }
+  if(bytes == 0){
+    return false;
+  }
+  return true;
 }
 
 /*
