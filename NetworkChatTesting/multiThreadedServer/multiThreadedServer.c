@@ -17,6 +17,7 @@
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
+  char *last_two;
   char *portNumber;
   char * argArray[1024];
   char * flagArray[1024]; 
@@ -28,52 +29,6 @@ int main(int argc, char* argv[]){
   char *dbErrorMessage = 0;
   int dbResult;
   char *sql;
-
-  //INIT ARGUMENTS INTO ARRAY 
-  argCounter = initArgArray(argc, argv, argArray);
-  if (argCounter < 4 || argCounter > 5){
-    USAGE("./server"); 
-    exit(EXIT_FAILURE);  
-  } 
-
-  /**************************************************/
-  /* User entered DB Path With 5TH ELEMENT -C FLAG */
-  /************************************************/
-  if (argCounter == 5){
-    //OPEN DATABASE
-    if ((dbResult = sqlite3_open(argArray[3], &database))){
-      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
-      exit(0);
-    }
-    //GET ACCOUNT INFO 
-    sql = "SELECT * FROM ACCOUNTS";
-    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
-      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
-      sqlite3_free(dbErrorMessage);
-      exit(0);
-    }
-  } 
-  /*********************************************/
-  /*  DB PATH BUT NO 5TH ELEMENT -C FLAG      */
-  /*******************************************/
-  else{
-    //OPEN DATABASE
-    if ((dbResult = sqlite3_open("accounts.db", &database))){
-      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
-      exit(0);
-    }
-    //NO PREVIOUS DB, CREATE NEW ACCOUNTS
-    sql = "CREATE TABLE ACCOUNTS("                        \
-          "username     CHAR(1024) PRIMARY KEY NOT NULL," \
-          "password     CHAR(1024) NOT NULL,"             \
-          "salt         CHAR(1024) NOT NULL);";
-    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
-      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
-      sqlite3_free(dbErrorMessage);
-      exit(0);
-    }
-  }
-
   /**************************/
   /*  PARSE ARGS FOR FLAGS */
   /*************************/
@@ -89,7 +44,95 @@ int main(int argc, char* argv[]){
     }
     argCounter++;   
   }
- 
+
+  //INIT ARGUMENTS INTO ARRAY 
+  argCounter = initArgArray(argc, argv, argArray);
+  if (argCounter < 4 || argCounter > 5){
+    USAGE("./server"); 
+    exit(EXIT_FAILURE);  
+  } 
+
+  /**************************************************/
+  /* User entered DB Path With 5TH ELEMENT -C FLAG */
+  /************************************************/
+  if (argCounter == 5){
+    last_two = (void *)argv[3] + strlen(argv[3]) - 2; 
+    if (strcmp(last_two, "db")!=0){
+      FILE *accountsFile;
+      size_t size = 1024;
+      char username[1024];
+      char password[1024];
+      char salt[1024];
+      char *usernamePtr = username;
+      char *passwordPtr = password;
+      char *saltPtr = salt;
+      char *lastChar;
+      memset(&username, 0, 1024);
+      memset(&password, 0, 1024);
+      memset(&salt, 0, 1024);
+      accountsFile = fopen(argArray[3], "r");
+      if (accountsFile != NULL){
+        while(getline(&usernamePtr, &size, accountsFile) > 0){
+          lastChar = strchr(usernamePtr, '\n');
+          *lastChar = '\0';
+          if (getline(&passwordPtr, &size, accountsFile) > 0){
+            lastChar = strchr(passwordPtr, '\n');
+            *lastChar = '\0';
+          } else{
+            fprintf(stderr, "Invalid Accounts File\n");
+            exit(0);
+          }
+
+          if (getline(&saltPtr, &size, accountsFile) > 0){
+            lastChar = strchr(saltPtr, '\n');
+            *lastChar = '\0';
+          } else{
+            fprintf(stderr, "Invalid Accounts File\n");
+            exit(0);
+          }
+          processValidAccount(usernamePtr, passwordPtr, saltPtr);
+          memset(&username, 0, 1024);
+          memset(&password, 0, 1024);
+          memset(&salt, 0, 1024);
+        }
+        fclose(accountsFile);
+      }
+    } else{ 
+    //OPEN DATABASE
+        if ((dbResult = sqlite3_open(argArray[3], &database))){
+          fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
+          exit(0);
+        }
+    //GET ACCOUNT INFO 
+        sql = "SELECT * FROM ACCOUNTS";
+        if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+          fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+          sqlite3_free(dbErrorMessage);
+          exit(0);
+        } 
+    } 
+  }
+  /*********************************************/
+  /*  DB PATH BUT NO 5TH ELEMENT -C FLAG      */
+  /*******************************************/
+  else{
+    //OPEN DATABASE
+    if ((dbResult = sqlite3_open("accounts.db", &database))){
+      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
+      exit(0);
+    }
+    //NO PREVIOUS DB, CREATE NEW ACCOUNTS
+    sql = "CREATE TABLE ACCOUNTS("                        \
+          "username     CHAR(1024) PRIMARY KEY NOT NULL," \
+          "password     CHAR(1024) NOT NULL,"             \
+          "salt         CHAR(1024) NOT NULL);";
+    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+      /*fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+      sqlite3_free(dbErrorMessage);
+      exit(0);*/
+    }
+  }
+
   /***************************************/
   /* EXTRACT ARGV FOR IMPORTANT STRINGS */
   /*************************************/
@@ -217,32 +260,43 @@ int main(int argc, char* argv[]){
           while( (bytes=read(0,&stdinBuffer,1024))>0){  
             if (strcmp(stdinBuffer, "/shutdown\n")==0){
               // ATTEMPT SQL SHUTDOWN
-              char sqlInsert[1024];
-              Account * accountPtr;
-              sql = "DELETE FROM ACCOUNTS;";
-
-              //@QUESTION: ISN'T DELETE FROM ACCOUNTS EXECUTED WITHOUT THE USERNAME ATTACHED IN NEXT BLOCK
+                char sqlInsert[1024];
+                Account * accountPtr;
+                sql = "DELETE FROM ACCOUNTS;";
               //ATTEMPT TO CLEAR USERS
-              if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
-                  fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
-                  //SHUTDOWN PROCEDURES
-                  sqlite3_free(dbErrorMessage);
-                  processShutdown();
-                  exit(0);
-              }
-              for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
-                memset(&sqlInsert, 0, 1024);
-                sql = createSQLInsert(accountPtr, sqlInsert);
-                printf("sql = %s\n", sql);
                 if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
-                  fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
-                  //SHUTDOWN PROCEDURES
-                  sqlite3_free(dbErrorMessage);
-                  processShutdown();
-                  exit(0);
+                    fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                    //SHUTDOWN PROCEDURES
+                    sqlite3_free(dbErrorMessage);
                 }
-              }
-              sqlite3_close(database);
+                for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
+                    memset(&sqlInsert, 0, 1024);
+                    sql = createSQLInsert(accountPtr, sqlInsert);
+                    printf("sql = %s\n", sql);
+                    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+                        fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                  //SHUTDOWN PROCEDURES
+                        sqlite3_free(dbErrorMessage);
+                    }
+                }
+                sqlite3_close(database);
+                FILE *accountsFile;
+                if (argCounter == 5){
+                    accountsFile = fopen(argArray[3], "w");
+                }
+                else{
+                  accountsFile = fopen("accounts", "w");
+                }
+                if (accountsFile != NULL){
+                  Account *accountPtr;
+                  for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
+                    printf("username is %s\n", accountPtr->userName);
+                    fprintf(accountsFile, "%s\n", accountPtr->userName);
+                    fprintf(accountsFile, "%s\n", accountPtr->password);
+                    fprintf(accountsFile, "%s\n", accountPtr->salt);
+                  }
+                fclose(accountsFile);
+                }
               processShutdown();
             }
             //EXECUTE OTHER COMMANDS
