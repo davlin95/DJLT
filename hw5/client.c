@@ -13,7 +13,7 @@
 
 /*
  * 1) test the global socket for chat xterms, 
- *see @questions for wilson, must be -c -v, other way doesn't work for flags. 
+ * see @questions for wilson, must be -c -v, other way doesn't work for flags. 
  */
  
 /*

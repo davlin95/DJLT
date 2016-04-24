@@ -29,6 +29,7 @@ int pollNum=0;
 int verbose = 0;
 int serverFd=-1;
 int globalSocket;
+pthread_t commThreadId=-1;
 
 
 typedef struct sessionData{
@@ -176,7 +177,7 @@ void compactPollDescriptors(){
  */
 void* loginThread(void* args);
 
-
+void* communicationThread(void* args);
 
 						/******** CLIENT MANAGEMENT FUNCTIONS ******/
 
