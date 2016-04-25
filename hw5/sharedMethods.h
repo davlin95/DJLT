@@ -19,7 +19,7 @@
   */
 bool ReadBlockedSocket(int fd, char* buffer){
   int bytes = 0;
-  int counter =0;
+  int counter = 0;
   char character;
   char* bufferPtr=buffer;
   while( ((bytes = read(fd,&character,1) )>0) && strstr(buffer,"\r\n\r\n")==NULL && counter<1023){

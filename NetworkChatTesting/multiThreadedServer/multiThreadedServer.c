@@ -17,7 +17,6 @@
 
 int main(int argc, char* argv[]){ 
   int argCounter; 
-  char *last_two;
   char *portNumber;
   char * argArray[1024];
   char * flagArray[1024]; 
@@ -25,10 +24,12 @@ int main(int argc, char* argv[]){
   memset(&flagArray, 0, sizeof(flagArray));
   
   //INITIALIZE DATABASE VARIABLES
-  sqlite3 *database;
+  /*
   char *dbErrorMessage = 0;
+  sqlite3 *database;
   int dbResult;
   char *sql;
+  */
   /**************************/
   /*  PARSE ARGS FOR FLAGS */
   /*************************/
@@ -56,7 +57,9 @@ int main(int argc, char* argv[]){
   /* User entered DB Path With 5TH ELEMENT -C FLAG */
   /************************************************/
   if (argCounter == 5){
-    last_two = (void *)argv[3] + strlen(argv[3]) - 2; 
+    getAccounts(argArray[3]);
+  }  
+    /*last_two = (void *)argArray[3] + strlen(argArray[3]) - 2; 
     if (strcmp(last_two, "db")!=0){
       FILE *accountsFile;
       size_t size = 1024;
@@ -97,41 +100,43 @@ int main(int argc, char* argv[]){
         }
         fclose(accountsFile);
       }
-    } else{ 
+    }  */
+     /* 
     //OPEN DATABASE
         if ((dbResult = sqlite3_open(argArray[3], &database))){
           fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
           exit(0);
         }
-    //GET ACCOUNT INFO 
+      //GET ACCOUNT INFO 
         sql = "SELECT * FROM ACCOUNTS";
         if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
           fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
           sqlite3_free(dbErrorMessage);
           exit(0);
         } 
-    } 
-  }
+    }*/ 
   /*********************************************/
   /*  DB PATH BUT NO 5TH ELEMENT -C FLAG      */
   /*******************************************/
-  else{
+  /*
+    //database = initDataBase(database);
     //OPEN DATABASE
+    
     if ((dbResult = sqlite3_open("accounts.db", &database))){
       fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
       exit(0);
     }
     //NO PREVIOUS DB, CREATE NEW ACCOUNTS
     sql = "CREATE TABLE ACCOUNTS("                        \
-          "username     CHAR(1024) PRIMARY KEY NOT NULL," \
-          "password     CHAR(1024) NOT NULL,"             \
-          "salt         CHAR(1024) NOT NULL);";
+          "username     CHAR(1025) PRIMARY KEY NOT NULL," \
+          "password     CHAR(1025) NOT NULL,"             \
+          "salt         CHAR(1025) NOT NULL);";
     if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
-      /*fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
       sqlite3_free(dbErrorMessage);
-      exit(0);*/
+      exit(0);
     }
-  }
+  }*/
 
   /***************************************/
   /* EXTRACT ARGV FOR IMPORTANT STRINGS */
@@ -153,10 +158,10 @@ int main(int argc, char* argv[]){
   /*****************/ 
   int connfd;    
   if ((serverFd = createBindListen(portNumber, serverFd))<0){
-    printf("error createBindListen\n");
-    exit(EXIT_FAILURE);       
+    fprintf(stderr, ERROR PROTOCOL_ERR100 DEFAULT);
+    exit(EXIT_FAILURE);        
   }else{
-    printf("Listening\n"); 
+    printf("Currently listening on port %s\n", portNumber);  
   }
 
   /**********************************************************************/
@@ -186,10 +191,10 @@ int main(int argc, char* argv[]){
   struct pollfd acceptPollFds[2];
   memset(acceptPollFds, 0 , sizeof(acceptPollFds));
 
-  /* Set poll for serverFd */
+  /* Set poll for serverFd */  
   acceptPollFds[0].fd = serverFd;
   acceptPollFds[0].events = POLLIN;
-
+ 
   /* Set poll for stdin */
   makeNonBlocking(0);
   acceptPollFds[1].fd = 0;
@@ -201,7 +206,6 @@ int main(int argc, char* argv[]){
   /******************/
   int acceptPollStatus;
   while(1){
-    printf("waiting for accept poll\n");
     acceptPollStatus = poll(acceptPollFds, 2, -1);
     if(acceptPollStatus<0){
       fprintf(stderr,"poll():%s",strerror(errno)); 
@@ -222,7 +226,6 @@ int main(int argc, char* argv[]){
       /*   POLLIN FROM SERVERFD         */
       /*********************************/
       if(acceptPollFds[i].fd == serverFd){
-        printStarHeadline("SERVER IS TAKING IN CLIENTS",-1);
 
         while(1){
           /************* STORE INCOMING CONNECTS ****/
@@ -238,7 +241,7 @@ int main(int argc, char* argv[]){
               fprintf(stderr,"accept() in poll loop: %s\n",strerror(errno));
               close(connfd); 
             }
-            break;
+            break; 
           }
           *connfdPtr=connfd; // pass pointer to malloced int to login thread 
 
@@ -256,7 +259,6 @@ int main(int argc, char* argv[]){
       /*   POLLIN FROM STDIN            */
       /*********************************/
       else if(acceptPollFds[i].fd == 0){
-        printStarHeadline("STDIN INPUT",-1);
         int bytes=0;
         char stdinBuffer[1024];
         memset(&stdinBuffer,0,1024);
@@ -266,6 +268,14 @@ int main(int argc, char* argv[]){
         /*****************************/
         while( (bytes=read(0,&stdinBuffer,1024))>0){  
             if (strcmp(stdinBuffer, "/shutdown\n")==0){
+              char account[] = "accounts";
+              char * accounts;
+              if (argCounter == 5)
+                accounts = argArray[3];
+              else
+                accounts = account;
+              saveAccounts(accounts);
+              /*
               // ATTEMPT SQL SHUTDOWN
                 char sqlInsert[1024];
                 Account * accountPtr;
@@ -303,7 +313,7 @@ int main(int argc, char* argv[]){
                     fprintf(accountsFile, "%s\n", accountPtr->salt);
                   }
                 fclose(accountsFile);
-                }
+                }*/
               processShutdown();
           }
           //EXECUTE OTHER COMMANDS
@@ -338,7 +348,6 @@ void* loginThread(void* args){
   memset(&password, 0, 1024);
 
   /*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
-  printf("Encountered new client in loginThread! Client CONNFD IS %d\n", connfd);
   if (performLoginProcedure(connfd, username, password, newUser)){
 
     /****  CREATE AND PROCESS CLIENT ****/
@@ -354,7 +363,6 @@ void* loginThread(void* args){
     /* NEW USER NEEDS ACCOUNT CREATED */
     /*********************************/
     if (user){
-      printf("Login thread creating new account for logged in user: %s\n",username);
       unsigned char saltBuffer[1024];
       unsigned char passwordHash[1024]; 
       memset(&saltBuffer, 0, 1024);
@@ -378,9 +386,7 @@ void* loginThread(void* args){
      /****************************************************/
     /* IF COMMUNICATION THREAD NEEDED FOR MULTIPLEXING  */
     /***************************************************/
-    printf("pollNum is %d\n",pollNum);
     if(pollNum<3){
-      printf("spawning communicationThread\n");
       if(pthread_create(&commThreadId, NULL, &communicationThread, NULL)<0){
         close(connfd);
         fprintf(stderr,"Error spawning communicationThread for descriptor %d\n",connfd);
@@ -393,7 +399,6 @@ void* loginThread(void* args){
     /* Trigger the poll forward in the communication thread*/
     if(globalSocket>0){
       write(globalSocket," ",1);
-      printf("\nwrote to globalSocket\n");
     }
   }
   /**********************/
@@ -401,7 +406,6 @@ void* loginThread(void* args){
   /********************/
   else {
     writeToGlobalSocket();
-    printf("Client %d failed to login",connfd);
     close(connfd);
     free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
   }
@@ -418,7 +422,6 @@ void* communicationThread(void* args){
   /*   ETERNAL WHILE  */
   /*******************/
   while(1){
-    printf("waiting for communication poll\n");
     pollStatus = poll(pollFds, pollNum, -1);
     if(pollStatus<0){
       fprintf(stderr,"poll():%s",strerror(errno)); 
@@ -439,7 +442,6 @@ void* communicationThread(void* args){
       /* LOOP FORWARD DUE TO GLOBAL SOCKET WRITE */
       /******************************************/
       else if(pollFds[i].fd == pollFds[0].fd ){
-        printf("global socket triggered poll\n");
         char globalByte;
         read(pollFds[0].fd,&globalByte,1);
       }
@@ -447,7 +449,6 @@ void* communicationThread(void* args){
       /*   POLLIN: PREVIOUS CLIENT         */
       /************************************/
       else{
-        printStarHeadline("COMMUNICATION FROM CLIENT",pollFds[i].fd);
         int doneReading=0;
         //int bytes;
         char clientMessage[1024];
@@ -460,7 +461,6 @@ void* communicationThread(void* args){
         memset(&clientMessage,0, 1024);
         if(ReadNonBlockedSocket(pollFds[i].fd ,clientMessage)==false){
           fprintf(stderr,"ReadNonBlockedSocket(): Detected Socket Closed\n");
-          printf("attempting to read BYE if it is there\n");
           memset(&clientMessage,0, 1024);
           ReadNonBlockedSocket(pollFds[i].fd ,clientMessage);
           doneReading=1;
@@ -492,11 +492,10 @@ void* communicationThread(void* args){
         else if (checkVerb(PROTOCOL_BYE, clientMessage)){ 
           if (verbose){
             printf(VERBOSE "%s" DEFAULT, clientMessage);
-          }              
-          doneReading=1; 
+          }               
+          doneReading=1;  
         }
         else if(extractArgAndTestMSG(clientMessage,NULL,NULL,NULL) ){
-          printStarHeadline("GOT MSG!!!",-1);
           if (verbose){
             printf(VERBOSE "%s" DEFAULT, clientMessage);
           }                
@@ -509,7 +508,6 @@ void* communicationThread(void* args){
           memset(&msgBuffer,0,1024);
 
           extractArgAndTestMSG(clientMessage,msgToBuffer,msgFromBuffer,msgBuffer);
-          printf("SERVER RECEIVED MSG: to %s from %s  message: %s",msgToBuffer,msgFromBuffer,msgBuffer);
           Client* toUser= getClientByUsername(msgToBuffer);
             
           //CHECK IF THE TO-USER IS STILL LOGGED ON, OR IF THEY EXIST, USER NOT MESSAGING SELF
@@ -529,11 +527,10 @@ void* communicationThread(void* args){
         /*******************************************************/
         /* OUTPUT MESSAGE FROM CLIENT : DELETE AFTER TESTING  */
         /*****************************************************/
-        printf("%s\n",clientMessage);
-
+ 
         /********************************/
-        /* IF CLIENT LOGGED OFF        */
-        /******************************/
+        /* IF CLIENT LOGGED OFF        */ 
+        /******************************/ 
         if(doneReading){ 
           char username[1024];
           memset(&username, 0, 1024);
