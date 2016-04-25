@@ -207,7 +207,6 @@ int getMessages(char** messageArray, char* protocolBuffer){
 
     //CHOP UP A COPY OF THE TESTED STRING
     strcpy(tempString, protocolBuffer);
-    printf("tempString is %s\n", tempString);
     token = strtok_r(tempString, "\r\n\r\n", &savePtr);
     while (token != NULL){
       strcpy(msgPtr, token);
@@ -217,9 +216,6 @@ int getMessages(char** messageArray, char* protocolBuffer){
       token = strtok_r(NULL,"\r\n\r\n",&savePtr);
     }
     messageArray[arrayIndex] = NULL;
-    for (int i = 0; i <arrayIndex; i++){
-      printf("messageArray[%d] = %s\n", i, messageArray[i]);
-    }
     return arrayIndex;
 }
 /* 
@@ -311,13 +307,11 @@ bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *
     //COPY THE TO PERSON IF POSSIBLE
     if(toBuffer!=NULL){
       strcpy(toBuffer,protocolArray[1]);
-      printf("extractArgAndTestMSG() copied TO:%s\n",toBuffer);
     }
 
     //COPY THE FROM PERSON IF POSSIBLE 
     if(fromBuffer!=NULL){
       strcpy(fromBuffer,protocolArray[2]);
-      printf("extractArgAndTestMSG() copied FROM:%s\n",fromBuffer);
     }
     //COPY ALL ARGS AFTER FROM PERSON, UP TO BEFORE THE PROTOCOL FOOTER
     int i;
@@ -329,9 +323,6 @@ bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *
             strcat(messageBuffer," ");
           }
       }
-    }
-    if(messageBuffer!=NULL){
-      printf("extractArgAndTestMSG() copied MESSAGE:%s",messageBuffer);
     }
     return true;
 }

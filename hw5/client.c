@@ -348,7 +348,7 @@ int main(int argc, char* argv[]){
           }
         }
         
-      }/* MOVE ON TO NEXT POLL FD */
+      }/* MOVE ON TO NEXT POLL FD */ 
 
     }/* FOREVER RUNNING LOOP */ 
 

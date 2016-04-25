@@ -146,7 +146,7 @@ int main(int argc, char* argv[]){
 
 
   /***********************************/
-  /* PROGRAM THREAD ARR AND SIGNALS  */
+  /* PROGRAM THREAD ARR AND SIGNALS  */ 
   /**********************************/
   int threadStatus,threadNum=0;
   pthread_t threadId[1026];  
