@@ -265,7 +265,6 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
       if (verbose){
         printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
-      printf("Received Error and bye together\n");
       if (checkVerb(PROTOCOL_BYE, messageArray[1])){
         if (verbose){
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
@@ -328,7 +327,6 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
   if (checkVerb(PROTOCOL_ERR2, protocolBuffer)){
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
-      printf("Received Error and bye together\n");
       if (verbose){
         printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
@@ -372,7 +370,6 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         if (verbose)
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         if (noOfMessages == 3){
-          printf("Received SSAPWEN/SSAP, HI, and MOTD together.\n");
           if (checkVerb(PROTOCOL_MOTD, messageArray[2])){
             if (verbose)
               printf(VERBOSE "%s" DEFAULT, messageArray[2]);
@@ -405,7 +402,6 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         fprintf(stderr, "Didn't receive HI\n");
       }
     }
-    printf("Didn't receive SSAPWEN/SSAP, HI, and MOTD together\n");
     memset(&protocolBuffer, 0, 1024);
     if (read(fd, &protocolBuffer,1024) < 0){
       fprintf(stderr,"Read(): bytes read negative\n");
@@ -465,7 +461,6 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
 void writeToGlobalSocket(){
   if(globalSocket>0){
       write(globalSocket," ",1);
-      printf("\nwrote to globalSocket\n");
     }
 }
 
