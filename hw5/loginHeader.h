@@ -142,7 +142,7 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     else{
       protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
       protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
-      fprintf(stderr, "Invalid Password\n");
+      //fprintf(stderr, "Invalid Password\n");
       return false;
     }
   }

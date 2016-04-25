@@ -98,7 +98,7 @@ struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumbe
     fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
     return NULL;
   }
-  printf("getaddrinfo successful()\n");
+  //printf("getaddrinfo successful()\n");
   return results;
 }
 /*
@@ -196,10 +196,10 @@ void waitForByeAndClose(int clientFd){
   byeBytes = read(clientFd,&byeBuffer,1024);
   if(byeBytes > 0){
     if(checkVerb(PROTOCOL_BYE,byeBuffer)){
-      printf("Valid BYE FROM SERVER\n");
+      //printf("Valid BYE FROM SERVER\n");
     } 
   }
-  printf("CLOSING SERVER\n");
+  //printf("CLOSING SERVER\n");
   close(clientFd);
 }
 
@@ -244,7 +244,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
       protocolMethod(fd, IAMNEW, username, NULL, NULL, verbose); 
   }
   else{
-    printf("Expected protocol verb EIFLOW\n");
+    //printf("Expected protocol verb EIFLOW\n");
     return false;
   }
   //----------------------------------||
@@ -265,7 +265,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
       if (verbose){
         printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
-      printf("Received Error and bye together\n");
+      //printf("Received Error and bye together\n");
       if (checkVerb(PROTOCOL_BYE, messageArray[1])){
         if (verbose){
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
@@ -274,7 +274,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         return false;
       }
     }
-    printf("Didn't receive Error and bye together\n");
+    //printf("Didn't receive Error and bye together\n");
     if(verbose){
         printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
@@ -311,7 +311,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
     }
   }
   else {
-    printf("Expected protocol verb AUTH or HINEW\n");
+    //printf("Expected protocol verb AUTH or HINEW\n");
     return false;
   }
   //----------------------------------|| 
@@ -328,7 +328,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
   if (checkVerb(PROTOCOL_ERR2, protocolBuffer)){
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
-      printf("Received Error and bye together\n");
+      //printf("Received Error and bye together\n");
       if (verbose){
         printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
@@ -340,7 +340,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         return false;
       }
     }
-    printf("Didn't receive Error and bye together\n");
+    //printf("Didn't receive Error and bye together\n");
     if (verbose){
       printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
@@ -372,7 +372,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         if (verbose)
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         if (noOfMessages == 3){
-          printf("Received SSAPWEN/SSAP, HI, and MOTD together.\n");
+          //printf("Received SSAPWEN/SSAP, HI, and MOTD together.\n");
           if (checkVerb(PROTOCOL_MOTD, messageArray[2])){
             if (verbose)
               printf(VERBOSE "%s" DEFAULT, messageArray[2]);
@@ -405,7 +405,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         fprintf(stderr, "Didn't receive HI\n");
       }
     }
-    printf("Didn't receive SSAPWEN/SSAP, HI, and MOTD together\n");
+    //printf("Didn't receive SSAPWEN/SSAP, HI, and MOTD together\n");
     memset(&protocolBuffer, 0, 1024);
     if (read(fd, &protocolBuffer,1024) < 0){
       fprintf(stderr,"Read(): bytes read negative\n");
@@ -431,7 +431,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
           }
         }
       }
-      printf("noOfMessages: %d\n", noOfMessages);
+      //printf("noOfMessages: %d\n", noOfMessages);
     if (protocol_Login_Helper(PROTOCOL_HI, protocolBuffer, username)){
       if (verbose)
           printf(VERBOSE "%s" DEFAULT, protocolBuffer);
@@ -450,14 +450,14 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         else
           fprintf(stderr, "Expected verb MOTD");
       }
-      else 
-        printf("Expected MOTD");
+      //else 
+        //printf("Expected MOTD");
     }
-    else
-      printf("protocol_Login_Helper failed\n");
+    //else
+      //printf("protocol_Login_Helper failed\n");
   }
-  else 
-    printf("Expected SSAP or SSAPWEN\n");
+  //else 
+    //printf("Expected SSAP or SSAPWEN\n");
   return false; 
 }
 
@@ -465,12 +465,12 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
 void writeToGlobalSocket(){
   if(globalSocket>0){
       write(globalSocket," ",1);
-      printf("\nwrote to globalSocket\n");
+      //printf("\nwrote to globalSocket\n");
     }
 }
 
 void recognizeAndExecuteStdin(char* userTypedIn){
-  printf("user typed in: %s", userTypedIn);
+  //printf("user typed in: %s", userTypedIn);
   if(strcmp(userTypedIn,"/users\n")==0){ 
     //PRINT OUT USERS
     //processUsersRequest();

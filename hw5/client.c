@@ -69,7 +69,7 @@ void killClientProgramHandler(){
   printf("\n"); 
   protocolMethod(clientFd,BYE,NULL,NULL,NULL,verbose); 
   if(clientFd >0){  
-    printf("closing clientFd cleanly\n");
+    //printf("closing clientFd cleanly\n");
     close(clientFd);
   }
   exit(0);
@@ -177,7 +177,7 @@ int main(int argc, char* argv[]){
     /*   ETERNAL POLL       */
     /***********************/
     while(1){
-      printf("waiting at poll()\n");
+      //printf("waiting at poll()\n");
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
@@ -238,22 +238,35 @@ int main(int argc, char* argv[]){
               // EXTRACT THE ARGS AND SEE IF IT'S VALID
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
                 printStarHeadline("MESSAGE ADDRESS",-1);
-            		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
+            		//printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
 
                 //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 if(getXtermByUsername(fromUser)==NULL && strcmp(toUser,username)==0){
                     //CREATE CHAT BOX
-                    printf("Creating Xterm for user: %s\n",fromUser);
                     int child = createXterm(fromUser,username);
-                    send(child,messageFromUser,strnlen(messageFromUser,1023),0);
 
-                    /*//CONTINUE TO SEND CHAT  
-                    Xterm* xterm = getXtermByUsername(fromUser);
-                    if(xterm!=NULL){
-                      send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                    //SEND ALL PREVIOUS HISTORY BEFORE SENDING THE CURRENT MESSAGE
+                    if(getMemoryNodeByUsername(fromUser)!=NULL){
+                      MemoryNode* node = getMemoryNodeByUsername(fromUser);
+                      int i;
+                      for(i=0;i< (node->index);i++){
+                        char buffer[1024];
+                        memset(buffer,0,1024);
+                        strcpy(buffer,(node->conversation)[i]);
+                        send(child,buffer,strnlen(message,1023),0);
+                      }
+                    }
+                    send(child,message,strnlen(message,1023),0);
+
+                    //STORE INTO MEMORY NODE
+                    if(getMemoryNodeByUsername(fromUser)!=NULL){
+                      MemoryNode* node = getMemoryNodeByUsername(fromUser);
+                      addStringToMemNode(node,message);
                     }else{
-                      fprintf(stderr,"createXterm() in poll: not initialized \n");
-                    }*/
+                      MemoryNode* node = createMemoryNodeStruct(fromUser);
+                      addMemoryNodeToList(node);
+                      addStringToMemNode(node,message);
+                    }
                 }
                 //IF CHAT EXISTS FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 else if(getXtermByUsername(fromUser)!=NULL && strcmp(toUser,username)==0){ 
@@ -261,7 +274,16 @@ int main(int argc, char* argv[]){
 
                     //SAFE SEND
                     if(xterm!=NULL){
-                      send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+
+                      //STORE INTO MEMORY NODE
+                      if(getMemoryNodeByUsername(fromUser)!=NULL){
+                        MemoryNode* node = getMemoryNodeByUsername(fromUser);
+                        addStringToMemNode(node,message);
+                      }else{
+                        MemoryNode* node = createMemoryNodeStruct(fromUser);
+                        addMemoryNodeToList(node);
+                        addStringToMemNode(node,message);
+                      }
                     }else{
                       fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
                     }
@@ -269,26 +291,39 @@ int main(int argc, char* argv[]){
                 //IF CHATBOX DOESN'T EXIST FROM PREVIOUS CONTACT, BUT THIS CLIENT IS THE SENDER
                 else if(getXtermByUsername(toUser)==NULL && strcmp(fromUser,username)==0){
                   //CREATE CHAT BOX
-                  printf("Creating Xterm for user: %s\n",toUser);
+                  //printf("Creating Xterm for user: %s\n",toUser);
                   int child = createXterm(toUser,username);
-                  send(child,messageFromUser,strnlen(messageFromUser,1023),0);
 
-                  /*//SAFE-SEND CHAT  
-                  Xterm* xterm = getXtermByUsername(toUser);
-                  if(xterm!=NULL){
-                    send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
-                  }else{
-                    fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
-                  }*/
+                    //SEND ALL PREVIOUS HISTORY BEFORE SENDING THE CURRENT MESSAGE
+                    if(getMemoryNodeByUsername(toUser)!=NULL){
+                      MemoryNode* node = getMemoryNodeByUsername(toUser);
+                      int i;
+                      for(i=0;i< (node->index);i++){
+                        char buffer[1024];
+                        memset(buffer,0,1024);
+                        strcpy(buffer, ((node->conversation)[i]) );
+                        send(child,buffer,strnlen(message,1023),0);
+                      }
+                    }
+                    send(child,message,strnlen(message,1023),0);
 
+                    //STORE INTO MEMORY NODE
+                    if(getMemoryNodeByUsername(toUser)!=NULL){
+                      MemoryNode* node = getMemoryNodeByUsername(toUser);
+                      addStringToMemNode(node,message);
+                    }else{
+                      MemoryNode* node = createMemoryNodeStruct(toUser);
+                      addMemoryNodeToList(node);
+                      addStringToMemNode(node,message);
+                    }
                 }
             	}  
-            } 
+            }
+
             memset(&message,0,1024);   
-          
           }
           if((serverBytes=read(clientFd,message,1))==0){
-            printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
+            //printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
             close(clientFd);  
             exit(0);  
           }
@@ -325,11 +360,11 @@ int main(int argc, char* argv[]){
             
           } 
         }
-        /*******************************/
+        /*******************************/ 
         /*  Catch Global Socket Write */
         /*****************************/
         else if(clientPollFds[i].fd == clientPollFds[2].fd){
-          printf("catched read into global socket\n");
+         // printf("catched read into global socket\n");
           char byte;
           read(clientPollFds[2].fd,&byte,1);
         }
@@ -346,7 +381,7 @@ int main(int argc, char* argv[]){
 
           //IF CHILD XTERM DIED
           if(chatBytes==0){
-            printf("xterm died detected in poll loop read\n");
+            //printf("xterm died detected in poll loop read\n");
             cleanUpXterm(getXtermByChatFd(clientPollFds[i].fd));
           }else{
               //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON

@@ -50,10 +50,113 @@ typedef struct xtermStruct{
   struct xtermStruct *prev;
 }Xterm;
 
+typedef struct memoryStruct{
+  //NODE DATA
+  int index;
+  char toUser[1024];
+  char conversation[50][1024];
+
+  //LINKED LIST FEATURES
+  struct memoryStruct *next;
+  struct memoryStruct *prev;
+}MemoryNode;
+
 //HEAD OF LINKED LIST STRUCT PTR
 Xterm* xtermHead;
+MemoryNode* memoryHead;
 
-		
+						/****************************/
+						/* MEMORYNODE STRUCT METHODS*/
+						/****************************/
+MemoryNode* createMemoryNodeStruct(char* otherUser){
+  MemoryNode* newMemoryNode = malloc(sizeof(MemoryNode));
+
+  //ADD VALUES TO STRUCT
+  memset(newMemoryNode->toUser,0,1024);
+  strcpy(newMemoryNode->toUser,otherUser);
+
+  newMemoryNode->index=0;
+  //CLEAR CONVO SET
+  memset(newMemoryNode->conversation,0,sizeof(char)*50*1024);
+
+  //LINKS
+  newMemoryNode->next = NULL;
+  newMemoryNode->prev = NULL;
+
+  return newMemoryNode;
+}
+
+void addStringToMemNode(MemoryNode* mem,char* str){
+	if(mem!=NULL && (mem->index < 49)){
+		int spot = mem->index;
+		memset((mem->conversation)[spot],0,1024);
+		strncpy((mem->conversation)[spot],str,1023);
+		if(spot<49){
+			mem->index = (mem->index)+1;
+		}
+	}else{
+		fprintf(stderr,"addStringToMemNode(): mem is NULL or buffer is full\n");
+	}
+}
+
+void getStringFromMemNode(MemoryNode* mem,char* str){
+	if(mem!=NULL && (mem->index > 0)){
+		int spot = mem->index-1;
+		strncpy(str,(mem->conversation)[spot],1023);
+		memset((mem->conversation)[spot],0,1024);
+		if(spot>0){
+		  mem->index = (mem->index)-1;
+		}
+	}else{
+		fprintf(stderr,"addStringToMemNode(): mem is NULL or buffer is empty\n");
+	}
+}
+
+
+void destoryMemoryNode(MemoryNode* node){
+  if(node != NULL){
+    //UNLINK THE XTERM FROM THE REST OF LIST
+    if(node->prev !=NULL){
+      node->prev->next = node->next;
+    }
+    if(node->next !=NULL){
+      node->next->prev = node->prev;
+    }
+    //RESET THE XTERM HEAD IF MUST 
+    if(node == memoryHead && node->prev != NULL){
+      memoryHead = node->prev;
+    }else if(node == memoryHead && node->next != NULL){
+      memoryHead = node->next;
+    }else if(node== memoryHead){
+      memoryHead = NULL;
+    }
+
+    //ACTUAL FREEING PROCESS
+    free(node);
+  }
+}
+
+	
+void addMemoryNodeToList(MemoryNode* mem){
+	//ADD TO GLOBAL DATA STRUCTURES
+  if(memoryHead!=NULL){
+  	memoryHead->prev=mem;
+  }
+  mem->next = memoryHead;
+  memoryHead = mem;
+}
+	
+
+MemoryNode* getMemoryNodeByUsername(char* username){
+	MemoryNode* memPtr;
+    for(memPtr = memoryHead; memPtr!=NULL; memPtr = memPtr->next){
+      if (strcmp(memPtr->toUser,username) == 0){
+        return memPtr;
+      }
+    }
+    return NULL;
+}
+
 						/***********************/
                         /* XTERM STRUCT METHODS */
 						/***********************/
@@ -104,7 +207,7 @@ void destroyXtermMemory(Xterm* xterm){
   }
 }
 
-	
+
  					/************************************************/
                     /*           XTERM CHAT PROGRAM                */
                     /***********************************************/
@@ -120,12 +223,12 @@ void setChatUser(char* username, int fd, pid_t xtermProcess){
   newXterm->next = xtermHead;
   xtermHead = newXterm;
 
-  printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
+  //printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
   //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
   clientPollFds[clientPollNum].fd = fd;
   clientPollFds[clientPollNum].events = POLLIN;
   clientPollNum++;
-  printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+ // printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
 }
 
 Xterm* getXtermByUsername(char* username){

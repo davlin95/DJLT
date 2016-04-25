@@ -15,6 +15,10 @@
 #define ERROR "\x1b[1;31m"
 #define DEFAULT "\x1b[0m"
 
+#ifndef PROTOCOL_MSG
+#define PROTOCOL_MSG "MSG"
+#endif 
+
  				/************************************/
                 /*  Global Structures               */
                 /************************************/
@@ -104,5 +108,67 @@ void printUserOut(){
   	printf(ERROR "\n%s",promptArrow);
 }
 
+/*
+ *  A function that takes a string and tests it for the structure of "MSG TOPERSON FROMPERSON MSG \r\n\r\n"
+ *  returns true if passes format test. copies the message into the buffer.
+ */
+bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char* messageBuffer){
+    char * savePtr;
+    char *token;
+    int arrayIndex = 0;
+    char tempString[1024];
+    char * protocolArray[1024];
+
+    //CLEAR BUFFERS
+    memset(&tempString, 0, 1024);
+    memset(&protocolArray, 0, 1024);
+
+    //CHOP UP THE STRING
+    strcpy(tempString, string);
+    token = strtok_r(tempString, " ", &savePtr);
+    while (token != NULL){
+      protocolArray[arrayIndex++] = token;
+      token = strtok_r(NULL," ",&savePtr);
+    }
+
+    //ERROR CHECK THE INPUT, 
+    if ( arrayIndex < 5 ){
+      //fprintf(stderr,"extractArgAndTestMSG() error: not enough arguments in buildProtocolMSGString");
+      return false;
+    }else if(strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ){
+      //fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not ended with protocol ending");
+      return false;
+    }else if(strcmp(protocolArray[0], PROTOCOL_MSG)!=0){
+     // fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not started with protocol string");
+      return false;
+    }
+
+    //COPY THE TO PERSON IF POSSIBLE
+    if(toBuffer!=NULL){
+      strcpy(toBuffer,protocolArray[1]);
+     // printf("extractArgAndTestMSG() copied TO:%s\n",toBuffer);
+    }
+
+    //COPY THE FROM PERSON IF POSSIBLE 
+    if(fromBuffer!=NULL){
+      strcpy(fromBuffer,protocolArray[2]);
+     // printf("extractArgAndTestMSG() copied FROM:%s\n",fromBuffer);
+    }
+    //COPY ALL ARGS AFTER FROM PERSON, UP TO BEFORE THE PROTOCOL FOOTER
+    int i;
+    for(i=3; i<arrayIndex-1 ;i++){
+      if(messageBuffer!=NULL){
+          strcat(messageBuffer, protocolArray[i]);
+          //DON"T ADD SPACE AFTER LAST MESSAGE WORD
+          if(i!=arrayIndex-2){
+            strcat(messageBuffer," ");
+          }
+      }
+    }
+    if(messageBuffer!=NULL){
+      //printf("extractArgAndTestMSG() copied MESSAGE:%s",messageBuffer);
+    }
+    return true;
+}
 
 

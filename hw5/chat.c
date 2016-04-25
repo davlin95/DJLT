@@ -43,9 +43,6 @@ int main(int argc, char ** argv) {
     }
 
 
-
-
-
 	 /****************************************/
     /*        IMPLEMENT POLL                */
    /****************************************/
@@ -89,22 +86,44 @@ int main(int argc, char ** argv) {
         /***********************************/ 
         /*   POLLIN FROM CHATFD           */
         /*********************************/
-        if(chatPollFds[i].fd == chatFd){
+        if(chatPollFds[i].fd == chatFd){ 
           int clientBytes =0;
+
           char message[1024];
-          memset(&message,0,1024);   
+          memset(&message,0,1024);
+
+          char toBuffer[1024];
+          memset(&toBuffer,0,1024);
+
+          char fromBuffer[1024];
+          memset(&fromBuffer,0,1024); 
+
+
+          char messageBuffer[1024];
+          memset(&messageBuffer,0,1024); 
+
+
           while( (clientBytes = recv(chatFd, message, 1024, 0))>0){
-            write(1,VERBOSE,strlen(VERBOSE));
-            char* inner = "\n> \0";
-            write(1,inner,strlen(inner));
-            write(1,message,strnlen(message,1023));
-            write(1,ERROR,strlen(ERROR));
+            extractArgAndTestMSG(message,toBuffer,fromBuffer,messageBuffer);
+
+            if(strcmp(originalUser,fromBuffer)!=0 ){
+              write(1,VERBOSE,strlen(VERBOSE));
+              char* inner = "\n> \0";
+              write(1,inner,strlen(inner));
+              write(1,messageBuffer,strnlen(messageBuffer,1023));
+            }
+            else{
+              write(1,ERROR,strlen(ERROR));
+              char* inner = "\n< \0";
+              write(1,inner,strlen(inner));
+              write(1,messageBuffer,strnlen(messageBuffer,1023));
+            }
             char* outer = "\n< \0";
             write(1,outer,strlen(outer));
             memset(&message,0,1024);   
           }
           if((clientBytes=read(chatFd,message,1))==0){
-            printf("DETECTED client CLOSED, CLOSING chatFd\n");
+            //printf("DETECTED client CLOSED, CLOSING chatFd\n");
             close(chatFd); 
             exit(0);
           }
