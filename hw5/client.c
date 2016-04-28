@@ -45,10 +45,6 @@ void xtermReaperHandler(){
   pid = waitpid(-1,&reapStatus,WUNTRACED);
   while(pid > 0){
     //NOTIFY THE ADMIN WHICH XTERM PROCESS DIED
-    char deadChild[1024];
-    memset(deadChild,0,1024); 
-    sprintf(deadChild,"pid: %d died\n",pid);
-    write(1,deadChild,1023);
 
     //CLEAN UP CONTENTS For the chat index corresponding to this process pid. 
     Xterm* deadXterm = getXtermByPid(pid);
@@ -69,7 +65,6 @@ void killClientProgramHandler(){
   printf("\n"); 
   protocolMethod(clientFd,BYE,NULL,NULL,NULL,verbose); 
   if(clientFd >0){  
-    printf("closing clientFd cleanly\n");
     close(clientFd);
   }
   exit(0);
@@ -131,7 +126,6 @@ int main(int argc, char* argv[]){
  
   /*********** NOTIFY SERVER OF CONNECTION *****/
   if (performLoginProcedure(clientFd, username, newUser) == 0){
-      printf("Failed to login properly\n");
       close(clientFd);
       exit(0); 
   } 
@@ -177,7 +171,6 @@ int main(int argc, char* argv[]){
     /*   ETERNAL POLL       */
     /***********************/
     while(1){
-      printf("waiting at poll()\n");
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
         fprintf(stderr,"poll(): %s\n",strerror(errno));
@@ -197,7 +190,6 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM CLIENTFD         */
         /*********************************/
         if(clientPollFds[i].fd == clientFd){
-          printStarHeadline("SERVER TALKING TO THIS CLIENT",-1);
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){ 
           	if (verbose)
@@ -218,7 +210,6 @@ int main(int argc, char* argv[]){
               		fprintf(stderr, "Error with UTSIL response\n");
             }
             else if (checkVerb(PROTOCOL_BYE, message)){ 
-              printf("RECEIVED BYE FROM SERVER\n");
               close(clientFd);
               exit(EXIT_SUCCESS);
             }
@@ -237,13 +228,10 @@ int main(int argc, char* argv[]){
  
               // EXTRACT THE ARGS AND SEE IF IT'S VALID
             	if(extractArgAndTestMSG(message,toUser,fromUser,messageFromUser)){
-                printStarHeadline("MESSAGE ADDRESS",-1);
-            		printf("TO: %s, FROM: %s MESSAGE: %s\n",toUser,fromUser,messageFromUser);
 
                 //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 if(getXtermByUsername(fromUser)==NULL && strcmp(toUser,username)==0){
                     //CREATE CHAT BOX
-                    printf("Creating Xterm for user: %s\n",fromUser);
                     int child = createXterm(fromUser,username);
                     send(child,messageFromUser,strnlen(messageFromUser,1023),0);
 
@@ -269,7 +257,6 @@ int main(int argc, char* argv[]){
                 //IF CHATBOX DOESN'T EXIST FROM PREVIOUS CONTACT, BUT THIS CLIENT IS THE SENDER
                 else if(getXtermByUsername(toUser)==NULL && strcmp(fromUser,username)==0){
                   //CREATE CHAT BOX
-                  printf("Creating Xterm for user: %s\n",toUser);
                   int child = createXterm(toUser,username);
                   send(child,messageFromUser,strnlen(messageFromUser,1023),0);
 
@@ -288,7 +275,6 @@ int main(int argc, char* argv[]){
           
           }
           if((serverBytes=read(clientFd,message,1))==0){
-            printf("DETECTED SERVER CLOSED, CLOSING CLIENTFD\n");
             close(clientFd);  
             exit(0);  
           }
@@ -298,7 +284,6 @@ int main(int argc, char* argv[]){
         /*   POLLIN FROM STDIN            */
         /*********************************/
         else if(clientPollFds[i].fd == 0){
-          printStarHeadline("STDIN INPUT",-1);
           int bytes=0;
           char stdinBuffer[1024];   
           memset(&stdinBuffer,0,1024); 
@@ -329,7 +314,6 @@ int main(int argc, char* argv[]){
         /*  Catch Global Socket Write */
         /*****************************/
         else if(clientPollFds[i].fd == clientPollFds[2].fd){
-          printf("catched read into global socket\n");
           char byte;
           read(clientPollFds[2].fd,&byte,1);
         }
@@ -346,7 +330,6 @@ int main(int argc, char* argv[]){
 
           //IF CHILD XTERM DIED
           if(chatBytes==0){
-            printf("xterm died detected in poll loop read\n");
             cleanUpXterm(getXtermByChatFd(clientPollFds[i].fd));
           }else{
               //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
@@ -365,7 +348,7 @@ int main(int argc, char* argv[]){
           }
         }
         
-      }/* MOVE ON TO NEXT POLL FD */
+      }/* MOVE ON TO NEXT POLL FD */ 
 
     }/* FOREVER RUNNING LOOP */ 
 

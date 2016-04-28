@@ -727,3 +727,59 @@ void writeToGlobalSocket(){
       printf("\nwrote to globalSocket\n");
     }
 }
+
+void getAccounts(char * accounts){
+      FILE *accountsFile;
+      size_t size = 1024;
+      char username[1024];
+      char password[1024];
+      char salt[1024];
+      char *usernamePtr = username;
+      char *passwordPtr = password;
+      char *saltPtr = salt;
+      char *lastChar;
+      memset(&username, 0, 1024);
+      memset(&password, 0, 1024);
+      memset(&salt, 0, 1024);
+      accountsFile = fopen(accounts, "r");
+      if (accountsFile != NULL){
+        while(getline(&usernamePtr, &size, accountsFile) > 0){
+          lastChar = strchr(usernamePtr, '\n');
+          *lastChar = '\0';
+          if (getline(&passwordPtr, &size, accountsFile) > 0){
+            lastChar = strchr(passwordPtr, '\n');
+            *lastChar = '\0';
+          } else{
+            fprintf(stderr, "Invalid Accounts File\n");
+            exit(0);
+          }
+
+          if (getline(&saltPtr, &size, accountsFile) > 0){
+            lastChar = strchr(saltPtr, '\n');
+            *lastChar = '\0';
+          } else{
+            fprintf(stderr, "Invalid Accounts File\n");
+            exit(0);
+          }
+          processValidAccount(usernamePtr, passwordPtr, saltPtr);
+          memset(&username, 0, 1024);
+          memset(&password, 0, 1024);
+          memset(&salt, 0, 1024);
+        }
+        fclose(accountsFile);
+      }
+  }
+
+  void saveAccounts(char * accounts){
+    FILE *accountsFile;
+    Account *accountPtr;
+    accountsFile = fopen(accounts, "w");
+    if (accountsFile != NULL){
+        for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
+            fprintf(accountsFile, "%s\n", accountPtr->userName);
+            fprintf(accountsFile, "%s\n", accountPtr->password);
+            fprintf(accountsFile, "%s\n", accountPtr->salt);
+        }
+      fclose(accountsFile);
+    }
+  }

@@ -104,7 +104,6 @@ int main(int argc, char ** argv) {
             memset(&message,0,1024);   
           }
           if((clientBytes=read(chatFd,message,1))==0){
-            printf("DETECTED client CLOSED, CLOSING chatFd\n");
             close(chatFd); 
             exit(0);
           }
