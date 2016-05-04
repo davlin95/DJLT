@@ -15,6 +15,7 @@
 #include <sys/socket.h>
 
 
+
                 /************************************/
                 /*  Global Structures               */
                 /************************************/
@@ -26,7 +27,8 @@ int globalSocket;
 
 #define USAGE(name) do {                                                                        \
         fprintf(stderr,                                                                         \
-            "\n%s [-hcv] NAME SERVER_IP SERVER_PORT\n"                                          \
+            "\n%s [-hcv] [-a FILE] NAME SERVER_IP SERVER_PORT\n"                                \
+            "-a FILE      Path to the audit log file.\n"                                        \
             "-h           Displays help menu & returns EXIT_SUCCESS.\n"                         \
             "-c           Requests to server to create a new user.\n"                           \
             "-v           Verbose print all incoming and outgoing protocol verbs & content.\n"  \
@@ -37,7 +39,7 @@ int globalSocket;
         );                                                                                      \
     } while(0)
 
-char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t List connected users.", "/time \t Display connection duration with Server.", "/chat <to> <msg> \t Send message (<msg>) to user (<to>).", "/logout \t Disconnect from server.", NULL};
+char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t List connected users.", "/time \t Display connection duration with Server.", "/chat <to> <msg> \t Send message (<msg>) to user (<to>).", "/audit \t Show contents of audit log file.", "/logout \t Disconnect from server.", NULL};
 
 						/***********************************************************************/
 						/*                    CLIENT PROGRAM FUNCTIONS                         */
@@ -215,8 +217,38 @@ bool protocol_Login_Helper(char *verb, char* string, char *stringToMatch){
     return false;
 }
 
+void ipPortString(char *ip, char *port, char* strBuffer){
+  strcat(strBuffer, ip);
+  strcat(strBuffer, ":");
+  strcat(strBuffer, port);
+}
 
-bool performLoginProcedure(int fd,char* username, bool newUser){ 
+
+void createAuditEvent(char *username, char* event, char * info, char *info2, char *info3, char *strBuffer){
+  memset(strBuffer, 0, 1024);
+  time_t t;
+  struct tm *tmp;
+  t = time(NULL);
+  tmp = localtime(&t);
+  if (strftime(strBuffer, 100, "%D-%I:%m%P", tmp)==0){
+      fprintf(stderr, "strftime returned failed\n");
+  }
+  strcat(strBuffer, ", ");
+  strcat(strBuffer, username);
+  strcat(strBuffer, ", ");
+  strcat(strBuffer, event);
+  strcat(strBuffer, ", ");
+  strcat(strBuffer, info);
+  if (info2 != NULL){
+    strcat(strBuffer, ", ");
+    strcat(strBuffer, info2);
+    strcat(strBuffer, ", ");
+    strcat(strBuffer, info3);
+  }
+}
+
+
+bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){ 
   char protocolBuffer[1024];
   char *messageArray[1024];
   int noOfMessages;
@@ -270,6 +302,10 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         }
         fprintf(stderr, "Error sending username, received ERR and BYE\n");
+        if (checkVerb(PROTOCOL_ERR0, messageArray[0]))
+          strncat(loginMSG, messageArray[0], 22);
+        else
+          strncat(loginMSG, messageArray[1], 25);
         return false;
       }
     }
@@ -277,6 +313,10 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
     if(verbose){
         printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
+    if (checkVerb(PROTOCOL_ERR0, messageArray[0]))
+          strncat(loginMSG, protocolBuffer, 22);
+    else
+          strncat(loginMSG, protocolBuffer, 25);
     memset(&protocolBuffer,0,1024);
     if (read(fd, &protocolBuffer,1024) < 0){
       fprintf(stderr,"Read(): bytes read negative\n");
@@ -335,6 +375,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
           printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         }
         fprintf(stderr, "Error sending password, received ERR and BYE\n");
+        strncat(loginMSG, messageArray[0], 19);
         return false;
       }
     }
@@ -342,6 +383,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
     if (verbose){
       printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
+    strcat(loginMSG, protocolBuffer);
     memset(&protocolBuffer,0,1024);
     if (read(fd, &protocolBuffer,1024) < 0){
       fprintf(stderr,"Read(): bytes read negative\n");
@@ -375,6 +417,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
               printf(VERBOSE "%s" DEFAULT, messageArray[2]);
             if (extractArgsAndTest(messageArray[2], motd)){
               printf("%s\n", motd);
+              strcat(loginMSG, motd);
               return true;
             } 
           }
@@ -390,6 +433,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
         if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
             if (extractArgsAndTest(protocolBuffer, motd)){
               printf("%s\n", motd);
+              strcat(loginMSG, motd);
               return true;
             }
         }
@@ -422,12 +466,12 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
             }
             if (extractArgsAndTest(messageArray[1], motd)){
               printf("%s\n", motd);
+              strcat(loginMSG, motd);
               return true;
             }
           }
         }
       }
-      printf("noOfMessages: %d\n", noOfMessages);
     if (protocol_Login_Helper(PROTOCOL_HI, protocolBuffer, username)){
       if (verbose)
           printf(VERBOSE "%s" DEFAULT, protocolBuffer);
@@ -441,6 +485,7 @@ bool performLoginProcedure(int fd,char* username, bool newUser){
       if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
           if (extractArgsAndTest(protocolBuffer, motd)){
               printf("%s\n", motd);
+              strcat(loginMSG, motd);
               return true;
           }
         else

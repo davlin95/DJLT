@@ -82,7 +82,7 @@ int main(int argc, char* argv[]){
   bool newUser;
   char *username;
   char *portNumber; 
-  char* ipAddress;
+  char* ipAddress; 
   char message[1024];  
   char * argArray[1024];
   char * flagArray[1024];
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]){
     if (strcmp(flagArray[argCounter], "-h")==0){ 
       USAGE("./client");
       exit(EXIT_SUCCESS);
-    } 
+    }  
     if (strcmp(flagArray[argCounter], "-v")==0){
       verbose = true;
     }
@@ -115,20 +115,29 @@ int main(int argc, char* argv[]){
 
   //INIT USER PASSED IN ARGS
   username = argArray[1];
-  portNumber = argArray[2];
-  ipAddress = argArray[3];
- 
-  // TRY CONNECTING TO SOCKET 
+  portNumber = argArray[3]; 
+  ipAddress = argArray[2];
+  char ipPort[1024];
+  memset(&ipPort, 0, 1024);
+  ipPortString(ipAddress, portNumber, ipPort); 
+  char auditEvent[1024];
+  // TRY CONNECTING TO SOCKET   
   if ((clientFd = createAndConnect(portNumber, clientFd,ipAddress)) < 0){
-    fprintf(stderr, "Error creating socket and connecting to server. \n");
-    exit(0);
+    createAuditEvent(username, "ERR, ", "ERR # message", NULL, NULL, auditEvent);
+    printf("%s\n", auditEvent);
+    exit(0); 
   }
- 
+  char loginMSG[1024];
+  memset(&loginMSG, 0, 1024);
   /*********** NOTIFY SERVER OF CONNECTION *****/
-  if (performLoginProcedure(clientFd, username, newUser) == 0){
+  if (performLoginProcedure(clientFd, username, newUser, loginMSG) == 0){
       close(clientFd);
+      createAuditEvent(username, "LOGIN", ipPort, "fail", loginMSG, auditEvent);
+      printf("%s\n", auditEvent);
       exit(0); 
   } 
+  createAuditEvent(username, "LOGIN", ipPort, "success", loginMSG, auditEvent);
+  printf("%s\n", auditEvent);
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -213,6 +222,9 @@ int main(int argc, char* argv[]){
               close(clientFd);
               exit(EXIT_SUCCESS);
             }
+            else if (checkVerb(PROTOCOL_UOFF, message)){ 
+              printf("received UOFF\n");
+            }
             /***********************************/
             /* RECEIVED MSG BACK FROM SERVER  */
             /*********************************/
@@ -234,6 +246,8 @@ int main(int argc, char* argv[]){
                     //CREATE CHAT BOX
                     int child = createXterm(fromUser,username);
                     send(child,messageFromUser,strnlen(messageFromUser,1023),0);
+                    createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
+                    printf("%s\n", auditEvent);
 
                     /*//CONTINUE TO SEND CHAT  
                     Xterm* xterm = getXtermByUsername(fromUser);
@@ -247,9 +261,11 @@ int main(int argc, char* argv[]){
                 else if(getXtermByUsername(fromUser)!=NULL && strcmp(toUser,username)==0){ 
                     Xterm* xterm = getXtermByUsername(fromUser);
 
-                    //SAFE SEND
+                    //SAFE SEND 
                     if(xterm!=NULL){
                       send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                      createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
+                      printf("%s\n", auditEvent);
                     }else{
                       fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
                     }
@@ -259,6 +275,10 @@ int main(int argc, char* argv[]){
                   //CREATE CHAT BOX
                   int child = createXterm(toUser,username);
                   send(child,messageFromUser,strnlen(messageFromUser,1023),0);
+                  createAuditEvent(username, "CMD", "/chat", "success", "client", auditEvent);
+                  printf("%s\n", auditEvent);
+                  createAuditEvent(username, "MSG", "to", toUser, messageFromUser, auditEvent);
+                  printf("%s\n", auditEvent);
 
                   /*//SAFE-SEND CHAT  
                   Xterm* xterm = getXtermByUsername(toUser);
@@ -269,8 +289,13 @@ int main(int argc, char* argv[]){
                   }*/
 
                 }
-            	}  
+            	} 
             } 
+            else{
+              createAuditEvent(username, "CMD", "/chat", "failure", "client", auditEvent);
+              printf("%s\n", auditEvent);
+
+            }
             memset(&message,0,1024);   
           
           }
@@ -288,25 +313,46 @@ int main(int argc, char* argv[]){
           char stdinBuffer[1024];   
           memset(&stdinBuffer,0,1024); 
           while( (bytes=read(0,&stdinBuffer,1024))>0){
-            /*send time verb to server*/
-            if(strcmp(stdinBuffer,"/time\n")==0){
+            stdinBuffer[strlen(stdinBuffer)-1] = 0;
+            /*send time verb to server*/ 
+            if(strcmp(stdinBuffer,"/time")==0){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose);
+              createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
+              printf("%s\n", auditEvent);
             }  
-            else if(strcmp(stdinBuffer,"/listu\n")==0){ 
+            else if(strcmp(stdinBuffer,"/listu")==0){  
               protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose); 
+              createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
+              printf("%s\n", auditEvent);
             }  
-            else if(strcmp(stdinBuffer,"/logout\n")==0){
+            else if(strcmp(stdinBuffer,"/logout")==0){
               protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose);
               waitForByeAndClose(clientFd); 
+              createAuditEvent(username, "LOGOUT", "intentional", NULL, NULL, auditEvent);
+              printf("%s\n", auditEvent);
               exit(EXIT_SUCCESS);   
             }  
             else if(strstr(stdinBuffer,"/chat")!=NULL){ 
               // CONTAINS "/chat"
+              char userMsgBuffer[1024];
+              memset(&userMsgBuffer, 0, 1024);
             	processChatCommand(clientFd,stdinBuffer,username, verbose);
             }
-            else if(strcmp(stdinBuffer,"/help\n")==0){  
+            else if(strcmp(stdinBuffer,"/help")==0){  
             	displayHelpMenu(clientHelpMenuStrings);
+              createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
+              printf("%s\n", auditEvent);
             } 
+            else if(strcmp(stdinBuffer,"/audit")==0){
+              createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
+              printf("%s\n", auditEvent);
+              //todo: print audit log
+            }
+            else{
+              createAuditEvent(username, "CMD", stdinBuffer, "failure", "client", auditEvent);
+              printf("%s\n", auditEvent);
+              //todo:not a valid command
+            }
             
           } 
         }
@@ -338,6 +384,8 @@ int main(int argc, char* argv[]){
                   fprintf(stderr,"error in poll loop: getXtermByChatFd() returned NULL\n");
                   continue;//continue searching the rest of for loop for events
               }
+              char userMsgBuffer[1024];
+              memset(&userMsgBuffer, 0, 1024);
               char relayMessage[1024];
               memset(&relayMessage,0,1024);
               if(buildMSGProtocol(relayMessage ,xterm->toUser, username, chatBuffer)==false){
@@ -345,6 +393,9 @@ int main(int argc, char* argv[]){
                 continue; //continue searching the rest of for loop for events
               }
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1023),0);
+              createAuditEvent(username, "MSG", "to", xterm->toUser, chatBuffer, auditEvent);
+              printf("%s\n", auditEvent);
+
           }
         }
          

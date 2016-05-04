@@ -8,19 +8,29 @@
 #include <errno.h>
 #include <netdb.h>
 #include <sys/types.h>
+#include <time.h>
 
 char **initArgArray(int argc, char **argv, char **argArray);
 char **initFlagArray(int argc, char **argv, char **flagArray);
 
 int main(int argc, char ** argv){
-    char * argArray[1024];
-    char * flagArray[1024];
-    memset(&argArray, 0, sizeof(argArray));
-    memset(&flagArray, 0, sizeof(flagArray));
-    initArgArray(argc, argv, argArray);
-    initFlagArray(argc, argv, flagArray);
-    return 0;
+    char outstr[200];
+    time_t t;
+    struct tm *tmp;
+    t = time(NULL);
+    tmp = localtime(&t);
+    if (tmp == NULL){
+    	perror("localtime");
+    	exit(EXIT_FAILURE);
+    }
+    if (strftime(outstr, sizeof(outstr), argv[1], tmp)==0){
+    	fprintf(stderr, "strftime returned 0");
+    	exit(EXIT_FAILURE);
+    }
+    printf("Result string is %s\n", outstr);
+    exit(EXIT_SUCCESS);
 }
+
     
 char **initArgArray(int argc, char **argv, char **argArray){
     int i;

@@ -141,12 +141,13 @@ char* serverHelpMenuStrings[]={"/users \t List users currently logged in.", "/he
 
 #define USAGE(name) do {                                                                         \
         fprintf(stderr,                                                                                \
-            "\n%s [-h|-v] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                                          \
-            "-h             Displays help menu & returns EXIT_SUCCESS.\n"                              \
-            "-v             Verbose print all incoming and outgoing protocol verbs & content.\n"       \
-            "PORT_NUMBER    Port number to listen on.\n"                                               \
-            "MOTD           Message to display to the client when they connect.\n"                     \
-            "ACCOUNTS_FILE  File containing username and password data to be loaded upon execution.\n" \
+            "\n%s [-hv] [-t THREAD_COUNT] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                          \
+            "-t THREAD_COUNT  The number of threads used for the login queue."                          \
+            "-h               Displays help menu & returns EXIT_SUCCESS.\n"                              \
+            "-v               Verbose print all incoming and outgoing protocol verbs & content.\n"       \
+            "PORT_NUMBER      Port number to listen on.\n"                                               \
+            "MOTD             Message to display to the client when they connect.\n"                     \
+            "ACCOUNTS_FILE    File containing username and password data to be loaded upon execution.\n" \
             ,(name)                                                                                    \
         );                                                                                             \
     } while(0) 

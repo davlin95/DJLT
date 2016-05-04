@@ -134,7 +134,7 @@ int main(int argc, char* argv[]){
     if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
       fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
       sqlite3_free(dbErrorMessage);
-      exit(0);
+      //exit(0);
     }
   }
 
