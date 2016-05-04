@@ -29,6 +29,8 @@ int main(int argc, char* argv[]){
   sqlite3 *database;
   int dbResult;
   char *sql;
+<<<<<<< HEAD
+=======
   */
   /**************************/
   /*  PARSE ARGS FOR FLAGS */
@@ -45,6 +47,7 @@ int main(int argc, char* argv[]){
     }
     argCounter++;   
   }
+>>>>>>> 73cbe9617313e2ebafa1dde77238991d110eadd3
 
   //INIT ARGUMENTS INTO ARRAY 
   argCounter = initArgArray(argc, argv, argArray);
@@ -57,6 +60,21 @@ int main(int argc, char* argv[]){
   /* User entered DB Path With 5TH ELEMENT -C FLAG */
   /************************************************/
   if (argCounter == 5){
+<<<<<<< HEAD
+    //OPEN DATABASE
+    if ((dbResult = sqlite3_open(argArray[3], &database))){
+      fprintf(stderr, "Error opening database: %s\n", sqlite3_errmsg(database));
+      exit(0);
+    }
+    //GET ACCOUNT INFO 
+    sql = "SELECT * FROM ACCOUNTS";
+    if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+      fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+      sqlite3_free(dbErrorMessage);
+      exit(0);
+    }
+  } 
+=======
     getAccounts(argArray[3]);
   }  
     /*last_two = (void *)argArray[3] + strlen(argArray[3]) - 2; 
@@ -115,6 +133,7 @@ int main(int argc, char* argv[]){
           exit(0);
         } 
     }*/ 
+>>>>>>> 73cbe9617313e2ebafa1dde77238991d110eadd3
   /*********************************************/
   /*  DB PATH BUT NO 5TH ELEMENT -C FLAG      */
   /*******************************************/
@@ -138,6 +157,22 @@ int main(int argc, char* argv[]){
     }
   }*/
 
+  /**************************/
+  /*  PARSE ARGS FOR FLAGS */
+  /*************************/
+  initFlagArray(argc, argv, flagArray);
+  argCounter = 0;
+  while (flagArray[argCounter] != NULL){
+    if (strcmp(flagArray[argCounter], "-h")==0){   
+      USAGE("./server");
+      exit(EXIT_SUCCESS);
+    }
+    if (strcmp(flagArray[argCounter], "-v")==0){
+      verbose = true;
+    }
+    argCounter++;   
+  }
+ 
   /***************************************/
   /* EXTRACT ARGV FOR IMPORTANT STRINGS */
   /*************************************/
@@ -255,6 +290,7 @@ int main(int argc, char* argv[]){
           }
         }
       }
+      
       /***********************************/
       /*   POLLIN FROM STDIN            */
       /*********************************/
@@ -267,6 +303,36 @@ int main(int argc, char* argv[]){
         /* EXECUTE STDIN COMMANDS     */
         /*****************************/
         while( (bytes=read(0,&stdinBuffer,1024))>0){  
+<<<<<<< HEAD
+          if (strcmp(stdinBuffer, "/shutdown\n")==0){
+            // ATTEMPT SQL SHUTDOWN
+            char sqlInsert[1024];
+            Account * accountPtr;
+            sql = "DELETE FROM ACCOUNTS;";
+
+            //ATTEMPT TO CLEAR USERS
+            if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+                fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                //SHUTDOWN PROCEDURES
+                sqlite3_free(dbErrorMessage);
+                processShutdown();
+                exit(0);
+            }
+            for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
+              memset(&sqlInsert, 0, 1024);
+              sql = createSQLInsert(accountPtr, sqlInsert);
+              printf("sql = %s\n", sql);
+              if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
+                fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
+                //SHUTDOWN PROCEDURES
+                sqlite3_free(dbErrorMessage);
+                processShutdown();
+                exit(0);
+              }
+            }
+            sqlite3_close(database);
+            processShutdown();
+=======
             if (strcmp(stdinBuffer, "/shutdown\n")==0){
               char account[] = "accounts";
               char * accounts;
@@ -315,6 +381,7 @@ int main(int argc, char* argv[]){
                 fclose(accountsFile);
                 }*/
               processShutdown();
+>>>>>>> 73cbe9617313e2ebafa1dde77238991d110eadd3
           }
           //EXECUTE OTHER COMMANDS
           recognizeAndExecuteStdin(stdinBuffer);
