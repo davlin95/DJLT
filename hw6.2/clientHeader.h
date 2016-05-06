@@ -523,6 +523,16 @@ void recognizeAndExecuteStdin(char* userTypedIn){
   }
 }
 
+FILE *initAudit(char *file){
+  char *fileName = "audit.log";
+  FILE *filePtr; 
+  if (file != NULL){
+    fileName = file;
+  }
+  filePtr = fopen(fileName, "a");
+  return filePtr;
+}
+
 
 
 

@@ -77,46 +77,58 @@ int main(int argc, char* argv[]){
   signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
 
-  //Program Startup Vars 
-  int argCounter;   
   bool newUser;
-  char *username;
-  char *portNumber; 
-  char* ipAddress; 
-  char message[1024];  
-  char * argArray[1024];
-  char * flagArray[1024];
-  memset(&argArray, 0, sizeof(argArray));
-  memset(&flagArray, 0, sizeof(flagArray));
-  argCounter = initArgArray(argc, argv, argArray);
-
-  //USER NEEDS HELP 
-  if (argCounter != 5){
+  char *username = NULL;
+  char *portNumber = NULL; 
+  char *ipAddress = NULL; 
+  char *filePtr;
+  int c;
+  char message[1024];
+  //check flags in command line
+  while ((c = getopt(argc, argv, "hcva:")) != -1){
+    switch(c){
+      case 'h':
+        USAGE("./client");
+        exit(EXIT_SUCCESS);
+      case 'c':
+        newUser = true;
+        printf("new user\n");
+        break;
+      case 'v':
+        printf("verbose\n");
+        verbose = true;
+        break;
+      case 'a':
+        if (optarg != NULL){
+          filePtr = optarg;
+          break;
+        }
+        else
+      case '?': 
+      default:
+        USAGE("./client");
+        exit(EXIT_FAILURE);
+    }
+  }
+  //get username, ip, and address from command line
+  if (optind < argc && (argc - optind) == 3){
+    username = argv[optind++];
+    ipAddress = argv[optind++];
+    portNumber = argv[optind++];
+  }
+  else{
     USAGE("./client");
     exit(EXIT_FAILURE);
-  } 
-
-  // BUILD FLAG ARRAY 
-  initFlagArray(argc, argv, flagArray);
-  argCounter = 0;
-  while (flagArray[argCounter] != NULL){
-    if (strcmp(flagArray[argCounter], "-h")==0){ 
-      USAGE("./client");
-      exit(EXIT_SUCCESS);
-    }  
-    if (strcmp(flagArray[argCounter], "-v")==0){
-      verbose = true;
-    }
-    if (strcmp(flagArray[argCounter], "-c")==0){
-      newUser = true;
-    }
-    argCounter++; 
   }
+  //initialize audit file
+  FILE* auditFile = NULL;
+  int auditFD = 0;
+  auditFile = initAudit(filePtr);
+  auditFD = fileno(auditFile);
+  printf("auditFd is %d\n", auditFD);
+  fprintf(auditFile, "%s\n", "yeahhhh boy");
+  fclose(auditFile);
 
-  //INIT USER PASSED IN ARGS
-  username = argArray[1];
-  portNumber = argArray[3]; 
-  ipAddress = argArray[2];
   char ipPort[1024];
   memset(&ipPort, 0, 1024);
   ipPortString(ipAddress, portNumber, ipPort); 
