@@ -1,6 +1,13 @@
-05/06/16-11:05am, wilson1, LOGIN, 127.0.0.1:1234, success, whatsup 
-05/06/16-11:05am, wilson1, CMD, /listu, success, client
-05/06/16-11:05am, wilson1, LOGOUT, intentional
-05/06/16-11:05am, david2, LOGIN, 127.0.0.1:1234, success, whatsup 
-05/06/16-11:05am, david2, CMD, /time, success, client
-05/06/16-11:05am, david2, LOGOUT, intentional
+05/06/16-12:39pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-12:39pm, david2, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-12:39pm, david2, CMD, /chat, success, client
+05/06/16-12:39pm, wilson1, MSG, from1, david2, wha
+05/06/16-12:39pm, david2, MSG, to, wilson1, wha
+05/06/16-12:39pm, wilson1, MSG, to, david2, whatto you
+05/06/16-12:39pm, david2, MSG, from2, wilson1, whatto you
+05/06/16-12:39pm, david2, MSG, to, wilson1, what to me
+05/06/16-12:39pm, wilson1, MSG, from2, david2, what to me
+05/06/16-12:39pm, david2, CMD, t/listu, failure, client
+05/06/16-12:40pm, david2, CMD, [A/listu, failure, client
+05/06/16-12:40pm, david2, CMD, /listu, success, client
+05/06/16-12:41pm, david2, LOGOUT, intentional

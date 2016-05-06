@@ -239,7 +239,7 @@ void createAuditEvent(char *username, char* event, char * info, char *info2, cha
   struct tm *tmp;
   t = time(NULL);
   tmp = localtime(&t);
-  if (strftime(strBuffer, 100, "%D-%I:%m%P", tmp)==0){
+  if (strftime(strBuffer, 100, "%D-%I:%M%P", tmp)==0){
     sfwrite(&lock, stderr, "strftime returned failed\n");
       //fprintf(stderr, "strftime returned failed\n");
   }
@@ -255,6 +255,7 @@ void createAuditEvent(char *username, char* event, char * info, char *info2, cha
     strcat(strBuffer, ", ");
     strcat(strBuffer, info3);
   }
+  strcat(strBuffer, "\n");
 }
 
 
@@ -612,7 +613,7 @@ FILE *initAudit(char *file){
 
 void lockWriteUnlock(char* text, FILE *stream, int fd){
   flock(fd, LOCK_EX);
-  fprintf(stream, "%s\n", text);
+  write(fd, text, strlen(text));
   flock(fd, LOCK_UN);
 }
 

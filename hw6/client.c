@@ -271,7 +271,7 @@ int main(int argc, char* argv[]){
                     //CREATE CHAT BOX
                     int child = createXterm(fromUser,username);
                     send(child,messageFromUser,strnlen(messageFromUser,1023),0);
-                    char *messagePtr = (void *)messageFromUser + strlen(messageFromUser) - 1;
+                    char *messagePtr = (void *)messageFromUser + strlen(messageFromUser);
                     *messagePtr = '\0';
                     createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
                     lockWriteUnlock(auditEvent, auditFile, auditFd);
@@ -305,8 +305,8 @@ int main(int argc, char* argv[]){
                   //CREATE CHAT BOX
                   int child = createXterm(toUser,username);
                   send(child,messageFromUser,strnlen(messageFromUser,1023),0);
-                  createAuditEvent(username, "CMD", "/chat", "success", "client", auditEvent);
-                  lockWriteUnlock(auditEvent, auditFile, auditFd);
+                  char *messagePtr = (void *)messageFromUser + strlen(messageFromUser);
+                  *messagePtr = '\0';
                   createAuditEvent(username, "MSG", "to", toUser, messageFromUser, auditEvent);
                   lockWriteUnlock(auditEvent, auditFile, auditFd);
 
@@ -321,11 +321,6 @@ int main(int argc, char* argv[]){
                 }
             	} 
             } 
-            else{
-              createAuditEvent(username, "CMD", "/chat", "failure", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
-
-            }
             memset(&message,0,1024);   
           
           }
@@ -365,9 +360,11 @@ int main(int argc, char* argv[]){
             }  
             else if(strstr(stdinBuffer,"/chat")!=NULL){ 
               // CONTAINS "/chat"
-              char userMsgBuffer[1024];
-              memset(&userMsgBuffer, 0, 1024);
-            	processChatCommand(clientFd,stdinBuffer,username, verbose, &lock);
+            	if (processChatCommand(clientFd,stdinBuffer,username, verbose, &lock) == 0)
+                createAuditEvent(username, "CMD", "/chat", "failure", "client", auditEvent);
+              else
+                createAuditEvent(username, "CMD", "/chat", "success", "client", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
             }
             else if(strcmp(stdinBuffer,"/help")==0){  
             	displayHelpMenu(clientHelpMenuStrings);
@@ -426,6 +423,7 @@ int main(int argc, char* argv[]){
                 continue; //continue searching the rest of for loop for events
               }
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1023),0);
+              chatBuffer[strlen(chatBuffer) - 1] = 0;
               createAuditEvent(username, "MSG", "to", xterm->toUser, chatBuffer, auditEvent);
               lockWriteUnlock(auditEvent, auditFile, auditFd);
 
