@@ -36,9 +36,14 @@ pthread_t commThreadId=-1;
 //MUTEXES
 pthread_mutex_t loginQueueMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t stdoutMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_rwlock_t clientList_RWLock = PTHREAD_RWLOCK_INITIALIZER;
+pthread_rwlock_t accountList_RWLock = PTHREAD_RWLOCK_INITIALIZER;
+
+
 int loginQueue[128];
 int queueCount =0;
 sem_t items_semaphore;
+sem_t accept_semaphore;
 
 typedef struct sessionData{
   char* ipAddressString;
@@ -676,7 +681,8 @@ void sha256(char* password, unsigned char *output){
   SHA256_Final(output, &sha256);
 }
 
-void processValidClient(char* clientUserName, int fd){
+void processValidClient(pthread_rwlock_t* rwLock,char* clientUserName, int fd){
+  pthread_rwlock_wrlock(rwLock);
   Client* newClient = createClient(clientUserName, fd);
 
   //GET IPADDRESS STRING FOR THE CLIENT STRUCT
@@ -693,17 +699,20 @@ void processValidClient(char* clientUserName, int fd){
   //START SESSION TIME FOR CLIENT
   startSession(newClient->session);
   addClientToList(newClient);
+  pthread_rwlock_unlock(rwLock);
 }
 
-void processValidAccount(char *username, char *password, char *salt){
+void processValidAccount(pthread_rwlock_t* rwLock, char *username, char *password, char *salt){
+  pthread_rwlock_wrlock(rwLock);
   Account* newAccount = createAccount(username, password, salt);
   addAccountToList(newAccount);
+  pthread_rwlock_unlock(rwLock);
 }
 
 int callback(void* NotUsed, int argc, char **argv, char**azColName){
   int i;
   for (i = 0; i < argc; i+=3){
-    processValidAccount(argv[i], argv[i+1], argv[i+2]);
+    processValidAccount(&accountList_RWLock, argv[i], argv[i+1], argv[i+2]);
   }
   return 0;
 }
@@ -766,7 +775,7 @@ void getAccounts(char * accounts){
             sfwrite(&stdoutMutex,stderr, "Invalid Accounts File\n");
             exit(0);
           }
-          processValidAccount(usernamePtr, passwordPtr, saltPtr);
+          processValidAccount(&accountList_RWLock, usernamePtr, passwordPtr, saltPtr);
           memset(&username, 0, 1024);
           memset(&password, 0, 1024);
           memset(&salt, 0, 1024);

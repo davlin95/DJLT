@@ -156,6 +156,8 @@ int main(int argc, char* argv[]){
   signal(SIGINT,killServerHandler); 
   commThreadId=-1;
   sem_init(&items_semaphore,0,0);
+  sem_init(&accept_semaphore,0,1);
+
   
 
    /************** SPAWN LOGIN THREAD  *******/
@@ -220,6 +222,7 @@ int main(int argc, char* argv[]){
   int acceptPollStatus;
   while(1){
     acceptPollStatus = poll(acceptPollFds, 2, -1);
+
     if(acceptPollStatus<0){
       sfwrite(&stdoutMutex, stderr,"poll():%s",strerror(errno)); 
       break; // exit due to poll error
@@ -247,8 +250,11 @@ int main(int argc, char* argv[]){
 
           //MALLOC AND STORE THE CONNFD, IF VALID CONNFD
           int* connfdPtr = malloc(sizeof(int));
+
+  		  sem_wait(&accept_semaphore);
           connfd = accept(serverFd,(struct sockaddr *) &newClientStorage, &addr_size);
-            
+  		  sem_post(&accept_semaphore);
+
           if(connfd<0){
             if(errno!=EWOULDBLOCK){
               sfwrite(&stdoutMutex, stderr,"accept() in poll loop: %s\n",strerror(errno));
@@ -261,12 +267,20 @@ int main(int argc, char* argv[]){
           /****************************************************************/
           /*               ADD ACCEPTED FD INTO LOGIN QUEUE           	*/
           /*************************************************************/
-          pthread_mutex_lock(&loginQueueMutex);
-          loginQueue[queueCount++]=connfd;
-          pthread_mutex_unlock(&loginQueueMutex);
-          sem_post(&items_semaphore);
+          if(queueCount<128){
+          	pthread_mutex_lock(&loginQueueMutex);
+          	loginQueue[queueCount++]=connfd;
+          	pthread_mutex_unlock(&loginQueueMutex);
+          	sem_post(&items_semaphore);
+          }else{
+          	//WHAT IF PAST 128 CONCURRENCY?
+			pthread_mutex_lock(&loginQueueMutex);
+          	loginQueue[queueCount++]=connfd;
+          	pthread_mutex_unlock(&loginQueueMutex);
+          	sem_post(&items_semaphore);
+          }
 
-        }
+        } 
       }
       /***********************************/
       /*   POLLIN FROM STDIN            */
@@ -352,7 +366,6 @@ void* loginThread(void* args){
   while(true){
   	sem_wait(&items_semaphore);
   	pthread_mutex_lock(&loginQueueMutex);
-  	//CONNFD COPY OF THE ONE ON THE HEAP
   	connfd = loginQueue[--queueCount];
   	pthread_mutex_unlock(&loginQueueMutex);
 
@@ -391,16 +404,16 @@ void* loginThread(void* args){
         		sfwrite(&stdoutMutex, stderr, "LoginThread(): Error creating salt\n");
       		}
 
-      		//APPEND SALT AND HASH IT 
+      		//APPEND SALT AND HASH IT  
       		strcat(password, (char*)saltBuffer);
       		sha256(password, passwordHash); 
 
       		//STORE IT IN NEW ACCOUNT STRUCT INTO GLOBAL LIST
-      		processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);
+      		processValidAccount(&accountList_RWLock,username, (char *)passwordHash, (char *)saltBuffer);
     	}
     	
     	//ADD CLIENT TO ACTIVE LIST OF USERS
-    	processValidClient(username,connfd);
+    	processValidClient(&clientList_RWLock,username,connfd);
 
      	/****************************************************/
     	/* IF COMMUNICATION THREAD NEEDED FOR MULTIPLEXING  */
@@ -426,7 +439,7 @@ void* loginThread(void* args){
     	close(connfd);
     	free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
   	}
-
+  	write(globalSocket," ",1);
   }
   
   //EXIT THREAD 
