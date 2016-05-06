@@ -11,6 +11,7 @@
 #include <sys/wait.h>
 #include "xtermHeader.h"     
 
+
 /*
  * 1) test the global socket for chat xterms, 
  * see @questions for wilson, must be -c -v, other way doesn't work for flags. 
@@ -34,12 +35,13 @@ void cleanUpXterm(Xterm* xterm){
     }
     compactClientPollDescriptors();
   }else{
-    fprintf(stderr,"cleanUpXterm(): error xterm is NULL\n");
+    sfwrite(&lock, stderr,"cleanUpXterm(): error xterm is NULL\n");
+    //fprintf(stderr,"cleanUpXterm(): error xterm is NULL\n");
   }
 }
 
 
-void xtermReaperHandler(){ 
+void xtermReaperHandler(){
   pid_t pid;
   int reapStatus; 
   pid = waitpid(-1,&reapStatus,WUNTRACED);
@@ -51,7 +53,8 @@ void xtermReaperHandler(){
     if(deadXterm!=NULL){
       cleanUpXterm(deadXterm);
     }else{
-      fprintf(stderr,"xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
+      sfwrite(&lock, stderr, "xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
+      //fprintf(stderr,"xtermReaperHandler(): deadXterm is NULL and can't be cleaned up\n");
     }
 
     //MOVE THE POLL AHEAD TO STOP DISABILITY, AND ATTEMPT TO RE-REAP
@@ -62,8 +65,9 @@ void xtermReaperHandler(){
 
 
 void killClientProgramHandler(){
-  printf("\n"); 
-  protocolMethod(clientFd,BYE,NULL,NULL,NULL,verbose); 
+  sfwrite(&lock, stdout, "\n");
+  //printf("\n"); 
+  protocolMethod(clientFd,BYE,NULL,NULL,NULL,verbose, &lock); 
   if(clientFd >0){  
     close(clientFd);
   }
@@ -72,7 +76,7 @@ void killClientProgramHandler(){
 
 
 int main(int argc, char* argv[]){ 
-
+  pthread_mutex_init(&lock, NULL);
   /* Attach Signal handlers */
   signal(SIGINT,killClientProgramHandler);  
   signal(SIGCHLD,xtermReaperHandler);
@@ -92,10 +96,8 @@ int main(int argc, char* argv[]){
         exit(EXIT_SUCCESS);
       case 'c':
         newUser = true;
-        printf("new user\n");
         break;
       case 'v':
-        printf("verbose\n");
         verbose = true;
         break;
       case 'a':
@@ -122,12 +124,10 @@ int main(int argc, char* argv[]){
   }
   //initialize audit file
   FILE* auditFile = NULL;
-  int auditFD = 0;
+  int auditFd = 0;
   auditFile = initAudit(filePtr);
-  auditFD = fileno(auditFile);
-  printf("auditFd is %d\n", auditFD);
-  fprintf(auditFile, "%s\n", "yeahhhh boy");
-  fclose(auditFile);
+  auditFd = fileno(auditFile);
+  //fclose(auditFile);
 
   char ipPort[1024];
   memset(&ipPort, 0, 1024);
@@ -135,8 +135,9 @@ int main(int argc, char* argv[]){
   char auditEvent[1024];
   // TRY CONNECTING TO SOCKET   
   if ((clientFd = createAndConnect(portNumber, clientFd,ipAddress)) < 0){
-    createAuditEvent(username, "ERR, ", "ERR # message", NULL, NULL, auditEvent);
-    printf("%s\n", auditEvent);
+    sfwrite(&lock, stderr, "Error creating and connecting socket\n");
+    //createAuditEvent(username, "ERR, ", "ERR # message", NULL, NULL, auditEvent);
+    //printf("%s\n", auditEvent);
     exit(0); 
   }
   char loginMSG[1024];
@@ -145,11 +146,11 @@ int main(int argc, char* argv[]){
   if (performLoginProcedure(clientFd, username, newUser, loginMSG) == 0){
       close(clientFd);
       createAuditEvent(username, "LOGIN", ipPort, "fail", loginMSG, auditEvent);
-      printf("%s\n", auditEvent);
+      lockWriteUnlock(auditEvent, auditFile, auditFd);
       exit(0); 
   } 
   createAuditEvent(username, "LOGIN", ipPort, "success", loginMSG, auditEvent);
-  printf("%s\n", auditEvent);
+  lockWriteUnlock(auditEvent, auditFile, auditFd);
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -168,21 +169,25 @@ int main(int argc, char* argv[]){
     clientPollFds[0].fd = clientFd; 
     clientPollFds[0].events = POLLIN;
     if (makeNonBlocking(clientFd)<0){   
-      fprintf(stderr, "Error making socket nonblocking.\n");
+      sfwrite(&lock, stderr,"Error making socket nonblocking.\n");
+      //fprintf(stderr, "Error making socket nonblocking.\n");
     }  
     /* Set poll for stdin */ 
     clientPollFds[1].fd = 0;
     clientPollFds[1].events = POLLIN; 
     if (makeNonBlocking(0)<0){ 
-      fprintf(stderr, "Error making stdin nonblocking.\n");
+      sfwrite(&lock, stderr,"Error making stdin nonblocking.\n");
+      //fprintf(stderr, "Error making stdin nonblocking.\n");
     }
 
     //UNBLOCK THE GLOBAL SOCKET/READ AND ADD THE GLOBAL READ SOCKET ON POLL WATCH
     if(makeNonBlocking(globalSocketPair[0])<0){
-      fprintf(stderr, "Error making global socket 1 nonblocking.\n");
+      sfwrite(&lock, stderr,"Error making global socket 1 nonblocking.\n");
+      //fprintf(stderr, "Error making global socket 1 nonblocking.\n");
     }
     if(makeNonBlocking(globalSocketPair[1])<0){
-      fprintf(stderr, "Error making global socket 2 nonblocking.\n");
+      sfwrite(&lock, stderr,"Error making global socket 2 nonblocking.\n");
+      //fprintf(stderr, "Error making global socket 2 nonblocking.\n");
     }
     clientPollFds[2].fd = globalSocketPair[1]; // hold onto the read pipe for the global var. 
     clientPollFds[2].events = POLLIN;
@@ -194,7 +199,8 @@ int main(int argc, char* argv[]){
     while(1){
       pollStatus = poll(clientPollFds, clientPollNum, -1);
       if(pollStatus<0){
-        fprintf(stderr,"poll(): %s\n",strerror(errno));
+        sfwrite(&lock, stderr,"poll(): %s\n", strerror(errno));
+        //fprintf(stderr,"poll(): %s\n",strerror(errno));
         continue;
       } 
       int i; 
@@ -203,7 +209,8 @@ int main(int argc, char* argv[]){
           continue; 
         } 
         if(clientPollFds[i].revents!=POLLIN){
-            fprintf(stderr,"poll.revents:%s\n",strerror(errno));
+          sfwrite(&lock, stderr,"poll.revents:%s\n",strerror(errno));
+          //  fprintf(stderr,"poll.revents:%s\n",strerror(errno));
             break;
         }  
 
@@ -213,8 +220,11 @@ int main(int argc, char* argv[]){
         if(clientPollFds[i].fd == clientFd){
           int serverBytes =0;
           while( (serverBytes = recv(clientFd, message, 1024, 0))>0){ 
-          	if (verbose)
-          		printf(VERBOSE "%s" DEFAULT, message);
+          	if (verbose){
+              sfwrite(&lock, stdout, VERBOSE "%s", message);
+              sfwrite(&lock, stdout, DEFAULT ""); 
+          		//printf(VERBOSE "%s" DEFAULT, message);
+            }
             if (checkVerb(PROTOCOL_EMIT, message)){
               char sessionLength[1024]; 
               memset(&sessionLength, 0, 1024);
@@ -225,17 +235,20 @@ int main(int argc, char* argv[]){
             else if (checkVerb(PROTOCOL_UTSIL, message)){
             	char listOfUsers[1024];
             	memset(&listOfUsers, 0, 1024);
-              	if (extractArgsAndTest(message, listOfUsers))
-              		printf("%s\n", listOfUsers);
-              	else
-              		fprintf(stderr, "Error with UTSIL response\n");
+              	if (extractArgsAndTest(message, listOfUsers)){
+                  sfwrite(&lock, stdout, "%s\n", listOfUsers);
+              		//printf("%s\n", listOfUsers);
+                }
+              	else{
+                  sfwrite(&lock, stderr, "Error with UTSIL response\n");
+              		//fprintf(stderr, "Error with UTSIL response\n");
+                }
             }
             else if (checkVerb(PROTOCOL_BYE, message)){ 
               close(clientFd);
               exit(EXIT_SUCCESS);
             }
             else if (checkVerb(PROTOCOL_UOFF, message)){ 
-              printf("received UOFF\n");
             }
             /***********************************/
             /* RECEIVED MSG BACK FROM SERVER  */
@@ -258,8 +271,10 @@ int main(int argc, char* argv[]){
                     //CREATE CHAT BOX
                     int child = createXterm(fromUser,username);
                     send(child,messageFromUser,strnlen(messageFromUser,1023),0);
+                    char *messagePtr = (void *)messageFromUser + strlen(messageFromUser) - 1;
+                    *messagePtr = '\0';
                     createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
-                    printf("%s\n", auditEvent);
+                    lockWriteUnlock(auditEvent, auditFile, auditFd);
 
                     /*//CONTINUE TO SEND CHAT  
                     Xterm* xterm = getXtermByUsername(fromUser);
@@ -276,10 +291,13 @@ int main(int argc, char* argv[]){
                     //SAFE SEND 
                     if(xterm!=NULL){
                       send(xterm->chatFd,messageFromUser,strnlen(messageFromUser,1023),0);
+                      char *messagePtr = (void *)messageFromUser + strlen(messageFromUser) - 1;
+                      *messagePtr = '\0';
                       createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
-                      printf("%s\n", auditEvent);
+                      lockWriteUnlock(auditEvent, auditFile, auditFd);
                     }else{
-                      fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
+                      sfwrite(&lock, stderr, "poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
+                      //fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
                     }
                 }
                 //IF CHATBOX DOESN'T EXIST FROM PREVIOUS CONTACT, BUT THIS CLIENT IS THE SENDER
@@ -288,9 +306,9 @@ int main(int argc, char* argv[]){
                   int child = createXterm(toUser,username);
                   send(child,messageFromUser,strnlen(messageFromUser,1023),0);
                   createAuditEvent(username, "CMD", "/chat", "success", "client", auditEvent);
-                  printf("%s\n", auditEvent);
+                  lockWriteUnlock(auditEvent, auditFile, auditFd);
                   createAuditEvent(username, "MSG", "to", toUser, messageFromUser, auditEvent);
-                  printf("%s\n", auditEvent);
+                  lockWriteUnlock(auditEvent, auditFile, auditFd);
 
                   /*//SAFE-SEND CHAT  
                   Xterm* xterm = getXtermByUsername(toUser);
@@ -305,7 +323,7 @@ int main(int argc, char* argv[]){
             } 
             else{
               createAuditEvent(username, "CMD", "/chat", "failure", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
 
             }
             memset(&message,0,1024);   
@@ -328,41 +346,42 @@ int main(int argc, char* argv[]){
             stdinBuffer[strlen(stdinBuffer)-1] = 0;
             /*send time verb to server*/ 
             if(strcmp(stdinBuffer,"/time")==0){
-              protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose);
+              protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose, &lock);
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
             }  
             else if(strcmp(stdinBuffer,"/listu")==0){  
-              protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose); 
+              protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose, &lock); 
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
             }  
             else if(strcmp(stdinBuffer,"/logout")==0){
-              protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose);
+              protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose, &lock);
               waitForByeAndClose(clientFd); 
               createAuditEvent(username, "LOGOUT", "intentional", NULL, NULL, auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              fclose(auditFile);
               exit(EXIT_SUCCESS);   
             }  
             else if(strstr(stdinBuffer,"/chat")!=NULL){ 
               // CONTAINS "/chat"
               char userMsgBuffer[1024];
               memset(&userMsgBuffer, 0, 1024);
-            	processChatCommand(clientFd,stdinBuffer,username, verbose);
+            	processChatCommand(clientFd,stdinBuffer,username, verbose, &lock);
             }
             else if(strcmp(stdinBuffer,"/help")==0){  
             	displayHelpMenu(clientHelpMenuStrings);
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
             } 
             else if(strcmp(stdinBuffer,"/audit")==0){
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
               //todo: print audit log
             }
             else{
               createAuditEvent(username, "CMD", stdinBuffer, "failure", "client", auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
               //todo:not a valid command
             }
             
@@ -393,7 +412,8 @@ int main(int argc, char* argv[]){
               //BUILD MESSAGE PROTOCOL TO SEND TO SERVER/ TO BE RELAYED TO PERSON
               Xterm* xterm = getXtermByChatFd(clientPollFds[i].fd);
               if(xterm==NULL){
-                  fprintf(stderr,"error in poll loop: getXtermByChatFd() returned NULL\n");
+                sfwrite(&lock, stderr, "error in poll loop: getXtermByChatFd() returned NULL\n");
+                  //fprintf(stderr,"error in poll loop: getXtermByChatFd() returned NULL\n");
                   continue;//continue searching the rest of for loop for events
               }
               char userMsgBuffer[1024];
@@ -401,12 +421,13 @@ int main(int argc, char* argv[]){
               char relayMessage[1024];
               memset(&relayMessage,0,1024);
               if(buildMSGProtocol(relayMessage ,xterm->toUser, username, chatBuffer)==false){
-                fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+                sfwrite(&lock, stderr, "error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
+                //fprintf(stderr,"error in poll loop: buildMSGProtocol() unable to build relay message to server\n");
                 continue; //continue searching the rest of for loop for events
               }
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1023),0);
               createAuditEvent(username, "MSG", "to", xterm->toUser, chatBuffer, auditEvent);
-              printf("%s\n", auditEvent);
+              lockWriteUnlock(auditEvent, auditFile, auditFd);
 
           }
         }

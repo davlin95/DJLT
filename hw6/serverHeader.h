@@ -18,8 +18,6 @@
 #include "WolfieProtocolVerbs.h"
 #include <pthread.h> 
 #include <sqlite3.h>
-#include <semaphore.h> 
-#include "sfwrite.c"
 
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
@@ -33,12 +31,6 @@ int serverFd=-1;
 int globalSocket;
 pthread_t commThreadId=-1;
 
-//MUTEXES
-pthread_mutex_t loginQueueMutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t stdoutMutex = PTHREAD_MUTEX_INITIALIZER;
-int loginQueue[128];
-int queueCount =0;
-sem_t items_semaphore;
 
 typedef struct sessionData{
   char* ipAddressString;
@@ -148,7 +140,7 @@ void loadAccountFile();
 char* serverHelpMenuStrings[]={"/users \t List users currently logged in.", "/help \t List available commands.", "/accts \t List all user accounts and information.", "/shutdown \t Shutdown the server", NULL};
 
 #define USAGE(name) do {                                                                         \
-        sfwrite(&stdoutMutex,stderr,                                                                                \
+        fprintf(stderr,                                                                                \
             "\n%s [-hv] [-t THREAD_COUNT] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                          \
             "-t THREAD_COUNT  The number of threads used for the login queue."                          \
             "-h               Displays help menu & returns EXIT_SUCCESS.\n"                              \
@@ -239,7 +231,7 @@ bool verifyPassword(char* password);
  * @return : void
  */
 void accountStructToString(Account* accountData){
-  sfwrite(&stdoutMutex,stdout,"Username: %-15s Password: %s\n", accountData->userName, accountData->password);
+  printf("Username: %-15s Password: %s\n", accountData->userName, accountData->password);
 }
 
 /*
@@ -264,7 +256,7 @@ void clientStructToString(Client* clientData){
   memset(ipaddress, 0, strlen(ipaddress)); 
   inet_ntop( AF_INET,(clientData->session->ipAddress), ipaddress, 33); */
 
-  sfwrite(&stdoutMutex,stdout,"Username: %-15s IP Address: %s\n", clientData->userName, 
+  printf("Username: %-15s IP Address: %s\n", clientData->userName, 
     clientData->session->ipAddressString);
 }
 /*
@@ -284,12 +276,12 @@ void processUsersRequest(){
 						/******** PROGRAM I/O AND LOGISTIC FUNCTIONS ****/
 void createSocketPair(int socketsArray[], int size){
   if(size <2){
-    sfwrite(&stdoutMutex,stderr,"CreateSocketPair(): insufficient size of array\n");
+    fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
   }
   int status=-1;
   status = socketpair(AF_UNIX,SOCK_STREAM,0,socketsArray);
   if(status<0){
-    sfwrite(&stdoutMutex,stderr,"CreateSocketPair(): error with socketpair()\n");
+    fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
   }
 }
 
@@ -299,7 +291,7 @@ void createSocketPair(int socketsArray[], int size){
   * A help menu function for server
   */ 
  void processHelp(){
-    sfwrite(&stdoutMutex,stdout,                                                                             
+    printf(                                                                              
             "[-h|-v] PORT_NUMBER MOTD [ACCOUNTS_FILE]\n"                                          
             "-h             Displays help menu & returns EXIT_SUCCESS.\n"                              
             "-v             Verbose print all incoming and outgoing protocol verbs & content.\n"       
@@ -319,18 +311,18 @@ void processUsers();
   * A function that shuts down the server
   */ 
  void processShutdown(){
-   sfwrite(&stdoutMutex,stdout,"SHUTTING DOWN()\n");
+   printf("SHUTTING DOWN()\n");
    disconnectAllUsers();
    if(serverFd>0){
      close(serverFd);
    }
-   // printf("\nEXITING\n");
+   printf("\nEXITING\n");
    exit(0);
  }
 
 void killServerHandler(){
     disconnectAllUsers();
-    sfwrite(&stdoutMutex,stdout,"disconnected All users\n"); 
+    printf("disconnected All users\n"); 
     exit(EXIT_SUCCESS);
 }
 
@@ -441,7 +433,7 @@ void killServerHandler(){
 
   /*********** STDIN FUNCTIONS ***********/
 void recognizeAndExecuteStdin(char* userTypedIn){
-  // printf("user typed in: %s", userTypedIn);
+  printf("user typed in: %s", userTypedIn);
   if(strcmp(userTypedIn,"/users\n")==0){
     //PRINT OUT USERS
     processUsersRequest();
@@ -523,7 +515,7 @@ struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumbe
   settings.ai_socktype=SOCK_STREAM;
   status = getaddrinfo(NULL,portNumber,&settings,&results);
   if(status!=0){
-    sfwrite(&stdoutMutex,stderr,"getaddrinfo():%s\n",gai_strerror(status));
+    fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
     return NULL;
   }
   return results;
@@ -536,7 +528,7 @@ struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumbe
 int makeReusable(int fd){
   int val=1;
   if ((setsockopt(fd, SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val))) < 0){
-      sfwrite(&stdoutMutex,stderr,"setsockopt(): %s\n",strerror(errno)); 
+      fprintf(stderr,"setsockopt(): %s\n",strerror(errno)); 
       return -1;
   }
   return 0;
@@ -549,18 +541,18 @@ int makeReusable(int fd){
  */ 
 int findSocketandBind(struct addrinfo *results, int serverFd){  
   if ((serverFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
-    sfwrite(&stdoutMutex,stderr,"socket(): %s\n",strerror(errno));
+    fprintf(stderr,"socket(): %s\n",strerror(errno));
     return -1;
   }
   if ((makeReusable(serverFd)) < 0){
     if (close(serverFd) < 0){
-      sfwrite(&stdoutMutex,stderr,"close(): %s\n",strerror(errno));
+      fprintf(stderr,"close(): %s\n",strerror(errno));
       return -1;
     }
   }
   if (bind(serverFd, results->ai_addr, results->ai_addrlen)<0){
     if (close(serverFd) < 0){
-      sfwrite(&stdoutMutex,stderr,"close(): %s\n",strerror(errno));
+      fprintf(stderr,"close(): %s\n",strerror(errno));
       return -1;
     }
   } 
@@ -574,12 +566,12 @@ int findSocketandBind(struct addrinfo *results, int serverFd){
 int makeNonBlocking(int fd){
   int flags;
   if ((flags = fcntl(fd, F_GETFL, 0)) < 0){
-    sfwrite(&stdoutMutex,stderr,"fcntl(): %s\n",strerror(errno));
+    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   flags |= O_NONBLOCK;
   if ((fcntl(fd, F_SETFL, flags)) < 0){
-    sfwrite(&stdoutMutex,stderr,"fcntl(): %s\n",strerror(errno));
+    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   return 0;
@@ -607,15 +599,15 @@ int createBindListen(char* portNumber, int serverFd){
     return -1;
   }
   if ((makeNonBlocking(serverFd))<0){
-    sfwrite(&stdoutMutex,stderr,"createBindListen(): error makeNonBlocking\n");
+    fprintf(stderr,"createBindListen(): error makeNonBlocking\n");
     freeaddrinfo(results);
     return -1;
   }
-  if(listen(serverFd,128)<0){
+  if(listen(serverFd,1024)<0){
     if(close(serverFd)<0){
-      sfwrite(&stdoutMutex,stderr,"close(serverFd): %s\n",strerror(errno));
+      fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
-    sfwrite(&stdoutMutex,stderr,"listen(): %s\n",strerror(errno));
+    fprintf(stderr,"listen(): %s\n",strerror(errno));
     freeaddrinfo(results);
     return -1;
   }
@@ -632,7 +624,7 @@ char* getIpAddressFromSocketFd(int socketFd,char ipAddress[]){
   socklen_t addressLength=sizeof(address);
   status = getsockname(socketFd,&address,&addressLength);
   if(status<0){
-    sfwrite(&stdoutMutex,stderr,"getIpAddressFromSocketFd():%s",strerror(errno));
+    fprintf(stderr,"getIpAddressFromSocketFd():%s",strerror(errno));
   }
   memset(ipAddress,0,1024);
   struct sockaddr_in * ipInet = ((struct sockaddr_in *) &address);
@@ -649,7 +641,7 @@ char* getIpAddressFromSocketFd(int socketFd,char ipAddress[]){
 bool buildUtsilArg(char *argBuffer){
   // CHECK FOR ERRORS
     if(argBuffer==NULL) {
-      sfwrite(&stdoutMutex,stderr,"buildUtsilArg(): argBuffer is null\n");
+      fprintf(stderr,"buildUtsilArg(): argBuffer is null\n");
       return 0;
     } 
 
@@ -665,7 +657,7 @@ bool buildUtsilArg(char *argBuffer){
             strcat(clientUsername, "\r\n");
         strcat(argBuffer, clientUsername);
     }
-    sfwrite(&stdoutMutex,stdout,"arg is %s\n", argBuffer);
+    printf("arg is %s\n", argBuffer);
     return true;
 }
 
@@ -729,7 +721,7 @@ void notifyAllUsersUOFF(char* username){
 void writeToGlobalSocket(){
   if(globalSocket>0){
       write(globalSocket," ",1);
-      // printf("\nwrote to globalSocket\n");
+      printf("\nwrote to globalSocket\n");
     }
 }
 
@@ -755,7 +747,7 @@ void getAccounts(char * accounts){
             lastChar = strchr(passwordPtr, '\n');
             *lastChar = '\0';
           } else{
-            sfwrite(&stdoutMutex,stderr, "Invalid Accounts File\n");
+            fprintf(stderr, "Invalid Accounts File\n");
             exit(0);
           }
 
@@ -763,7 +755,7 @@ void getAccounts(char * accounts){
             lastChar = strchr(saltPtr, '\n');
             *lastChar = '\0';
           } else{
-            sfwrite(&stdoutMutex,stderr, "Invalid Accounts File\n");
+            fprintf(stderr, "Invalid Accounts File\n");
             exit(0);
           }
           processValidAccount(usernamePtr, passwordPtr, saltPtr);
@@ -781,9 +773,9 @@ void getAccounts(char * accounts){
     accountsFile = fopen(accounts, "w");
     if (accountsFile != NULL){
         for (accountPtr = accountHead; accountPtr!=NULL; accountPtr = accountPtr->next){
-            sfwrite(&stdoutMutex,accountsFile, "%s\n", accountPtr->userName);
-            sfwrite(&stdoutMutex,accountsFile, "%s\n", accountPtr->password);
-            sfwrite(&stdoutMutex,accountsFile, "%s\n", accountPtr->salt);
+            fprintf(accountsFile, "%s\n", accountPtr->userName);
+            fprintf(accountsFile, "%s\n", accountPtr->password);
+            fprintf(accountsFile, "%s\n", accountPtr->salt);
         }
       fclose(accountsFile);
     }

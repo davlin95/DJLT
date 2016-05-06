@@ -13,7 +13,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/socket.h>
-
+#include <sys/file.h>
 
 
                 /************************************/
@@ -24,6 +24,7 @@ struct pollfd clientPollFds[1024];
 int clientPollNum;
 int verbose = 0; 
 int globalSocket;
+pthread_mutex_t lock;
 
 #define USAGE(name) do {                                                                        \
         fprintf(stderr,                                                                         \
@@ -58,7 +59,8 @@ char* clientHelpMenuStrings[]={"/help \t List available commands.", "/listu \t L
     hour = time/3600;
     minute = (time%3600)/60;
     second = (time%3600)%60;
-    printf("connected for %d hour(s), %d minute(s), and %d second(s)\n", hour, minute, second);
+    sfwrite(&lock, stdout, "connected for %d hour(s), %d minute(s), and %d second(s)\n", hour, minute, second);
+    //printf("connected for %d hour(s), %d minute(s), and %d second(s)\n", hour, minute, second);
   }
 
 void compactClientPollDescriptors(){
@@ -97,10 +99,10 @@ struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumbe
   settings.ai_socktype=SOCK_STREAM;
   status = getaddrinfo(ipAddress,portNumber,&settings,&results);
   if(status!=0){
-    fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
+    sfwrite(&lock, stderr,"getaddrinfo():%s\n",gai_strerror(status));
+    //fprintf(stderr,"getaddrinfo():%s\n",gai_strerror(status));
     return NULL;
   }
-  printf("getaddrinfo successful()\n");
   return results;
 }
 /*
@@ -111,7 +113,8 @@ struct addrinfo * buildAddrInfoStructs(struct addrinfo *results, char* portNumbe
 int makeReusable(int fd){
   int val=1;
   if ((setsockopt(fd, SOL_SOCKET,SO_REUSEADDR,&val,sizeof(val))) < 0){
-      fprintf(stderr,"setsockopt(): %s\n",strerror(errno)); 
+    sfwrite(&lock, stderr, "setsockopt(): %s\n",strerror(errno));
+      //fprintf(stderr,"setsockopt(): %s\n",strerror(errno)); 
       return -1;
   }
   return 0;
@@ -128,40 +131,44 @@ int createAndConnect(char* portNumber, int clientFd, char* ipAddress){
   struct addrinfo resultsStruct;
   struct addrinfo* results=&resultsStruct;
   if((results = buildAddrInfoStructs(results, portNumber, ipAddress)) == NULL){
-    fprintf(stderr,"createAndConnect(): unable to buildAddrInfoStructs()\n");
+    sfwrite(&lock, stderr, "createAndConnect(): unable to buildAddrInfoStructs()\n");
+    //fprintf(stderr,"createAndConnect(): unable to buildAddrInfoStructs()\n");
     return -1;
   }
   if ((clientFd = socket(results->ai_family, results->ai_socktype, results->ai_protocol)) < 0){
-    fprintf(stderr,"createAndConnect(): unable to build socket\n");
+    sfwrite(&lock, stderr, "createAndConnect(): unable to build socket\n");
+    //fprintf(stderr,"createAndConnect(): unable to build socket\n");
     freeaddrinfo(results);
     return -1;
   }
   if (connect(clientFd, results->ai_addr, results->ai_addrlen)!=-1){
-    fprintf(stderr,"createAndConnect(): Able to connect to socket\n");
+    sfwrite(&lock, stderr, "createAndConnect(): Able to connect to socket\n");
+    //fprintf(stderr,"createAndConnect(): Able to connect to socket\n");
     freeaddrinfo(results);
     return clientFd;
   }
   if (close(clientFd) < 0){
-    fprintf(stderr,"close(): %s\n",strerror(errno));
+    sfwrite(&lock, stderr, "close(): %s\n",strerror(errno));
+    //fprintf(stderr,"close(): %s\n",strerror(errno));
   }
   freeaddrinfo(results);
   return -1;
 }
 
 
- void printStarHeadline(char* headline,int optionalFd){
+ // void printStarHeadline(char* headline,int optionalFd){
 
-  printf("\n/***********************************/\n");
-  printf("/*\t");
-  if(optionalFd>=0){
-    printf("%-40s : %d",headline,optionalFd);
-  }
-  else {
-    printf("%-40s",headline);
-  }
-  printf("\t*/\n");
-  printf("/***********************************/\n");
- }
+ //  printf("\n/***********************************/\n");
+ //  printf("/*\t");
+ //  if(optionalFd>=0){
+ //    printf("%-40s : %d",headline,optionalFd);
+ //  }
+ //  else {
+ //    printf("%-40s",headline);
+ //  }
+ //  printf("\t*/\n");
+ //  printf("/***********************************/\n");
+ // }
 
 /*
  *A function that makes the socket non-blocking
@@ -171,12 +178,14 @@ int createAndConnect(char* portNumber, int clientFd, char* ipAddress){
 int makeNonBlocking(int fd){
   int flags;
   if ((flags = fcntl(fd, F_GETFL, 0)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    sfwrite(&lock, stderr, "fcntl(): %s\n",strerror(errno));
+    //fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   flags |= O_NONBLOCK;
   if ((fcntl(fd, F_SETFL, flags)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    sfwrite(&lock, stderr, "fcntl(): %s\n",strerror(errno));
+    //fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   return 0;
@@ -198,10 +207,10 @@ void waitForByeAndClose(int clientFd){
   byeBytes = read(clientFd,&byeBuffer,1024);
   if(byeBytes > 0){
     if(checkVerb(PROTOCOL_BYE,byeBuffer)){
-      printf("Valid BYE FROM SERVER\n");
+      sfwrite(&lock, stderr, "Valid BYE FROM SERVER\n");
+      //printf("Valid BYE FROM SERVER\n");
     } 
   }
-  printf("CLOSING SERVER\n");
   close(clientFd);
 }
 
@@ -231,7 +240,8 @@ void createAuditEvent(char *username, char* event, char * info, char *info2, cha
   t = time(NULL);
   tmp = localtime(&t);
   if (strftime(strBuffer, 100, "%D-%I:%m%P", tmp)==0){
-      fprintf(stderr, "strftime returned failed\n");
+    sfwrite(&lock, stderr, "strftime returned failed\n");
+      //fprintf(stderr, "strftime returned failed\n");
   }
   strcat(strBuffer, ", ");
   strcat(strBuffer, username);
@@ -254,29 +264,34 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
   int noOfMessages;
 
   //SEND WOLFIE TO SERVER
-  protocolMethod(fd, WOLFIE, NULL, NULL, NULL, verbose);  
+  protocolMethod(fd, WOLFIE, NULL, NULL, NULL, verbose, &lock);  
 
   //----------------------------------||
   //     READ RESPONSE FROM FD        ||                       
   //----------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&lock, stderr, "Read(): bytes read negative\n");
+    //fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
-  if (verbose)
-      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+  if (verbose){
+    sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+    sfwrite(&lock, stdout, DEFAULT "");
+      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+    }
   //----------------------------------------------|| 
   //      CHECK IF EXPECTED: EIFLOW \r\n\r\n      ||
   //----------------------------------------------||
   if(checkVerb(PROTOCOL_EIFLOW, protocolBuffer)){
     if (!newUser)
-      protocolMethod(fd, IAM, username, NULL,NULL, verbose);
+      protocolMethod(fd, IAM, username, NULL,NULL, verbose, &lock);
     else
-      protocolMethod(fd, IAMNEW, username, NULL, NULL, verbose); 
+      protocolMethod(fd, IAMNEW, username, NULL, NULL, verbose, &lock); 
   }
   else{
-    printf("Expected protocol verb EIFLOW\n");
+    sfwrite(&lock, stderr, "Expected protocol verb EIFLOW\n");
+    //printf("Expected protocol verb EIFLOW\n");
     return false;
   }
   //----------------------------------||
@@ -285,7 +300,8 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
 
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&lock, stderr, "Read(): bytes read negative\n");
+    //fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
   //----------------------------------------------------|| 
@@ -295,13 +311,16 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
       if (verbose){
-        printf(ERROR "%s" DEFAULT, messageArray[0]);
+        sfwrite(&lock, stdout, ERROR "%s", messageArray[0]);
+        sfwrite(&lock, stdout, DEFAULT "");
+        //printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
       if (checkVerb(PROTOCOL_BYE, messageArray[1])){
         if (verbose){
-          printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+          sfwrite(&lock, stdout, ERROR "%s", messageArray[1]);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         }
-        fprintf(stderr, "Error sending username, received ERR and BYE\n");
         if (checkVerb(PROTOCOL_ERR0, messageArray[0]))
           strncat(loginMSG, messageArray[0], 22);
         else
@@ -309,9 +328,10 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
         return false;
       }
     }
-    printf("Didn't receive Error and bye together\n");
     if(verbose){
-        printf(ERROR "%s" DEFAULT, protocolBuffer);
+      sfwrite(&lock, stdout, ERROR "%s", protocolBuffer);
+      sfwrite(&lock, stdout, DEFAULT "");
+      //  printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
     if (checkVerb(PROTOCOL_ERR0, messageArray[0]))
           strncat(loginMSG, protocolBuffer, 22);
@@ -319,14 +339,18 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
           strncat(loginMSG, protocolBuffer, 25);
     memset(&protocolBuffer,0,1024);
     if (read(fd, &protocolBuffer,1024) < 0){
-      fprintf(stderr,"Read(): bytes read negative\n");
+      sfwrite(&lock, stderr, "Read(): bytes read negative\n");
+      //fprintf(stderr,"Read(): bytes read negative\n");
       return false;
     }
     if(verbose){
-        printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+      sfwrite(&lock, stdout, DEFAULT "");
+       // printf(VERBOSE "%s" DEFAULT, protocolBuffer);
     }
     if (checkVerb(PROTOCOL_BYE, protocolBuffer)){
-        fprintf(stderr, "Error sending username, received ERR and BYE\n");
+      sfwrite(&lock, stderr, "Error sending username, received ERR and BYE\n");
+      //  fprintf(stderr, "Error sending username, received ERR and BYE\n");
         return false;
     }
   }
@@ -334,7 +358,9 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
   //      CHECK IF EXPECTED: HINEW or AUTH       ||
   //---------------------------------------------||
   if(verbose){
-        printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+    sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+    sfwrite(&lock, stdout, DEFAULT "");
+    //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
   }
   if (protocol_Login_Helper(PROTOCOL_HINEW, protocolBuffer, username) || checkVerb(PROTOCOL_AUTH, protocolBuffer)){
     char password[1024];
@@ -343,14 +369,15 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
 
     //SEND MESSAGE DEPENDING ON WHETHER IS A NEW USER OR NOT
     if (!newUser){
-      protocolMethod(fd, PASS, password, NULL, NULL, verbose);
+      protocolMethod(fd, PASS, password, NULL, NULL, verbose, &lock);
     }
     else{
-      protocolMethod(fd, NEWPASS, password, NULL, NULL, verbose);
+      protocolMethod(fd, NEWPASS, password, NULL, NULL, verbose, &lock);
     }
   }
   else {
-    printf("Expected protocol verb AUTH or HINEW\n");
+    sfwrite(&lock, stderr, "Expected protocol verb AUTH or HINEW\n");
+    //printf("Expected protocol verb AUTH or HINEW\n");
     return false;
   }
   //----------------------------------|| 
@@ -358,7 +385,8 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
   //----------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd,&protocolBuffer,1024) < 0){
-    fprintf(stderr,"performLoginProcedure(): bytes read negative\n");
+    sfwrite(&lock, stderr, "performLoginProcedure(): bytes read negative\n");
+    //fprintf(stderr,"performLoginProcedure(): bytes read negative\n");
     return false;
   }
   //--------------------------------------------|| 
@@ -368,32 +396,42 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
       if (verbose){
-        printf(ERROR "%s" DEFAULT, messageArray[0]);
+        sfwrite(&lock, stdout, ERROR "%s", messageArray[0]);
+        sfwrite(&lock, stdout, DEFAULT "");
+        //printf(ERROR "%s" DEFAULT, messageArray[0]);
       }
       if (checkVerb(PROTOCOL_BYE, messageArray[1])){
         if (verbose){
-          printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+          sfwrite(&lock, stdout, VERBOSE "%s", messageArray[1]);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, messageArray[1]);
         }
-        fprintf(stderr, "Error sending password, received ERR and BYE\n");
+        sfwrite(&lock, stderr, "Error sending password, received ERR and BYE\n");
+        //fprintf(stderr, "Error sending password, received ERR and BYE\n");
         strncat(loginMSG, messageArray[0], 19);
         return false;
       }
     }
-    printf("Didn't receive Error and bye together\n");
     if (verbose){
-      printf(ERROR "%s" DEFAULT, protocolBuffer);
+      sfwrite(&lock, stdout, ERROR "%s", protocolBuffer);
+      sfwrite(&lock, stdout, DEFAULT "");
+      //printf(ERROR "%s" DEFAULT, protocolBuffer);
     }
     strcat(loginMSG, protocolBuffer);
     memset(&protocolBuffer,0,1024);
     if (read(fd, &protocolBuffer,1024) < 0){
-      fprintf(stderr,"Read(): bytes read negative\n");
+      sfwrite(&lock, stderr, "Read(): bytes read negative\n");
+      //fprintf(stderr,"Read(): bytes read negative\n");
       return false;
     }
     if (verbose){
-      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+      sfwrite(&lock, stdout, DEFAULT "");
+      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
     }
     if (checkVerb(PROTOCOL_BYE, protocolBuffer)){
-        fprintf(stderr, "Error sending password, received ERR and BYE\n");
+      sfwrite(&lock, stderr, "Error sending password, received ERR and BYE\n");
+        //fprintf(stderr, "Error sending password, received ERR and BYE\n");
         return false;
     }
   }
@@ -406,66 +444,90 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
       if (verbose){
+        sfwrite(&lock, stdout, VERBOSE "%s", messageArray[0]);
+        sfwrite(&lock, stdout, DEFAULT "");
         printf(VERBOSE "%s" DEFAULT, messageArray[0]);
       }
       if (checkVerb(PROTOCOL_HI, messageArray[1])){
-        if (verbose)
-          printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+        if (verbose){
+          sfwrite(&lock, stdout, VERBOSE "%s", messageArray[1]);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+        }
         if (noOfMessages == 3){
           if (checkVerb(PROTOCOL_MOTD, messageArray[2])){
-            if (verbose)
-              printf(VERBOSE "%s" DEFAULT, messageArray[2]);
+            if (verbose){
+              sfwrite(&lock, stdout, VERBOSE "%s", messageArray[2]);
+              sfwrite(&lock, stdout, DEFAULT "");
+              //printf(VERBOSE "%s" DEFAULT, messageArray[2]);
+            }
             if (extractArgsAndTest(messageArray[2], motd)){
-              printf("%s\n", motd);
+              sfwrite(&lock, stdout, "%s\n", motd);
+              //printf("%s\n", motd);
               strcat(loginMSG, motd);
               return true;
             } 
           }
           else{
-            fprintf(stderr, "Didn't receive MOTD\n");
+            sfwrite(&lock, stderr, "Didn't receive MOTD\n");
+            //fprintf(stderr, "Didn't receive MOTD\n");
             return false;
           }
         }
         memset(&protocolBuffer, 0, 1024);
         read(fd,&protocolBuffer,1024);
-        if (verbose)
-          printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+        if (verbose){
+          sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+        }
         if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
             if (extractArgsAndTest(protocolBuffer, motd)){
-              printf("%s\n", motd);
+              sfwrite(&lock, stdout, "%s\n", motd);
+              //printf("%s\n", motd);
               strcat(loginMSG, motd);
               return true;
             }
         }
         else{
-            fprintf(stderr, "Didn't receive MOTD\n");
+          sfwrite(&lock, stderr, "Didn't receive MOTD\n");
+            //fprintf(stderr, "Didn't receive MOTD\n");
             return false;
         }
       }
       else{
-        fprintf(stderr, "Didn't receive HI\n");
+        sfwrite(&lock, stderr, "Didn't receive HI\n");
+        //fprintf(stderr, "Didn't receive HI\n");
       }
     }
     memset(&protocolBuffer, 0, 1024);
     if (read(fd, &protocolBuffer,1024) < 0){
-      fprintf(stderr,"Read(): bytes read negative\n");
-    return false;
+      sfwrite(&lock, stderr, "Read(): bytes read negative\n");
+      //fprintf(stderr,"Read(): bytes read negative\n");
+      return false;
     }
     memset(&messageArray, 0, 1024);
     if ((noOfMessages = getMessages(messageArray, protocolBuffer))>1){
       if (verbose){
-        printf(VERBOSE "%s" DEFAULT, messageArray[0]);
+        sfwrite(&lock, stdout, VERBOSE "%s", messageArray[0]);
+        sfwrite(&lock, stdout, DEFAULT "");
+        //printf(VERBOSE "%s" DEFAULT, messageArray[0]);
       }
       if (checkVerb(PROTOCOL_HI, messageArray[0])){
         if (verbose){
-          printf(VERBOSE "%s" DEFAULT, messageArray[0]);
+          sfwrite(&lock, stdout, VERBOSE "%s", messageArray[0]);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, messageArray[0]);
         }
         if (checkVerb(PROTOCOL_MOTD, messageArray[1])){
             if (verbose){
-              printf(VERBOSE "%s" DEFAULT, messageArray[1]);
+              sfwrite(&lock, stdout, VERBOSE "%s", messageArray[1]);
+              sfwrite(&lock, stdout, DEFAULT "");
+              //printf(VERBOSE "%s" DEFAULT, messageArray[1]);
             }
             if (extractArgsAndTest(messageArray[1], motd)){
-              printf("%s\n", motd);
+              sfwrite(&lock, stdout, "%s\n", motd);
+              //printf("%s\n", motd);
               strcat(loginMSG, motd);
               return true;
             }
@@ -473,32 +535,48 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
         }
       }
     if (protocol_Login_Helper(PROTOCOL_HI, protocolBuffer, username)){
-      if (verbose)
-          printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      if (verbose){
+          sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+        }
       memset(&protocolBuffer, 0, 1024);
       if (read(fd, &protocolBuffer,1024) < 0){
-        fprintf(stderr,"Read(): bytes read negative\n");
-      return false;
+        sfwrite(&lock, stderr,"Read(): bytes read negative\n");
+        //fprintf(stderr,"Read(): bytes read negative\n");
+        return false;
       }
-      if (verbose)
-          printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      if (verbose){
+          sfwrite(&lock, stdout, VERBOSE "%s", protocolBuffer);
+          sfwrite(&lock, stdout, DEFAULT "");
+          //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+        }
       if (checkVerb(PROTOCOL_MOTD, protocolBuffer)){
           if (extractArgsAndTest(protocolBuffer, motd)){
-              printf("%s\n", motd);
+              sfwrite(&lock, stdout, "%s\n", motd);
+              //printf("%s\n", motd);
               strcat(loginMSG, motd);
               return true;
           }
-        else
-          fprintf(stderr, "Expected verb MOTD");
+        else{
+          sfwrite(&lock, stderr, "Expected verb MOTD");
+          //fprintf(stderr, "Expected verb MOTD");
+        }
       }
-      else 
-        printf("Expected MOTD");
+      else {
+        sfwrite(&lock, stderr, "Expected MOTD");
+        //printf("Expected MOTD");
+      }
     }
-    else
-      printf("protocol_Login_Helper failed\n");
+    else{
+      sfwrite(&lock, stderr, "protocol_Login_Helper failed\n");
+      //printf("protocol_Login_Helper failed\n");
+    }
   }
-  else 
-    printf("Expected SSAP or SSAPWEN\n");
+  else {
+    sfwrite(&lock, stderr, "Expected SSAP or SSAPWEN\n");
+    //printf("Expected SSAP or SSAPWEN\n");
+  }
   return false; 
 }
 
@@ -510,7 +588,6 @@ void writeToGlobalSocket(){
 }
 
 void recognizeAndExecuteStdin(char* userTypedIn){
-  printf("user typed in: %s", userTypedIn);
   if(strcmp(userTypedIn,"/users\n")==0){ 
     //PRINT OUT USERS 
     //processUsersRequest();
@@ -531,6 +608,12 @@ FILE *initAudit(char *file){
   }
   filePtr = fopen(fileName, "a");
   return filePtr;
+}
+
+void lockWriteUnlock(char* text, FILE *stream, int fd){
+  flock(fd, LOCK_EX);
+  fprintf(stream, "%s\n", text);
+  flock(fd, LOCK_UN);
 }
 
 

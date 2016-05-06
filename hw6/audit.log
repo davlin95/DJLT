@@ -1,0 +1,6 @@
+05/06/16-11:05am, wilson1, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-11:05am, wilson1, CMD, /listu, success, client
+05/06/16-11:05am, wilson1, LOGOUT, intentional
+05/06/16-11:05am, david2, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-11:05am, david2, CMD, /time, success, client
+05/06/16-11:05am, david2, LOGOUT, intentional
