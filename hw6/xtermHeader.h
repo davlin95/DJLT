@@ -12,12 +12,14 @@
 int makeNonBlockingForChat(int fd){
   int flags;
   if ((flags = fcntl(fd, F_GETFL, 0)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    sfwrite(&lock, stderr, "fcntl(): %s\n",strerror(errno));
+    //fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   flags |= O_NONBLOCK;
   if ((fcntl(fd, F_SETFL, flags)) < 0){
-    fprintf(stderr,"fcntl(): %s\n",strerror(errno));
+    sfwrite(&lock, stderr, "fcntl(): %s\n",strerror(errno));
+    //fprintf(stderr,"fcntl(): %s\n",strerror(errno));
     return -1;
   }
   return 1;
@@ -66,7 +68,8 @@ Xterm* createXtermStruct(char* username,int fd, pid_t process){
 
   //MAKE THE XTERM CHAT FD NONBLOCKING
   if (makeNonBlockingForChat(fd)<0){ 
-    fprintf(stderr,"createXtermStruct(): Error making fd nonblocking\n");
+    sfwrite(&lock, stderr, "createXtermStruct(): Error making fd nonblocking\n");
+    //fprintf(stderr,"createXtermStruct(): Error making fd nonblocking\n");
   }
 
   //ADD VALUES TO STRUCT
@@ -119,13 +122,14 @@ void setChatUser(char* username, int fd, pid_t xtermProcess){
   }
   newXterm->next = xtermHead;
   xtermHead = newXterm;
-
-  printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
+  sfwrite(&lock, stderr, "newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
+  //printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
   //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
   clientPollFds[clientPollNum].fd = fd;
   clientPollFds[clientPollNum].events = POLLIN;
   clientPollNum++;
-  printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+  sfwrite(&lock, stderr, "setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+  //printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
 }
 
 Xterm* getXtermByUsername(char* username){
@@ -161,18 +165,21 @@ Xterm* getXtermByChatFd(int fd){
 
 void createSocketPair(int socketsArray[], int size){
   if(size <2){
-    fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
+    sfwrite(&lock, stderr, "CreateSocketPair(): insufficient size of array\n");
+    //fprintf(stderr,"CreateSocketPair(): insufficient size of array\n");
   }
   int status=-1;
   status = socketpair(AF_UNIX,SOCK_STREAM,0,socketsArray);
   if(status<0){
-    fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
+    sfwrite(&lock, stderr, "CreateSocketPair(): error with socketpair()\n");
+    //fprintf(stderr,"CreateSocketPair(): error with socketpair()\n");
   }
 }
 
-char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* originalUser, int socketCopy){
+char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* originalUser, int socketCopy, int auditFd){
   if(xOffset<0){
-    fprintf(stderr,"buildXtermArgs error(): defaulting to xOffset of 0\n");
+    sfwrite(&lock, stderr, "buildXtermArgs error(): defaulting to xOffset of 0\n");
+    //fprintf(stderr,"buildXtermArgs error(): defaulting to xOffset of 0\n");
     xOffset=0;
   }
 
@@ -204,6 +211,10 @@ char** buildXtermArgs(char* xtermArgs[],int xOffset, char* otherUser, char* orig
 	strcpy(user2,originalUser);
   }
   xtermArgs[9]=user2;
+  char fdBuf[10];
+  memset(&fdBuf, 0, 10);
+  sprintf(fdBuf, "%d", auditFd);
+  xtermArgs[10]=fdBuf;
   return xtermArgs;
 }
 
@@ -262,7 +273,7 @@ char* statFind(char* findDir, char* buffer){
   return NULL;
 }
 
-int createXterm(char * sendToUser, char* originalUser){
+int createXterm(char * sendToUser, char* originalUser, int auditFd){
   pid_t pid;
   int socketArr[10];
 
@@ -275,7 +286,7 @@ int createXterm(char * sendToUser, char* originalUser){
     char xtermString[1024];
     memset(&xtermString,0,1024);
     char* xtermArgs[1024];
-    buildXtermArgs(xtermArgs, 320 ,sendToUser, originalUser, socketArr[1]);
+    buildXtermArgs(xtermArgs, 320 ,sendToUser, originalUser, socketArr[1], auditFd);
 
     //EXECUTE XTERM
     int execStatus =-1;
@@ -283,12 +294,14 @@ int createXterm(char * sendToUser, char* originalUser){
 
     // FAILED XTERM, CLEAN UP GLOBAL RESOURCES
     if(execStatus<0){
-      fprintf(stderr,"createXterm():Failed to execute\n");
+      sfwrite(&lock, stderr, "createXterm():Failed to execute\n");
+      //fprintf(stderr,"createXterm():Failed to execute\n");
       exit(EXIT_FAILURE); 
     }
   }
   else if(pid<0){ //PARENT
-    fprintf(stderr,"createXterm(): error forking\n");
+    sfwrite(&lock, stderr, "createXterm(): error forking\n");
+    //fprintf(stderr,"createXterm(): error forking\n");
     exit(EXIT_FAILURE);
   }
   //UPDATE DATA STRUCTURES

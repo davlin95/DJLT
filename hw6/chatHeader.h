@@ -10,39 +10,41 @@
 #include <signal.h>
 #include <arpa/inet.h>
 #include <sys/fcntl.h>
+#include <sys/file.h>
+#include "sfwrite.c"
 
 #define VERBOSE "\x1b[1;34m"
 #define ERROR "\x1b[1;31m"
 #define DEFAULT "\x1b[0m"
 
- 				/************************************/
+        /************************************/
                 /*  Global Structures               */
                 /************************************/
 
 struct pollfd chatPollFds[1024];
 int chatPollNum=0;
 int chatFd=-1;
+pthread_mutex_t lock;
 
 
 
 #define USAGE(name) do {                                                                    \
         fprintf(stderr,                                                                         \
-            "\n%s UNIX_SOCKET_FD AUDIT_FILE_FD\n"                                                             \
+            "\n%s UNIX_SOCKET_FD\n"                                                             \
             "UNIX_SOCKET_FD       The Unix Domain File Descriptor number.\n"                  \
-            "AUDIT_FILE_FD        The file descriptor of the audit.log created in the client program\n"\
             ,(name)                                                                             \
         );                                                                                      \
     } while(0)
 
 
-						/***********************************************************************/
-						/*                    CHAT PROGRAM FUNCTIONS                         */
-						/**********************************************************************/
+            /***********************************************************************/
+            /*                    CHAT PROGRAM FUNCTIONS                         */
+            /**********************************************************************/
 
 
 /*
  *A function that makes the socket non-blocking
- *@param fd: file descriptor of the socket 
+ *@param fd: file descriptor of the socket
  *@return: 0 if success, -1 otherwise
  */
 int makeNonBlocking(int fd){
@@ -65,7 +67,7 @@ bool isAllDigits(char* string){
   char* checkPtr=string;
   for(i=0;i<strlen(string);i++){
     if(*checkPtr>'9' || *checkPtr < '0' ){
-    	return false;
+      return false;
     }
   }
   return true;
@@ -99,10 +101,17 @@ void printUserIn(){
 }
  
 void printUserOut(){
-  	char promptArrow[1024];
-  	memset(&promptArrow,0,1024);
-  	strcat(promptArrow,"< ");
-  	printf(ERROR "\n%s",promptArrow);
+    char promptArrow[1024];
+    memset(&promptArrow,0,1024);
+    strcat(promptArrow,"< ");
+    printf(ERROR "\n%s",promptArrow);
+}
+
+
+void lockWriteUnlock(char* text, int fd){
+  flock(fd, LOCK_EX);
+  write(fd, text, strlen(text));
+  flock(fd, LOCK_UN);
 }
 
 

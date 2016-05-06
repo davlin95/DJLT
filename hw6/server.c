@@ -127,14 +127,14 @@ int main(int argc, char* argv[]){
       exit(0);
     }
     //NO PREVIOUS DB, CREATE NEW ACCOUNTS
-    sql = "CREATE TABLE ACCOUNTS("                        \
+    sql = "CREATE TABLE IF NOT EXISTS ACCOUNTS("          \
           "username     CHAR(1025) PRIMARY KEY NOT NULL," \
           "password     CHAR(1025) NOT NULL,"             \
           "salt         CHAR(1025) NOT NULL);";
     if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
       fprintf(stderr, "SQL Error: %s\n", dbErrorMessage);
       sqlite3_free(dbErrorMessage);
-      //exit(0);
+      exit(0);
     }
   }
 

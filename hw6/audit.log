@@ -11,3 +11,15 @@
 05/06/16-12:40pm, david2, CMD, [A/listu, failure, client
 05/06/16-12:40pm, david2, CMD, /listu, success, client
 05/06/16-12:41pm, david2, LOGOUT, intentional
+05/06/16-02:36pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-02:36pm, david2, LOGIN, 127.0.0.1:1234, success, whatsup 
+05/06/16-02:36pm, david2, CMD, /chat, success, client
+05/06/16-02:36pm, wilson1, MSG, from, david2, hello
+05/06/16-02:36pm, david2, MSG, to, wilson1, hello
+05/06/16-02:36pm, wilson1, MSG, to, david2, yo
+05/06/16-02:36pm, david2, MSG, from, wilson1, yo
+05/06/16-02:36pm, david2, MSG, to, wilson1, yo
+05/06/16-02:36pm, wilson1, MSG, from, david2, yo
+05/06/16-02:36pm, david2, CMD, /close, success, chat
+05/06/16-02:37pm, wilson1, CMD, /close, success, chat
+05/06/16-02:37pm, david2, LOGOUT, intentional
