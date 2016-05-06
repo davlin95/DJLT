@@ -18,6 +18,8 @@
 #include "WolfieProtocolVerbs.h"
 #include <pthread.h> 
 #include <sqlite3.h>
+#include <semaphore.h> 
+#include "sfwrite.c"
 
 						/***********************************************************************/
 						/*                    STRUCTS AND GLOBAL VARIABLES                     */
@@ -31,6 +33,12 @@ int serverFd=-1;
 int globalSocket;
 pthread_t commThreadId=-1;
 
+//MUTEXES
+pthread_mutex_t loginQueueMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t stdoutMutex = PTHREAD_MUTEX_INITIALIZER;
+int loginQueue[128];
+int queueCount =0;
+sem_t items_semaphore;
 
 typedef struct sessionData{
   char* ipAddressString;
@@ -603,7 +611,7 @@ int createBindListen(char* portNumber, int serverFd){
     freeaddrinfo(results);
     return -1;
   }
-  if(listen(serverFd,1024)<0){
+  if(listen(serverFd,128)<0){
     if(close(serverFd)<0){
       fprintf(stderr,"close(serverFd): %s\n",strerror(errno));
     }
