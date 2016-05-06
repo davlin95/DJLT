@@ -611,7 +611,7 @@ FILE *initAudit(char *file){
   return filePtr;
 }
 
-void lockWriteUnlock(char* text, FILE *stream, int fd){
+void lockWriteUnlock(char* text,  int fd){
   flock(fd, LOCK_EX);
   write(fd, text, strlen(text));
   flock(fd, LOCK_UN);

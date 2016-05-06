@@ -146,11 +146,11 @@ int main(int argc, char* argv[]){
   if (performLoginProcedure(clientFd, username, newUser, loginMSG) == 0){
       close(clientFd);
       createAuditEvent(username, "LOGIN", ipPort, "fail", loginMSG, auditEvent);
-      lockWriteUnlock(auditEvent, auditFile, auditFd);
+      lockWriteUnlock(auditEvent, auditFd);
       exit(0); 
   } 
   createAuditEvent(username, "LOGIN", ipPort, "success", loginMSG, auditEvent);
-  lockWriteUnlock(auditEvent, auditFile, auditFd);
+  lockWriteUnlock(auditEvent, auditFd);
 
    /******************************************/
    /*        IMPLEMENT POLL                 */
@@ -245,6 +245,9 @@ int main(int argc, char* argv[]){
                 }
             }
             else if (checkVerb(PROTOCOL_BYE, message)){ 
+              createAuditEvent(username, "LOGOUT", "error", NULL, NULL, auditEvent);
+              lockWriteUnlock(auditEvent, auditFd);
+              fclose(auditFile);
               close(clientFd);
               exit(EXIT_SUCCESS);
             }
@@ -269,12 +272,12 @@ int main(int argc, char* argv[]){
                 //IF NO OPEN CHAT FROM PREVIOUS CONTACT, AND MESSAGE ADDRESSED TO THIS CLIENT
                 if(getXtermByUsername(fromUser)==NULL && strcmp(toUser,username)==0){
                     //CREATE CHAT BOX
-                    int child = createXterm(fromUser,username);
+                    int child = createXterm(fromUser,username, auditFd);
                     send(child,messageFromUser,strnlen(messageFromUser,1023),0);
                     char *messagePtr = (void *)messageFromUser + strlen(messageFromUser);
                     *messagePtr = '\0';
                     createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
-                    lockWriteUnlock(auditEvent, auditFile, auditFd);
+                    lockWriteUnlock(auditEvent, auditFd);
 
                     /*//CONTINUE TO SEND CHAT  
                     Xterm* xterm = getXtermByUsername(fromUser);
@@ -294,7 +297,7 @@ int main(int argc, char* argv[]){
                       char *messagePtr = (void *)messageFromUser + strlen(messageFromUser) - 1;
                       *messagePtr = '\0';
                       createAuditEvent(username, "MSG", "from", fromUser, messageFromUser, auditEvent);
-                      lockWriteUnlock(auditEvent, auditFile, auditFd);
+                      lockWriteUnlock(auditEvent, auditFd);
                     }else{
                       sfwrite(&lock, stderr, "poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
                       //fprintf(stderr,"poll() loop: receiving MSG from server from pre-existing chat user, but no chatbox found\n");
@@ -303,12 +306,12 @@ int main(int argc, char* argv[]){
                 //IF CHATBOX DOESN'T EXIST FROM PREVIOUS CONTACT, BUT THIS CLIENT IS THE SENDER
                 else if(getXtermByUsername(toUser)==NULL && strcmp(fromUser,username)==0){
                   //CREATE CHAT BOX
-                  int child = createXterm(toUser,username);
+                  int child = createXterm(toUser,username, auditFd);
                   send(child,messageFromUser,strnlen(messageFromUser,1023),0);
                   char *messagePtr = (void *)messageFromUser + strlen(messageFromUser);
                   *messagePtr = '\0';
                   createAuditEvent(username, "MSG", "to", toUser, messageFromUser, auditEvent);
-                  lockWriteUnlock(auditEvent, auditFile, auditFd);
+                  lockWriteUnlock(auditEvent, auditFd);
 
                   /*//SAFE-SEND CHAT  
                   Xterm* xterm = getXtermByUsername(toUser);
@@ -343,18 +346,18 @@ int main(int argc, char* argv[]){
             if(strcmp(stdinBuffer,"/time")==0){
               protocolMethod(clientFd, TIME, NULL, NULL, NULL, verbose, &lock);
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
             }  
             else if(strcmp(stdinBuffer,"/listu")==0){  
               protocolMethod(clientFd, LISTU, NULL, NULL, NULL, verbose, &lock); 
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
             }  
             else if(strcmp(stdinBuffer,"/logout")==0){
               protocolMethod(clientFd, BYE, NULL, NULL, NULL, verbose, &lock);
               waitForByeAndClose(clientFd); 
               createAuditEvent(username, "LOGOUT", "intentional", NULL, NULL, auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
               fclose(auditFile);
               exit(EXIT_SUCCESS);   
             }  
@@ -364,21 +367,21 @@ int main(int argc, char* argv[]){
                 createAuditEvent(username, "CMD", "/chat", "failure", "client", auditEvent);
               else
                 createAuditEvent(username, "CMD", "/chat", "success", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
             }
             else if(strcmp(stdinBuffer,"/help")==0){  
             	displayHelpMenu(clientHelpMenuStrings);
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
             } 
             else if(strcmp(stdinBuffer,"/audit")==0){
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
               //todo: print audit log
             }
             else{
               createAuditEvent(username, "CMD", stdinBuffer, "failure", "client", auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
               //todo:not a valid command
             }
             
@@ -425,7 +428,7 @@ int main(int argc, char* argv[]){
               chatBytes = send(clientFd,relayMessage,strnlen(relayMessage,1023),0);
               chatBuffer[strlen(chatBuffer) - 1] = 0;
               createAuditEvent(username, "MSG", "to", xterm->toUser, chatBuffer, auditEvent);
-              lockWriteUnlock(auditEvent, auditFile, auditFd);
+              lockWriteUnlock(auditEvent, auditFd);
 
           }
         }
