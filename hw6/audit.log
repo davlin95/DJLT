@@ -23,3 +23,11 @@
 05/06/16-02:36pm, david2, CMD, /close, success, chat
 05/06/16-02:37pm, wilson1, CMD, /close, success, chat
 05/06/16-02:37pm, david2, LOGOUT, intentional
+05/06/16-03:24pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsgoodie 
+05/06/16-03:24pm, david2, LOGIN, 127.0.0.1:1234, success, whatsgoodie 
+05/06/16-03:24pm, david2, CMD, /chat, success, client
+05/06/16-03:24pm, wilson1, MSG, from, david2, hello
+05/06/16-03:24pm, david2, MSG, to, wilson1, hello
+05/06/16-03:24pm, wilson1, LOGOUT, intentional
+05/06/16-03:24pm, david2, LOGOUT, intentional
+05/06/16-03:25pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsgoodie 

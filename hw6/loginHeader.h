@@ -37,7 +37,7 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     if (verbose){
       printf(VERBOSE "%s" DEFAULT, protocolBuffer);
     }
-    protocolMethod(fd,EIFLOW,NULL,NULL,NULL, verbose);
+    protocolMethod(fd,EIFLOW,NULL,NULL,NULL, verbose, &stdoutMutex);
   }
   else{
     fprintf(stderr, "Expected protocol verb WOLFIE\n");
@@ -59,11 +59,11 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   if (protocol_Login_Helper(PROTOCOL_IAMNEW, protocolBuffer, userBuffer)){
     *newUser = true;
     if (validUsername(userBuffer) && getAccountByUsername(userBuffer)==NULL){
-      protocolMethod(fd, HINEW, userBuffer,NULL,NULL, verbose);
+      protocolMethod(fd, HINEW, userBuffer,NULL,NULL, verbose, &stdoutMutex);
     }
     else{
-      protocolMethod(fd, ERR0, NULL,NULL,NULL, verbose);
-      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
+      protocolMethod(fd, ERR0, NULL,NULL,NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
       fprintf(stderr, "Invalid Username or account already exists.\n");
       return false; 
     }
@@ -74,18 +74,18 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   else if (protocol_Login_Helper(PROTOCOL_IAM, protocolBuffer, userBuffer)){
     if (getAccountByUsername(userBuffer)!=NULL){
       if(getClientByUsername(userBuffer)==NULL){
-        protocolMethod(fd, AUTH, NULL, NULL, NULL, verbose);
+        protocolMethod(fd, AUTH, NULL, NULL, NULL, verbose, &stdoutMutex);
       } 
       else{
-        protocolMethod(fd, ERR0, NULL,NULL,NULL,verbose);
-        protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
+        protocolMethod(fd, ERR0, NULL,NULL,NULL,verbose, &stdoutMutex);
+        protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
         fprintf(stderr, "User already signed in.\n");
         return false;
       }
     }
     else{
-      protocolMethod(fd, ERR1, NULL,NULL,NULL, verbose);
-      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose);
+      protocolMethod(fd, ERR1, NULL,NULL,NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
       fprintf(stderr, "Account doesn't exist.\n");
       return false;
     }
@@ -110,14 +110,14 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //------------------------------------------------------||
   if (protocol_Login_Helper(PROTOCOL_NEWPASS, protocolBuffer, passBuffer)){
     if (validPassword(passBuffer)){
-      protocolMethod(fd, SSAPWEN, NULL, NULL, NULL, verbose);
-      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose);
-      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, SSAPWEN, NULL, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose, &stdoutMutex);
       return true;
     }
     else{
-      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
-      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
       fprintf(stderr, "Invalid Password\n");
       return false;
     }
@@ -134,21 +134,21 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     strcat(passBuffer, salt);
     sha256(passBuffer, hashBuffer);
     if (strcmp((getAccountByUsername(userBuffer))->password, (char*)hashBuffer)==0){
-      protocolMethod(fd, SSAP, NULL, NULL, NULL, verbose);
-      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose);
-      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, SSAP, NULL, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, HI, userBuffer, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, MOTD, NULL, NULL, NULL, verbose, &stdoutMutex);
       return true;
     }
     else{
-      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
-      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
+      protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
+      protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
       fprintf(stderr, "Invalid Password\n");
       return false;
     }
   }
   else{
-    protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose);
-    protocolMethod(fd, BYE, NULL, NULL, NULL, verbose);
+    protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
+    protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
     //fprintf(stderr, "Invalid Password\n");
     return false;
   }
