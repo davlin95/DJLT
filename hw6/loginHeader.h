@@ -36,15 +36,14 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------------|| 
   if(checkVerb(PROTOCOL_WOLFIE, protocolBuffer)){
     if (verbose){
-      sfwrite(&stdoutMutex, stdout, VERBOSE "%s", protocolBuffer);
-      sfwrite(&stdoutMutex, stdout, DEFAULT "");
-      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&stdoutMutex,stderr,VERBOSE );
+      sfwrite(&stdoutMutex,stderr,"%s", protocolBuffer);
+      sfwrite(&stdoutMutex,stderr,DEFAULT);
     }
     protocolMethod(fd,EIFLOW,NULL,NULL,NULL, verbose, &stdoutMutex);
   }
   else{
-    sfwrite(&stdoutMutex, stderr, "Expected protocol verb WOLFIE\n");
-    //fprintf(stderr, "Expected protocol verb WOLFIE\n");
+    sfwrite(&stdoutMutex,stderr, "Expected protocol verb WOLFIE\n");
     return false;
   }
   //-----------------------------------------||
@@ -52,18 +51,21 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    sfwrite(&stdoutMutex, stderr, "Read(): bytes read negative\n");
-    //fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&stdoutMutex,stderr,"Read(): bytes read negative\n");
     return false;
   }
-  if (verbose)
-      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+  if (verbose){
+      sfwrite(&stdoutMutex,stderr,VERBOSE );
+      sfwrite(&stdoutMutex,stderr, "%s", protocolBuffer);
+      sfwrite(&stdoutMutex,stderr,DEFAULT);
+    }
+
   //-------------------------------------------------------|| 
   //    CHECK IF RESPONSE: IAMNEW <username> \r\n\r\n      ||  
   //-------------------------------------------------------||
   if (protocol_Login_Helper(PROTOCOL_IAMNEW, protocolBuffer, userBuffer)){
     *newUser = true;
-    if (validUsername(userBuffer) && getAccountByUsername(userBuffer)==NULL){
+    if (validUsername(userBuffer) && getAccountByUsername(userBuffer)==NULL ){
       protocolMethod(fd, HINEW, userBuffer,NULL,NULL, verbose, &stdoutMutex);
     }
     else{
@@ -83,6 +85,7 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
       else{
         protocolMethod(fd, ERR0, NULL,NULL,NULL,verbose, &stdoutMutex);
         protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
+        //sfwrite(&stdoutMutex,stderr, "User already signed in.\n");
         return false;
       }
     }
@@ -100,14 +103,13 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    sfwrite(&stdoutMutex, stderr, "Read(): bytes read negative\n");
-    //fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&stdoutMutex,stderr,"Read(): bytes read negative\n");
     return false;
   }
   if (verbose){
-      sfwrite(&stdoutMutex, stdout, VERBOSE "%s", protocolBuffer);
-      sfwrite(&stdoutMutex, stdout, DEFAULT "");
-      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&stdoutMutex,stderr,VERBOSE );
+      sfwrite(&stdoutMutex,stderr, "%s", protocolBuffer);
+      sfwrite(&stdoutMutex,stderr,DEFAULT);
   }
   //------------------------------------------------------||
   //    CHECK IF RESPONSE: NEWPASS <password> \r\n\r\n    || 
@@ -122,6 +124,7 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     else{
       protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
       protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
+      //sfwrite(&stdoutMutex,stderr, "Invalid Password\n");
       return false;
     }
   }
