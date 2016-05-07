@@ -18,7 +18,7 @@
 int main(int argc, char* argv[]){ 
   char *portNumber;
   char *dbFile = NULL;
-  char *threadCount = "";
+  char * threadCount = "2\0";
   int c;
   //check flags in command line
   while ((c = getopt(argc, argv, "hvt:")) != -1){
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
   }
-  fprintf(stderr, "made it here. optind is %d, and argc is %d\nargv[2] is %s\n", optind, argc, argv[2]);
+  // fprintf(stderr, "made it here. optind is %d, and argc is %d\nargv[2] is %s\n", optind, argc, argv[2]);
   //get username, ip, and address from command line
   if (optind < argc && (argc - optind) > 1){
     portNumber = argv[optind++];
@@ -52,7 +52,7 @@ int main(int argc, char* argv[]){
     USAGE("./server");
     exit(EXIT_FAILURE);
   }
-  printf("%s\n", threadCount);
+  // printf("%s\n", threadCount);
   //INITIALIZE DATABASE VARIABLES
   
   char *dbErrorMessage = 0;
@@ -96,13 +96,13 @@ int main(int argc, char* argv[]){
     if ((dbResult = sqlite3_exec(database, sql, callback, 0, &dbErrorMessage)) != SQLITE_OK){
       sfwrite(&stdoutMutex, stderr, "SQL Error: %s\n", dbErrorMessage);
       sqlite3_free(dbErrorMessage);
-      //exit(0);
     }
   }
   /***********************************/
   /* PROGRAM THREAD ARR AND SIGNALS  */  
   /**********************************/
-  int threadStatus,threadNum=0;
+  int threadStatus,threadNum=0, threadCountInt =2;
+  threadCountInt = atoi(threadCount);
   pthread_t threadId[130];  
   signal(SIGINT,killServerHandler); 
   commThreadId=-1;
@@ -111,13 +111,16 @@ int main(int argc, char* argv[]){
 
   
 
-   /************** SPAWN LOGIN THREAD  *******/
-   threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, NULL);
-   if(threadStatus<0){
+  /************** SPAWN LOGIN THREAD  *******/
+  int i;
+  sfwrite(&stdoutMutex,stdout,"threadCount is %d\n",threadCountInt);
+  for(i=0;i<threadCountInt;i++){
+    threadStatus = pthread_create(&threadId[threadNum++], NULL, &loginThread, NULL);
+    if(threadStatus<0){
       sfwrite(&stdoutMutex, stderr,"Error spawning login thread\n");
-   }
-   pthread_setname_np(threadId[threadNum-1],"LOGIN THREAD");
-
+    }
+    pthread_setname_np(threadId[threadNum-1],"LOGIN THREAD");
+  }
 
   /*******************/
   /* Create Socket  */ 
@@ -134,6 +137,7 @@ int main(int argc, char* argv[]){
   /*  IMPLEMENT POLL: USED LATER IN COMMUNICATION/LOGIN                */
   /********************************************************************/ 
   /* Initialize Polls Interface*/
+  sem_init(&mainpoll_semaphore,0,1);
   memset(pollFds, 0 , sizeof(pollFds));
   pollNum =1;
 
@@ -222,15 +226,14 @@ int main(int argc, char* argv[]){
           	pthread_mutex_lock(&loginQueueMutex);
           	loginQueue[queueCount++]=connfd;
           	pthread_mutex_unlock(&loginQueueMutex);
-          	sem_post(&items_semaphore);
+            sem_post(&items_semaphore);
           }else{
           	//WHAT IF PAST 128 CONCURRENCY?
-			pthread_mutex_lock(&loginQueueMutex);
+			      pthread_mutex_lock(&loginQueueMutex);
           	loginQueue[queueCount++]=connfd;
           	pthread_mutex_unlock(&loginQueueMutex);
           	sem_post(&items_semaphore);
           }
-
         } 
       }
       /***********************************/
@@ -311,7 +314,6 @@ int main(int argc, char* argv[]){
 /**********************/
 /*     LOGIN THREAD  */ 
 /********************/
- 
 void* loginThread(void* args){ 
   int connfd;
   while(true){
@@ -319,7 +321,6 @@ void* loginThread(void* args){
   	pthread_mutex_lock(&loginQueueMutex);
   	connfd = loginQueue[--queueCount];
   	pthread_mutex_unlock(&loginQueueMutex);
-
 
   	//USER INFO
   	int user = 0;      
@@ -329,6 +330,7 @@ void* loginThread(void* args){
   	char password[1024];
   	memset(&password, 0, 1024);
 
+    pthread_mutex_lock(&loginProcedureMutex);
   	/*************** NONBLOCK CONNFD SET TO GLOBAL CLIENT LIST *********/
   	if (performLoginProcedure(connfd, username, password, newUser)){
 
@@ -336,10 +338,11 @@ void* loginThread(void* args){
     	if (makeNonBlocking(connfd)<0){
       		sfwrite(&stdoutMutex, stderr, "Error making connection socket nonblocking.\n");
     	}   
+      sem_wait(&mainpoll_semaphore);
     	pollFds[pollNum].fd = connfd;
     	pollFds[pollNum].events = POLLIN;
     	pollNum++; 
-
+      sem_post(&mainpoll_semaphore);
 
     	/***********************************/
     	/* NEW USER NEEDS ACCOUNT CREATED */
@@ -353,18 +356,18 @@ void* loginThread(void* args){
       		//CREATE RANDOM NUMBER SALT 
       		if (RAND_bytes(saltBuffer, 10) == 0){
         		sfwrite(&stdoutMutex, stderr, "LoginThread(): Error creating salt\n");
-      		}
-
+      		} 
+ 
       		//APPEND SALT AND HASH IT  
-      		strcat(password, (char*)saltBuffer);
+      		strcat(password, (char*)saltBuffer); 
       		sha256(password, passwordHash); 
 
       		//STORE IT IN NEW ACCOUNT STRUCT INTO GLOBAL LIST
-      		processValidAccount(&accountList_RWLock,username, (char *)passwordHash, (char *)saltBuffer);
+      		processValidAccount(username, (char *)passwordHash, (char *)saltBuffer);
     	}
     	
     	//ADD CLIENT TO ACTIVE LIST OF USERS
-    	processValidClient(&clientList_RWLock,username,connfd);
+    	processValidClient(username,connfd);
 
      	/****************************************************/
     	/* IF COMMUNICATION THREAD NEEDED FOR MULTIPLEXING  */
@@ -381,18 +384,18 @@ void* loginThread(void* args){
     	if(globalSocket>0){
       		write(globalSocket," ",1);
     	}
-  	}
+  	} 
   	/**********************/
   	/* USER FAILED LOGIN */
   	/********************/
   	else {
     	writeToGlobalSocket();
     	close(connfd);
-    	free( ((int *)args)  ); // FREE MALLOCED THE HEAP INT 
+    	free(((int *)args)); // FREE MALLOCED THE HEAP INT 
   	}
+    pthread_mutex_unlock(&loginProcedureMutex);
   	write(globalSocket," ",1);
   }
-  
   //EXIT THREAD 
   return NULL; 
 } 

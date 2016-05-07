@@ -31,3 +31,527 @@
 05/06/16-03:24pm, wilson1, LOGOUT, intentional
 05/06/16-03:24pm, david2, LOGOUT, intentional
 05/06/16-03:25pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsgoodie 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD 
+
+
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, CMD, , failure, client
+05/06/16-03:43pm, zetaj, LOGOUT, error
+05/06/16-03:43pm, zetaj, LOGOUT, error
+05/06/16-03:43pm, zetaj, LOGOUT, error
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:49pm, zetam, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:51pm, zetan, LOGOUT, error
+05/06/16-03:51pm, zetan, LOGOUT, error
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:56pm, zetan, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:57pm, zetao, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-03:59pm, zetao, LOGOUT, error
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, zetaP, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:13pm, zetaP, LOGOUT, error
+05/06/16-06:17pm, zetaR, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:17pm, zetaR, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:18pm, zetaR, LOGOUT, error
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:18pm, zetaR, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:19pm, zetaS, CMD, , failure, client
+05/06/16-06:26pm, khaled, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:26pm, khaled, LOGOUT, intentional
+05/06/16-06:29pm, khaled, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:29pm, chuntak, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-06:30pm, Rob, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-06:32pm, khaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:32pm, khaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:32pm, khaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:33pm, chuntak, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-06:33pm, khaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:33pm, khaled, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:33pm, khaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:35pm, chuntak, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD 
+
+
+05/06/16-06:35pm, Davie, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:35pm, Davie, LOGOUT, intentional
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:36pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:39pm, Davie, CMD, make, failure, client
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-06:40pm, Davie, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-06:41pm, Davie, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-07:09pm, Davie, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:09pm, Davie, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:09pm, Kelly, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:13pm, Davie, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:14pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:18pm, DJLT, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:20pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:22pm, DJKhaled, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:23pm, DJKhaled, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:45pm, DJKhaled4, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:49pm, DJKhaled4, LOGOUT, error
+05/06/16-07:50pm, DJKhaled5, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:50pm, DJKhaled5, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:50pm, DJKhaled5, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:50pm, DJKhaled5, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:50pm, DJKhaled5, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:50pm, DJKhaled5, LOGOUT, intentional
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:52pm, DJLTKhaledA, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:54pm, DJKhaledC, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-07:55pm, DJKhaledC, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-07:55pm, DJKhaledC, CMD, , failure, client
+05/06/16-07:55pm, DJKhaledC, CMD, /listu, success, client
+05/06/16-07:55pm, DJKhaledC, CMD, /listu, success, client
+05/06/16-08:00pm, DJKhaledD, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:04pm, DJKhaledD, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-08:04pm, DJKhaledG, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:07pm, DJKhaledG, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:08pm, DJKhaledH, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:10pm, DJKhaledI, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:11pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:12pm, DJKhaledJ, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:13pm, DJKhaledK, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:15pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:16pm, DJKhaledL, LOGIN, 127.0.0.1:1234, fail, 
+05/06/16-08:16pm, DJKhaledM, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:22pm, snake, CMD, /users, failure, client
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:23pm, snake, LOGOUT, error
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:24pm, snake1, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:26pm, snake1, LOGOUT, error
+05/06/16-08:26pm, snake1, LOGOUT, error
+05/06/16-08:26pm, snake1, LOGOUT, error
+05/06/16-08:26pm, snake1, LOGOUT, error
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, LOGOUT, error
+05/06/16-08:27pm, snake2, LOGOUT, error
+05/06/16-08:27pm, snake2, LOGOUT, error
+05/06/16-08:27pm, snake2, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake2, CMD, Snake3#, failure, client
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:27pm, snake3, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:28pm, snake3, LOGOUT, error
+05/06/16-08:28pm, snake2, LOGOUT, error
+05/06/16-08:28pm, snake5, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, success, helloworld 
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-08:29pm, snake6, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN

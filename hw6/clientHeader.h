@@ -366,7 +366,9 @@ bool performLoginProcedure(int fd,char* username, bool newUser, char *loginMSG){
   if (protocol_Login_Helper(PROTOCOL_HINEW, protocolBuffer, username) || checkVerb(PROTOCOL_AUTH, protocolBuffer)){
     char password[1024];
     memset(&password,0,1024);
-    strcpy(password, getpass("password: "));
+    sfwrite(&lock, stdout,"%s", "\npassword:");
+    strcpy(password, getpass(""));
+
 
     //SEND MESSAGE DEPENDING ON WHETHER IS A NEW USER OR NOT
     if (!newUser){

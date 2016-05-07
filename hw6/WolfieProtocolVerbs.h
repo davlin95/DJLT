@@ -295,13 +295,13 @@ bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *
 
     //ERROR CHECK THE INPUT, 
     if ( arrayIndex < 5 ){
-      fprintf(stderr,"extractArgAndTestMSG() error: not enough arguments in buildProtocolMSGString");
+      //fprintf(stderr,"extractArgAndTestMSG() error: not enough arguments in buildProtocolMSGString");
       return false;
     }else if(strcmp(protocolArray[arrayIndex-1], "\r\n\r\n")!=0 ){
-      fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not ended with protocol ending");
+      //fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not ended with protocol ending");
       return false;
     }else if(strcmp(protocolArray[0], PROTOCOL_MSG)!=0){
-      fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not started with protocol string");
+      //fprintf(stderr,"extractArgAndTestMSG() error: buildProtocolString() not started with protocol string");
       return false;
     }
 
@@ -334,11 +334,11 @@ bool extractArgAndTestMSG(char *string, char* toBuffer, char* fromBuffer, char *
  */
 bool buildProtocolString(char* buffer, char* protocol, char* middle){
   if(buffer==NULL||protocol == NULL || middle == NULL) {
-    fprintf(stderr,"error: buildProtocolString() on a NULL or missing parameter");
+    //fprintf(stderr,"error: buildProtocolString() on a NULL or missing parameter");
     return false;
   }
   if( (strcmp(buffer," ")==0 ) || (strcmp(protocol," ")==0 ) || (strcmp(middle," ")==0 )) {
-    fprintf(stderr,"error: buildProtocolString() on a space char");
+    //fprintf(stderr,"error: buildProtocolString() on a space char");
     return false;
   }
   //BUILD STRING 
@@ -355,11 +355,11 @@ bool buildProtocolString(char* buffer, char* protocol, char* middle){
  */
 bool buildMSGProtocol(char* buffer,char* toPerson,char* fromPerson, char* message){
     if(buffer==NULL || toPerson == NULL || fromPerson==NULL || message==NULL){
-        fprintf(stderr,"error: buildMSGPROTOCOL() on a NULL or missing parameter");
+        //fprintf(stderr,"error: buildMSGPROTOCOL() on a NULL or missing parameter");
         return 0;
     }
     if( (strcmp(buffer," ")==0 ) || (strcmp(toPerson," ")==0 ) || (strcmp(fromPerson," ")==0 ) || (strcmp(message," ")==0 )) {
-    fprintf(stderr,"error: buildProtocolString() on a space char");
+    //fprintf(stderr,"error: buildProtocolString() on a space char");
     return false;
   }
     memset(&buffer,0,strlen(buffer));
@@ -400,7 +400,7 @@ bool processChatCommand(int fd, char* string, char* thisUserName, int verbose, p
 
     //ERROR CHECK THE INPUT, 
     if ( arrayIndex < 2 ||strcmp(protocolArray[0], "/chat")!=0 ){
-      fprintf(stderr,"processChatCommand(): array missing parameters or not chat string\n");
+      //fprintf(stderr,"processChatCommand(): array missing parameters or not chat string\n");
       return false;
     }
 
@@ -485,7 +485,7 @@ void protocolMethod(int fd, int wolfieVerb, char* optionalString, char* optional
     case LISTU:    
                 if (verbose){
                   sfwrite(lock, stdout, VERBOSE "%s", PROTOCOL_LISTU);
-                  sfwrite(lock, stdout, DEFAULT "");
+                  sfwrite(lock, stdout, DEFAULT);
                   //printf(VERBOSE "%s" DEFAULT, PROTOCOL_LISTU);
                 }
                 send(fd,PROTOCOL_LISTU,strlen(PROTOCOL_LISTU),0); // MACRO NULL TERMINATED BY DEFAULT

@@ -1,4 +1,4 @@
-						/***********************************************************************/
+      			/***********************************************************************/
 						/*                    HEADER DETAILS                                  */
 						/**********************************************************************/
 
@@ -34,15 +34,18 @@ pthread_t commThreadId=-1;
 
 //MUTEXES
 pthread_mutex_t loginQueueMutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t seenlist_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t loginProcedureMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t stdoutMutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_rwlock_t clientList_RWLock = PTHREAD_RWLOCK_INITIALIZER;
 pthread_rwlock_t accountList_RWLock = PTHREAD_RWLOCK_INITIALIZER;
-
+pthread_rwlock_t seenlist_lock = PTHREAD_RWLOCK_INITIALIZER;
 
 int loginQueue[128];
 int queueCount =0;
 sem_t items_semaphore;
 sem_t accept_semaphore;
+sem_t mainpoll_semaphore;
 
 typedef struct sessionData{
   char* ipAddressString;
@@ -66,6 +69,12 @@ typedef struct accountData{
   struct accountData *next;
   struct accountData *prev;
 }Account;
+
+typedef struct seenListData{
+  char userName[1024];
+  struct seenListData *next;
+  struct seenListData *prev;
+}SeenList;
                       
 
                       /********************************************/
@@ -73,6 +82,52 @@ typedef struct accountData{
                       /*******************************************/
 Client* clientHead;
 Account* accountHead;
+SeenList* seenListHead=NULL;
+
+void setSeenList(char* userBuffer){
+  //pthread_rwlock_wrlock(&seenlist_lock);
+  SeenList* node = malloc(sizeof(SeenList));
+  memset(node->userName,0,1024);
+  strcpy(node->userName,userBuffer);
+  node->next = seenListHead;
+  node->prev = NULL;
+  seenListHead = node;
+  //pthread_rwlock_unlock(&seenlist_lock);
+}
+
+bool inSeenList(char* userBuffer){
+  pthread_mutex_lock(&seenlist_mutex);
+  //pthread_rwlock_wrlock(&seenlist_lock);
+  SeenList* ptr= seenListHead;
+  while(ptr!=NULL){
+    if(strcmp(userBuffer, ptr->userName)==0){
+      SeenList* node = malloc(sizeof(SeenList));
+      memset(node->userName,0,1024);
+      strcpy(node->userName,userBuffer);
+      node->next = seenListHead;
+      node->prev = NULL;
+      seenListHead = node;
+      pthread_mutex_unlock(&seenlist_mutex);
+      return true;
+    }
+  }
+  //pthread_rwlock_unlock(&seenlist_lock);
+  pthread_mutex_unlock(&seenlist_mutex);
+  return false;
+}
+
+
+void destroySeenList(){
+  pthread_rwlock_wrlock(&seenlist_lock);
+  SeenList* head = seenListHead;
+  SeenList* temp;
+  while(head!=NULL){
+    temp = head;
+    head = head->next;
+    free(temp);
+  }
+  pthread_rwlock_unlock(&seenlist_lock);
+}
 
 Client *createClient(char *username, int fd){
   Client *client = malloc(sizeof(struct clientData));
@@ -118,9 +173,11 @@ void setClientUserName(Client* client,char* name){
 }
 */
 void addClientToList(Client* client){
+  pthread_rwlock_wrlock(&clientList_RWLock);
   client->next=clientHead;
   client->prev=NULL;
   clientHead=client;
+  pthread_rwlock_unlock(&clientList_RWLock);
 }
 
 
@@ -136,9 +193,11 @@ Account *createAccount(char *username, char* password, char* salt){
 }
 
 void addAccountToList(Account* account){
+  pthread_rwlock_wrlock(&accountList_RWLock);
   account->next=accountHead;
   account->prev=NULL;
   accountHead=account;
+  pthread_rwlock_unlock(&accountList_RWLock);
 }
 
 
@@ -328,6 +387,7 @@ void processUsers();
    if(serverFd>0){
      close(serverFd);
    }
+   destroySeenList();
    // printf("\nEXITING\n");
    exit(0);
  }
@@ -680,8 +740,7 @@ void sha256(char* password, unsigned char *output){
   SHA256_Final(output, &sha256);
 }
 
-void processValidClient(pthread_rwlock_t* rwLock,char* clientUserName, int fd){
-  pthread_rwlock_wrlock(rwLock);
+void processValidClient(char* clientUserName, int fd){
   Client* newClient = createClient(clientUserName, fd);
 
   //GET IPADDRESS STRING FOR THE CLIENT STRUCT
@@ -698,20 +757,17 @@ void processValidClient(pthread_rwlock_t* rwLock,char* clientUserName, int fd){
   //START SESSION TIME FOR CLIENT
   startSession(newClient->session);
   addClientToList(newClient);
-  pthread_rwlock_unlock(rwLock);
 }
 
-void processValidAccount(pthread_rwlock_t* rwLock, char *username, char *password, char *salt){
-  pthread_rwlock_wrlock(rwLock);
+void processValidAccount(char *username, char *password, char *salt){
   Account* newAccount = createAccount(username, password, salt);
   addAccountToList(newAccount);
-  pthread_rwlock_unlock(rwLock);
 }
 
 int callback(void* NotUsed, int argc, char **argv, char**azColName){
   int i;
   for (i = 0; i < argc; i+=3){
-    processValidAccount(&accountList_RWLock, argv[i], argv[i+1], argv[i+2]);
+    processValidAccount( argv[i], argv[i+1], argv[i+2]);
   }
   return 0;
 }
@@ -774,7 +830,7 @@ void getAccounts(char * accounts){
             sfwrite(&stdoutMutex,stderr, "Invalid Accounts File\n");
             exit(0);
           }
-          processValidAccount(&accountList_RWLock, usernamePtr, passwordPtr, saltPtr);
+          processValidAccount( usernamePtr, passwordPtr, saltPtr);
           memset(&username, 0, 1024);
           memset(&password, 0, 1024);
           memset(&salt, 0, 1024);
