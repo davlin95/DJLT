@@ -41,10 +41,6 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
   }
-<<<<<<< HEAD
-=======
-  // fprintf(stderr, "made it here. optind is %d, and argc is %d\nargv[2] is %s\n", optind, argc, argv[2]);
->>>>>>> 7f919972e77432cf0725f26316dfab741787f9eb
   //get username, ip, and address from command line
   if (optind < argc && (argc - optind) > 1){
     portNumber = argv[optind++];
