@@ -41,7 +41,7 @@ void cleanUpXterm(Xterm* xterm){
 }
 
 
-void xtermReaperHandler(){
+void xtermReaperHandler(){ 
   pid_t pid;
   int reapStatus; 
   pid = waitpid(-1,&reapStatus,WUNTRACED);
@@ -375,14 +375,13 @@ int main(int argc, char* argv[]){
               lockWriteUnlock(auditEvent, auditFd);
             } 
             else if(strcmp(stdinBuffer,"/audit")==0){
+              processAudit(auditFd);
               createAuditEvent(username, "CMD", stdinBuffer, "success", "client", auditEvent);
               lockWriteUnlock(auditEvent, auditFd);
-              //todo: print audit log
             }
             else{
               createAuditEvent(username, "CMD", stdinBuffer, "failure", "client", auditEvent);
               lockWriteUnlock(auditEvent, auditFd);
-              //todo:not a valid command
             }
             
           } 
@@ -432,7 +431,7 @@ int main(int argc, char* argv[]){
 
           }
         }
-         
+          
       }/* MOVE ON TO NEXT POLL FD */ 
 
     }/* FOREVER RUNNING LOOP */ 

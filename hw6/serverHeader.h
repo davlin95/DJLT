@@ -323,7 +323,7 @@ void processUsers();
   * A function that shuts down the server
   */ 
  void processShutdown(){
-   sfwrite(&stdoutMutex,stdout,"SHUTTING DOWN()\n");
+   //sfwrite(&stdoutMutex,stdout,"SHUTTING DOWN()\n");
    disconnectAllUsers();
    if(serverFd>0){
      close(serverFd);

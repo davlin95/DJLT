@@ -122,13 +122,13 @@ void setChatUser(char* username, int fd, pid_t xtermProcess){
   }
   newXterm->next = xtermHead;
   xtermHead = newXterm;
-  sfwrite(&lock, stderr, "newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
+  //sfwrite(&lock, stderr, "newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
   //printf("newXterm added in list: local var xtermProcess is %d struct val is %d\n",xtermProcess,xtermHead->xtermProcess);
   //ADD TO GLOBAL POLL STRUCT THAT CORRESPONDS TO THE CHATFD GLOBALS
   clientPollFds[clientPollNum].fd = fd;
   clientPollFds[clientPollNum].events = POLLIN;
   clientPollNum++;
-  sfwrite(&lock, stderr, "setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
+  //sfwrite(&lock, stderr, "setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
   //printf("setChatUser(): fd just set is : %d clientPollNum for it is %d\n",clientPollFds[clientPollNum-1].fd, clientPollNum-1);
 }
 

@@ -31,3 +31,52 @@
 05/06/16-03:24pm, wilson1, LOGOUT, intentional
 05/06/16-03:24pm, david2, LOGOUT, intentional
 05/06/16-03:25pm, wilson1, LOGIN, 127.0.0.1:1234, success, whatsgoodie 
+05/06/16-03:57pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-03:58pm, wilson, CMD, /audit, success, client
+05/06/16-04:00pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:00pm, wilson, CMD, /audit, success, client
+05/06/16-04:01pm, wilson, LOGOUT, error
+05/06/16-04:01pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:01pm, wilson, CMD, /audit, success, client
+05/06/16-04:05pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:05pm, wilson, CMD, /audit, success, client
+05/06/16-04:05pm, wilson, CMD, , failure, client
+05/06/16-04:06pm, wilson, LOGOUT, error
+05/06/16-04:06pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:06pm, wilson, CMD, /audit, success, client
+05/06/16-04:06pm, wilson, CMD, /audit, success, client
+05/06/16-04:08pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:08pm, wilson, CMD, /audit, success, client
+05/06/16-04:09pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:09pm, wilson, CMD, /audit, success, client
+05/06/16-04:09pm, wilson, CMD, , failure, client
+05/06/16-04:18pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:18pm, wilson, CMD, /audit, success, client
+05/06/16-04:26pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:26pm, wilson, CMD, /audit, success, client
+05/06/16-04:28pm, wilson, LOGOUT, error
+05/06/16-04:29pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:29pm, wilson, CMD, /audit, success, client
+05/06/16-04:31pm, wilson, LOGOUT, error
+05/06/16-04:32pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:32pm, wilson, CMD, /audit, success, client
+05/06/16-04:34pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:34pm, wilson, CMD, /audit, success, client
+05/06/16-04:34pm, wilson, LOGOUT, error
+05/06/16-04:35pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:35pm, wilson, CMD, /audit, success, client
+05/06/16-04:38pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:38pm, wilson, CMD, /audit, success, client
+05/06/16-04:39pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:39pm, wilson, CMD, /audit, success, client
+05/06/16-04:43pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:43pm, wilson, CMD, /audit, success, client
+05/06/16-04:44pm, wilson, LOGOUT, error
+05/06/16-04:45pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:45pm, wilson, CMD, /audit, success, client
+05/06/16-04:51pm, wilson, LOGOUT, error
+05/06/16-04:51pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:51pm, wilson, CMD, /audit, success, client
+05/06/16-04:51pm, wilson, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:51pm, wilson, CMD, /audit, success, client
+05/06/16-04:51pm, wilson, LOGOUT, intentional

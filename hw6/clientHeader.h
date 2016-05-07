@@ -14,6 +14,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 
 
                 /************************************/
@@ -142,7 +143,7 @@ int createAndConnect(char* portNumber, int clientFd, char* ipAddress){
     return -1;
   }
   if (connect(clientFd, results->ai_addr, results->ai_addrlen)!=-1){
-    sfwrite(&lock, stderr, "createAndConnect(): Able to connect to socket\n");
+    //sfwrite(&lock, stderr, "createAndConnect(): Able to connect to socket\n");
     //fprintf(stderr,"createAndConnect(): Able to connect to socket\n");
     freeaddrinfo(results);
     return clientFd;
@@ -607,13 +608,24 @@ FILE *initAudit(char *file){
   if (file != NULL){
     fileName = file;
   }
-  filePtr = fopen(fileName, "a");
+  filePtr = fopen(fileName, "a+");
   return filePtr;
 }
 
 void lockWriteUnlock(char* text,  int fd){
-  flock(fd, LOCK_EX);
+  //flock(fd, LOCK_EX);
   write(fd, text, strlen(text));
+  //flock(fd, LOCK_UN);
+}
+
+void processAudit(int fd){
+  char buf[1];
+  memset(&buf, 0, 1);
+  lseek(fd, 0, SEEK_SET);
+  flock(fd, LOCK_EX);
+  while (read(fd, buf, 1) == 1){
+    sfwrite(&lock, stdout, buf);
+  }
   flock(fd, LOCK_UN);
 }
 

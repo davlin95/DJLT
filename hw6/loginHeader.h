@@ -26,7 +26,8 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   char protocolBuffer[1024];
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&stdoutMutex, stderr, "Read(): bytes read negative\n");
+    //fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
 
@@ -35,12 +36,15 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------------|| 
   if(checkVerb(PROTOCOL_WOLFIE, protocolBuffer)){
     if (verbose){
-      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&stdoutMutex, stdout, VERBOSE "%s", protocolBuffer);
+      sfwrite(&stdoutMutex, stdout, DEFAULT "");
+      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
     }
     protocolMethod(fd,EIFLOW,NULL,NULL,NULL, verbose, &stdoutMutex);
   }
   else{
-    fprintf(stderr, "Expected protocol verb WOLFIE\n");
+    sfwrite(&stdoutMutex, stderr, "Expected protocol verb WOLFIE\n");
+    //fprintf(stderr, "Expected protocol verb WOLFIE\n");
     return false;
   }
   //-----------------------------------------||
@@ -48,7 +52,8 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&stdoutMutex, stderr, "Read(): bytes read negative\n");
+    //fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
   if (verbose)
@@ -64,7 +69,6 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     else{
       protocolMethod(fd, ERR0, NULL,NULL,NULL, verbose, &stdoutMutex);
       protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
-      fprintf(stderr, "Invalid Username or account already exists.\n");
       return false; 
     }
   } 
@@ -79,19 +83,16 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
       else{
         protocolMethod(fd, ERR0, NULL,NULL,NULL,verbose, &stdoutMutex);
         protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
-        fprintf(stderr, "User already signed in.\n");
         return false;
       }
     }
     else{
       protocolMethod(fd, ERR1, NULL,NULL,NULL, verbose, &stdoutMutex);
       protocolMethod(fd, BYE, NULL,NULL,NULL, verbose, &stdoutMutex);
-      fprintf(stderr, "Account doesn't exist.\n");
       return false;
     }
   }
   else {
-    fprintf(stderr, "Expected protocol verb IAM or IAMNEW\n");
     return false;
   }
   //-----------------------------------------||
@@ -99,11 +100,14 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
   //-----------------------------------------||
   memset(&protocolBuffer,0,1024);
   if (read(fd, &protocolBuffer,1024) < 0){
-    fprintf(stderr,"Read(): bytes read negative\n");
+    sfwrite(&stdoutMutex, stderr, "Read(): bytes read negative\n");
+    //fprintf(stderr,"Read(): bytes read negative\n");
     return false;
   }
   if (verbose){
-      printf(VERBOSE "%s" DEFAULT, protocolBuffer);
+      sfwrite(&stdoutMutex, stdout, VERBOSE "%s", protocolBuffer);
+      sfwrite(&stdoutMutex, stdout, DEFAULT "");
+      //printf(VERBOSE "%s" DEFAULT, protocolBuffer);
   }
   //------------------------------------------------------||
   //    CHECK IF RESPONSE: NEWPASS <password> \r\n\r\n    || 
@@ -118,7 +122,6 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     else{
       protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
       protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
-      fprintf(stderr, "Invalid Password\n");
       return false;
     }
   }
@@ -142,7 +145,6 @@ bool performLoginProcedure(int fd,char* userBuffer, char* passBuffer, int *newUs
     else{
       protocolMethod(fd, ERR2, NULL, NULL, NULL, verbose, &stdoutMutex);
       protocolMethod(fd, BYE, NULL, NULL, NULL, verbose, &stdoutMutex);
-      fprintf(stderr, "Invalid Password\n");
       return false;
     }
   }

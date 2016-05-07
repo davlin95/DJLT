@@ -1,0 +1,36 @@
+05/06/16-04:52pm, wilson2, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-04:52pm, wilson2, CMD, /audit, success, client
+05/06/16-04:52pm, wilson2, CMD, /listu, success, client
+05/06/16-04:52pm, wilson2, CMD, /audit, success, client
+05/06/16-04:52pm, wilson2, CMD, /chat, failure, client
+05/06/16-04:53pm, wilson2, CMD, /audit, success, client
+05/06/16-05:20pm, wilson2, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:20pm, wilson2, LOGOUT, intentional
+05/06/16-05:20pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:21pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:22pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:22pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:23pm, wilson2, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:23pm, wilson2, CMD, /listu, success, client
+05/06/16-05:23pm, david, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:23pm, david, CMD, /chat, success, client
+05/06/16-05:23pm, wilson2, MSG, from, david, whatsup
+05/06/16-05:23pm, david, MSG, to, wilson2, whatsup
+05/06/16-05:24pm, david, MSG, to, wilson2, hola
+05/06/16-05:24pm, wilson2, MSG, from, david, hola
+05/06/16-05:24pm, david, LOGOUT, intentional
+05/06/16-05:24pm, wilson2, LOGOUT, intentional
+05/06/16-05:26pm, wilson2, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:26pm, david, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:26pm, david, LOGOUT, error
+05/06/16-05:26pm, wilson2, LOGOUT, error
+05/06/16-05:27pm, wilson2, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:27pm, david, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:27pm, david, LOGOUT, intentional
+05/06/16-05:27pm, wilson2, LOGOUT, intentional
+05/06/16-05:27pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:27pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-05:28pm, wilson2, LOGIN, 127.0.0.1:1234, fail, ERR 02 BAD PASSWORD
+05/06/16-05:28pm, david, LOGIN, 127.0.0.1:1234, fail, ERR 00 USER NAME TAKEN
+05/06/16-05:28pm, david, LOGIN, 127.0.0.1:1234, success, hello 
+05/06/16-05:28pm, david, LOGOUT, intentional
